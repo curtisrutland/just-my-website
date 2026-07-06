@@ -1,4 +1,4 @@
-import type { Kind } from "./types";
+import type { Kind } from "@/lib/macros/types";
 
 const OPTS: Kind[] = ["training", "rest", "unspecified"];
 

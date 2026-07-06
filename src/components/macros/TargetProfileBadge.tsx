@@ -1,4 +1,4 @@
-import type { Kind, MacroSet } from "./types";
+import type { Kind, MacroSet } from "@/lib/macros/types";
 
 const fmt = (n: number) => Math.round(n).toLocaleString("en-US");
 

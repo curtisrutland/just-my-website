@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { todayISO } from "@/components/macros/date";
+import { todayISO } from "@/lib/date";
 
 type Module = {
   glyph: string;

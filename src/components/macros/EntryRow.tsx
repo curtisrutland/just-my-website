@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { Confidence, RollupEntry } from "./types";
+import type { Confidence, RollupEntry } from "@/lib/macros/types";
 
 const TAG: Record<Confidence, string> = { measured: "MEAS", estimated: "EST", logged_serving: "SRV" };
 const fmt = (n: number | null) => (n == null ? "—" : Math.round(n).toLocaleString("en-US"));

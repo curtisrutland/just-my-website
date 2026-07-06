@@ -111,10 +111,18 @@ to match its semantics.
 src/lib/{module}/
   schema.ts     # Zod + normalization — single source of truth
   repo.ts       # Drizzle queries — only place tables are touched
-src/app/api/{module}/**   # token API routes (thin)
-src/app/(app)/{module}/** # Clerk-gated UI (thin)
-openapi/{module}.json     # generated OpenAPI fragment (build artifact, from schema.ts)
+  types.ts      # domain + response-contract types (shared by repo AND UI)
+src/components/{module}/**  # module-specific UI components
+src/app/api/{module}/**     # token API routes (thin)
+src/app/(app)/{module}/**   # Clerk-gated UI pages (thin)
+openapi/{module}.json       # generated OpenAPI fragment (build artifact, from schema.ts)
 ```
 
 Tables live in `src/lib/db/schema.ts`, namespaced by module (e.g. `macroFood`,
 `macroEntry`, `macroTargetProfile`, `weightEntry`).
+
+**Shared (cross-module), owned by no single module:** app-shell chrome lives in
+`src/components/shell/` (`AppShell` = nav rail + terminal header + content slot; `ThemeToggle`);
+pure utilities live in `src/lib/` (e.g. `date.ts`). The dependency rule is one-directional —
+**UI may import from `lib`, never the reverse** — so anything `lib` needs (domain types, date
+math) belongs in `lib`, not `components`.

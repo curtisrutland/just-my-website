@@ -1,5 +1,5 @@
 import { and, asc, count, desc, eq, gte, isNull, lte, max, min } from "drizzle-orm";
-import { addDays, dateRange } from "@/components/macros/date";
+import { addDays, dateRange } from "@/lib/date";
 import { db } from "@/lib/db";
 import { weightEntry, type WeightEntry } from "@/lib/db/schema";
 import type { WeightCreate, WeightPatch, WeightPoint, WeightRollup } from "./schema";

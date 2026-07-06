@@ -1,5 +1,5 @@
-import { addDays, dateRange } from "@/components/macros/date";
-import type { Kind, WeekDay } from "@/components/macros/types";
+import { addDays, dateRange } from "@/lib/date";
+import type { Kind, WeekDay } from "@/lib/macros/types";
 import { dayKindsBetween } from "./repo";
 
 /** The 7-day window ending at `selected`, each day resolved to its kind (absent → unspecified). */

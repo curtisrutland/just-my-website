@@ -1,4 +1,4 @@
-import type { MacroSet } from "./types";
+import type { MacroSet } from "@/lib/macros/types";
 
 /**
  * Target-state color rules and track geometry (docs/design-reference/DESIGN-HANDOFF.md §3).

@@ -1,6 +1,6 @@
 import { UserButton } from "@clerk/nextjs";
-import { AppShell } from "@/components/macros/AppShell";
-import { todayISO } from "@/components/macros/date";
+import { AppShell } from "@/components/shell/AppShell";
+import { todayISO } from "@/lib/date";
 import { trendDisplay, WINDOW_DAYS, type WindowKey } from "@/components/weight/format";
 import { WeightEntryForm } from "@/components/weight/WeightEntryForm";
 import { WeightList } from "@/components/weight/WeightList";

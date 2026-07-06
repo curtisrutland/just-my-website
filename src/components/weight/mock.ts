@@ -1,4 +1,4 @@
-import { addDays } from "@/components/macros/date";
+import { addDays } from "@/lib/date";
 import type { WeightPoint, WeightRollup } from "@/lib/weight/schema";
 
 /** Deterministic ~90-day mock series for the dev preview: a gentle downward trend with daily noise

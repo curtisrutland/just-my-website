@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { addDays, dayOfMonth, monthDay, weekday2, weekdayFull, year } from "./date";
-import type { Kind, WeekDay } from "./types";
+import { addDays, dayOfMonth, monthDay, weekday2, weekdayFull, year } from "@/lib/date";
+import type { Kind, WeekDay } from "@/lib/macros/types";
 
 const kindDot = (kind: Kind) =>
   kind === "training" ? "var(--color-warning)" : kind === "rest" ? "var(--color-success)" : "var(--color-accent)";

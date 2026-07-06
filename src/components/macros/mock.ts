@@ -1,4 +1,4 @@
-import type { DayRollupData, MacroSet, RollupEntry, WeekDay } from "./types";
+import type { DayRollupData, MacroSet, RollupEntry, WeekDay } from "@/lib/macros/types";
 
 /**
  * Mock day for the dev preview (UI-CONTRACT §4 shape). The canonical Jul 5 day: unspecified,

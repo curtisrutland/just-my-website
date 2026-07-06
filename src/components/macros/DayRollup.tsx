@@ -2,7 +2,7 @@ import { barState, resolveTargets, scaleFor, trackSummary, type TrackTargets } f
 import { MacroBar } from "./MacroBar";
 import { TargetProfileBadge } from "./TargetProfileBadge";
 import { Track } from "./Track";
-import type { DayRollupData } from "./types";
+import type { DayRollupData } from "@/lib/macros/types";
 
 const fmt = (n: number) => Math.round(n).toLocaleString("en-US");
 

@@ -1,5 +1,5 @@
 import { EntryRow } from "./EntryRow";
-import type { RollupEntry } from "./types";
+import type { RollupEntry } from "@/lib/macros/types";
 
 type EntryAction = (entryId: string, formData: FormData) => void | Promise<void>;
 

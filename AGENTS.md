@@ -42,4 +42,7 @@ Every module lives in `src/lib/{module}/` and owns:
 - its generated OpenAPI fragment
 
 Modules are self-contained. The shared kernel is small on purpose: auth, the error
-envelope, pagination shape, and these conventions. Nothing else is "platform."
+envelope, pagination shape, the app-shell chrome (`src/components/shell/`), the pure date
+utility (`src/lib/date.ts`), and these conventions. Nothing else is "platform." The layering
+rule is one-directional: UI imports from `lib`, never the reverse — so a module's domain types
+live in `src/lib/{module}/types.ts`, not in its components.

@@ -7,9 +7,9 @@
 - [x] I've updated the design to include the justmy.recipes sidebar/index link described in a previous item
 - [x] module headers should be equal heights, use the taller of the existing ones to standardize
 - [x] add a github link to the sidebar (this repo)
-- [ ] add the library and necessary component to enable vercel analytics
-- [ ] documentation audit (readme/claude/agents)
-- [ ] the github link should also go on the index page
+- [x] add the library and necessary component to enable vercel analytics
+- [x] documentation audit (readme/claude/agents)
+- [x] the github link should also go on the index page
 
 # feedback from Claude.ai (all resolved)
 

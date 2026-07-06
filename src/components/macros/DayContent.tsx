@@ -1,8 +1,8 @@
-import { todayISO } from "./date";
+import { todayISO } from "@/lib/date";
 import { DayNav } from "./DayNav";
 import { DayRollup } from "./DayRollup";
 import { EntryList } from "./EntryList";
-import type { DayRollupData, WeekDay } from "./types";
+import type { DayRollupData, WeekDay } from "@/lib/macros/types";
 
 type EntryAction = (entryId: string, formData: FormData) => void | Promise<void>;
 

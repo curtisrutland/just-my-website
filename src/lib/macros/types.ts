@@ -1,4 +1,5 @@
-/** UI-facing types — mirror the DayRollup response shape (UI-CONTRACT §4). */
+/** Macros domain + rollup-contract types (UI-CONTRACT §4). Consumed by both the repo/lib layer
+ *  (e.g. `week.ts`) and the UI — hence they live in `lib/macros`, never in `components`. */
 
 export type Kind = "training" | "rest" | "unspecified";
 export type Confidence = "measured" | "estimated" | "logged_serving";

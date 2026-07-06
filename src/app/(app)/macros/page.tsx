@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { todayISO } from "@/components/macros/date";
+import { todayISO } from "@/lib/date";
 
 // "today" is computed per request, not baked at build.
 export const dynamic = "force-dynamic";

@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { AppShell } from "@/components/macros/AppShell";
+import { AppShell } from "@/components/shell/AppShell";
 import { trendDisplay } from "@/components/weight/format";
 import { mockToday, mockWeightEntries, mockWeightRollup } from "@/components/weight/mock";
 import { WeightEntryForm } from "@/components/weight/WeightEntryForm";

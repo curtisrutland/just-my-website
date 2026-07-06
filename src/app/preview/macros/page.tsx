@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
-import { todayISO } from "@/components/macros/date";
-import { AppShell } from "@/components/macros/AppShell";
+import { todayISO } from "@/lib/date";
+import { AppShell } from "@/components/shell/AppShell";
 import { DayContent } from "@/components/macros/DayContent";
 import { DayKindControl } from "@/components/macros/DayKindControl";
-import type { DayRollupData } from "@/components/macros/types";
+import type { DayRollupData } from "@/lib/macros/types";
 import { getDayRollup } from "@/lib/macros/repo";
 import { buildWeek } from "@/lib/macros/week";
 

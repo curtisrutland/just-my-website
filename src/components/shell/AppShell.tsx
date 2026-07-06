@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { ThemeToggle } from "./ThemeToggle";
-import { todayISO } from "./date";
+import { todayISO } from "@/lib/date";
 
 /**
  * The shell chrome (UI-CONTRACT §2 / DESIGN-HANDOFF §2): a 210px nav rail, a fixed terminal header
