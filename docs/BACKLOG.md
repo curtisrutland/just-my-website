@@ -43,6 +43,11 @@ the top of each section.
       `justmy.website` (stdlib client, `name` param), verified end-to-end against prod with system
       python3, and now **uploaded to claude.ai and validated** (publish step done). Zips are at
       `skills/dist/manage-macros.zip` and `skills/dist/manage-weight.zip`.
+- [x] **Weight module** — second module, full anatomy: `src/lib/weight/` (schema + normalization,
+      repo with day-rollup + windowed stats, repo tests), `src/app/api/weight/` (days/entries/rollup
+      routes), `src/app/(app)/weight/` (live trend, stat tiles, entry form + list, correct/soft-delete
+      server actions). Wired as an active nav item and landing card; OpenAPI fragment generated
+      (`openapi/weight.json`). Live.
 
 ## Bugs — fixed
 
@@ -92,9 +97,15 @@ the top of each section.
 
 ## Future modules
 
-- **Weight tracker.** A daily body-weight module: log a weight per day, show weekly rolling averages
-  (smooths daily noise) and other useful stats/trends. Its own module under `src/lib/weight/` +
-  `src/app/(app)/weight/` following the module anatomy; add a nav entry + a landing card.
+- **Shopping list.** The remaining `SOON` module (disabled nav chip in `AppShell.tsx` + landing row
+  in `Landing.tsx`). Tagline: *"a running list that knows what the kitchen already has."*
+  **Scoped — see `docs/shopping-model.md`.** Single flat table `shopping_item`, two levels
+  (category-string → item), no quantity column, no item normalization. Two-section view (active
+  grouped by category alphabetical; recently-bought within 7 days pre-collapsed, filter-only history).
+  Web-primary **full editor** (add/check/edit/delete) — a deliberate departure from macros' Option A;
+  Claude also manages via API/skill. Own module under `src/lib/shopping/` + `src/app/(app)/shopping/`;
+  flip the nav chip + landing row to live. Deferred within scope: store-aisle category order,
+  old-bought purge, `manage-shopping` skill, check-off grace timer. Ready to build.
 
 ## Deferred decisions
 
