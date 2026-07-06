@@ -266,7 +266,8 @@ Per `CONVENTIONS §8` — the last two are the ones nothing auto-generates, so t
 - [ ] **OpenAPI:** register in `scripts/build-openapi.ts` (import schemas → build `shoppingSpec` →
       add `["shopping", shoppingSpec]` to `fragments`), then `npm run openapi:build` and confirm
       `openapi/shopping.json` appears.
-- [ ] **Docs:** this file is the model; update the README module list + `docs/BACKLOG.md` on ship.
+- [ ] **Docs:** this file is the model; on ship update the README module list, the live-modules
+      table in `docs/ARCHITECTURE.md` (add a `shopping` row; "Two" → "Three"), and `docs/BACKLOG.md`.
 
 ## Open / deferred (for the backlog)
 

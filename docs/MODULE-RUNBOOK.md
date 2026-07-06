@@ -108,7 +108,8 @@ Per `CONVENTIONS §8` — **nothing auto-generates these, so they must be explic
 - **OpenAPI:** register in `scripts/build-openapi.ts` (import the Zod schemas → build `{module}Spec`
   → add `["{module}", {module}Spec]` to `fragments`), run `npm run openapi:build`, confirm
   `openapi/{module}.json` appears. (The weight fragment was missed exactly here once.)
-- **Docs:** model doc committed, README module list updated, `docs/BACKLOG.md` updated.
+- **Docs:** model doc committed, README module list updated, the live-modules table in
+  `docs/ARCHITECTURE.md` updated, `docs/BACKLOG.md` updated.
 
 ---
 
