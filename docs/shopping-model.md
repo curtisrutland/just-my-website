@@ -83,11 +83,14 @@ These were described together but are separate, and separating them keeps each s
 
 1. **Persistent recent-bought section** *(data-model feature)* — the collapsed 7-day section above.
    The durable safety net: un-check any recent item to restore it.
-2. **Few-second grace timer** *(pure client-side, optional polish)* — on check-off, the item lingers
-   in place with an inline "undo" affordance for a few seconds before it animates down into the
-   collapsed section. Zero data-model implication (optimistic toggle + a timer). Nice-to-have; the
-   collapsed section already provides recovery, so this can ship later or never without changing
-   anything underneath.
+2. **Few-second grace timer** *(client-side; v1 — designed-in)* — on check-off, the item lingers
+   in place with an inline "undo" affordance and a draining progress bar for a few seconds before it
+   animates down into the collapsed section. The DB write is **immediate** (check writes
+   `status=bought, checkedAt=now` right away); the linger is purely visual, so there is no
+   pending/unsaved state — a refresh mid-linger just shows the item already in Recently Bought.
+   Zero data-model implication (optimistic local state + a timer). The design builds this as a
+   first-class feature (`lingerSeconds` default 4s, `lingerUndo` toggle), so it's in v1 — this is
+   the module's one piece of client-side state; everything else is server-component + server-action.
 
 ---
 
@@ -101,6 +104,25 @@ These were described together but are separate, and separating them keeps each s
 
 Checking off is expressed as a `PATCH {status}` (see API), so no bespoke toggle endpoint is needed;
 the repo sets/clears `checkedAt` from the status transition.
+
+### Design → schema mapping
+
+The Claude Design prototype (`Shopping List.dc.html`) uses a single 3-value `status`
+(`active` / `bought` / `deleted`) because a UI prototype just needs *some* way to make a row vanish.
+The production schema keeps only a 2-value `status` and models removal with the platform's standard
+`deletedAt` column. `status` answers *"where does this sit on the list?"*; `deletedAt` answers
+*"does this record exist?"* — orthogonal concerns. When building the UI, map the prototype's
+vocabulary onto the real fields (the visuals are unchanged — only which column "delete" writes to):
+
+| Prototype value / action | Production write |
+|---|---|
+| `status: 'active'` | `status: 'needed'` |
+| `status: 'bought'` (+ `checkedAt`) | *identical* |
+| `remove()` → `status: 'deleted'` | `deletedAt = now()` (soft-delete; row drops from all reads) |
+
+Keeping deletion in `deletedAt` (not a status value) is what lets the repo's shared
+`WHERE deleted_at IS NULL` filter, the agent-barred-from-hard-delete rule, and the clean two-value
+status toggle all work the same way they do in the macro and weight modules.
 
 ---
 
@@ -156,8 +178,10 @@ from a `status` change in PATCH — the API/skill never set `checkedAt` directly
 
 The only place `shopping_item` is touched; reads exclude soft-deleted.
 
-- `getList(opts?: { boughtWithinDays?: number })` → `{ active: CategoryGroup[]; recentlyBought: Item[] }`
-  — the two-section view; `boughtWithinDays` defaults to 7.
+- `getList(opts?: { boughtWithinDays?: number })` →
+  `{ active: CategoryGroup[]; recentlyBought: Item[]; activeCount: number }` — the two-section view;
+  `boughtWithinDays` defaults to 7. `activeCount` (total `needed` items) feeds the header's
+  `ON THE LIST` readout; it's just the summed group sizes, no extra query.
 - `listItems({ limit, offset })` → `{ items, count }` — flat paginated list (API completeness).
 - `getItemById(id)`
 - `addItem(input: ShoppingCreate)` → inserts a `needed` item.
@@ -189,9 +213,10 @@ A `<details>`-style section, **collapsed by default**, listing items bought with
 (newest first). Each row shows the text struck-through/muted with an **un-check** control (the
 durable undo). Older bought items are absent (filtered).
 
-### Check-off interaction *(optional polish)*
-Optimistic toggle; the item may linger a few seconds with an inline "undo" before sliding into the
-collapsed section. Can ship after v1 without model changes.
+### Check-off interaction *(v1 — client component)*
+Optimistic toggle; the checked item lingers a few seconds in place with an inline "undo" and a
+draining progress bar, then slides into the collapsed section. The write is immediate; the linger is
+visual only. See the design handoff for the exact animation/timing specs.
 
 ---
 
@@ -251,6 +276,5 @@ Per `CONVENTIONS §8` — the last two are the ones nothing auto-generates, so t
 - **Old-bought purge.** Filter-only for now; add a purge/cron if the table ever bloats.
 - **`manage-shopping` skill.** Build after the web + API land (like `manage-macros`), or fold into a
   shared client. Batch-add is the marquee use ("add the ingredients for X").
-- **Check-off grace timer.** Optional client-side polish; ship after v1.
 </content>
 </invoke>
