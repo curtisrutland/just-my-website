@@ -17,7 +17,7 @@ export function AppShell({
   children,
 }: {
   routeSegment: string;
-  activeModule?: "macros" | "weight";
+  activeModule?: "macros" | "weight" | "shopping";
   headerRight?: ReactNode;
   navFooter?: ReactNode;
   children: ReactNode;
@@ -35,9 +35,9 @@ export function AppShell({
               a real, prefetchable page → soft client-side transition. */}
           <NavItem label="macros" href={`/macros/${todayISO()}`} active={activeModule === "macros"} />
           <NavItem label="weight" href="/weight" active={activeModule === "weight"} />
+          <NavItem label="shopping" href="/shopping" active={activeModule === "shopping"} />
           <RecipesNavLink />
           <GithubNavLink />
-          <NavItem label="shopping" soon />
         </nav>
         <div className="rail-foot">
           {navFooter}

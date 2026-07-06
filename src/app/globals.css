@@ -78,6 +78,63 @@
   animation: caret-blink 1.1s step-end infinite;
 }
 
+/* Shopping — check-off feedback (ShoppingBoard.tsx): the checkmark pops in, and a checked row's
+ * grace-timer bar drains left-to-right over the linger window before the row moves. */
+@keyframes shopping-checkpop {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.18);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@keyframes shopping-drain {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+/* Shopping — interaction affordances inline styles can't express (:hover). Geometry stays inline in
+ * the component; these own the hover/checked surface. */
+.shop-check {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  transition:
+    border-color 0.12s,
+    background 0.12s;
+}
+.shop-check:hover {
+  border-color: var(--color-accent);
+  background: var(--band);
+}
+.shop-check[data-checked="true"],
+.shop-check[data-checked="true"]:hover {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+.shop-uncheck {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  transition: border-color 0.12s;
+}
+.shop-uncheck:hover {
+  border-color: var(--color-accent);
+}
+.shop-edit:hover {
+  color: var(--color-accent) !important;
+}
+.shop-del:hover {
+  color: var(--color-text) !important;
+}
+
 /* ============================================================================
  * App shell — responsive chrome (AppShell.tsx). Desktop base + one <=768px
  * reflow. These class names are the design's; components apply them because

@@ -34,6 +34,14 @@ const MODULES: Module[] = [
     desc: "Weigh in daily; the 7-day rolling average leads and the raw dots stay subordinate. The trend is the truth, not any single morning.",
   },
   {
+    glyph: "▸",
+    name: "shopping",
+    badge: "LIVE",
+    href: "/shopping",
+    active: true,
+    desc: "A running list, one grouping level deep — no quantities, no aisles, the detail lives in the words. Claude stocks it; you clear it in the store.",
+  },
+  {
     glyph: "◆",
     name: "recipes",
     badge: "SITE ↗",
@@ -52,14 +60,6 @@ const MODULES: Module[] = [
     external: true,
     muted: true,
     desc: "The source — Next.js, Neon, Drizzle; one human user and one machine user. Built in the open.",
-  },
-  {
-    glyph: "▹",
-    name: "shopping",
-    badge: "SOON",
-    href: null,
-    active: false,
-    desc: "A running list that knows what the kitchen already has. Not built yet.",
   },
 ];
 
