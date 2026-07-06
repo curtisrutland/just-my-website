@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { ThemeToggle } from "./ThemeToggle";
 
@@ -9,11 +10,13 @@ import { ThemeToggle } from "./ThemeToggle";
  */
 export function AppShell({
   routeSegment,
+  activeModule,
   headerRight,
   navFooter,
   children,
 }: {
   routeSegment: string;
+  activeModule?: "macros" | "weight";
   headerRight?: ReactNode;
   navFooter?: ReactNode;
   children: ReactNode;
@@ -36,7 +39,8 @@ export function AppShell({
           justmy<span style={{ color: "var(--color-accent)" }}>.website</span>
         </div>
         <nav style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2, padding: "8px 12px" }}>
-          <NavItem label="macros" active />
+          <NavItem label="macros" href="/macros" active={activeModule === "macros"} />
+          <NavItem label="weight" href="/weight" active={activeModule === "weight"} />
           <NavItem label="shopping" soon />
         </nav>
         <div style={{ padding: "12px 16px", borderTop: "1px solid var(--color-border)", display: "flex", flexDirection: "column", gap: 12 }}>
@@ -77,22 +81,23 @@ export function AppShell({
   );
 }
 
-function NavItem({ label, active, soon }: { label: string; active?: boolean; soon?: boolean }) {
-  return (
-    <div
-      style={{
-        position: "relative",
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-        padding: "9px 12px",
-        borderRadius: "var(--radius)",
-        background: active ? "var(--color-surface-raised)" : "transparent",
-        color: active ? "var(--color-text)" : "var(--color-text-muted)",
-        fontFamily: "var(--font-mono)",
-        fontSize: 12.5,
-      }}
-    >
+function NavItem({ label, href, active, soon }: { label: string; href?: string; active?: boolean; soon?: boolean }) {
+  const style: React.CSSProperties = {
+    position: "relative",
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    padding: "9px 12px",
+    borderRadius: "var(--radius)",
+    background: active ? "var(--color-surface-raised)" : "transparent",
+    border: active ? "1px solid var(--color-border)" : "1px solid transparent",
+    color: active ? "var(--color-text)" : "var(--color-text-muted)",
+    fontFamily: "var(--font-mono)",
+    fontSize: 12.5,
+    textDecoration: "none",
+  };
+  const inner = (
+    <>
       {active && (
         <span style={{ position: "absolute", left: 0, top: 6, bottom: 6, width: 2, background: "var(--color-accent)", borderRadius: 2 }} />
       )}
@@ -112,6 +117,13 @@ function NavItem({ label, active, soon }: { label: string; active?: boolean; soo
           SOON
         </span>
       )}
-    </div>
+    </>
+  );
+  return href ? (
+    <Link href={href} style={style}>
+      {inner}
+    </Link>
+  ) : (
+    <div style={style}>{inner}</div>
   );
 }

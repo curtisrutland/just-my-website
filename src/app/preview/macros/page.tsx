@@ -20,7 +20,7 @@ export default async function PreviewMacros() {
   const rollup = (await getDayRollup(date)) as unknown as DayRollupData;
   const week = await buildWeek(date);
   return (
-    <AppShell routeSegment={`macros/${date}`} headerRight={<DayKindControl kind={rollup.day.kind} />}>
+    <AppShell routeSegment={`macros/${date}`} activeModule="macros" headerRight={<DayKindControl kind={rollup.day.kind} />}>
       <DayContent rollup={rollup} week={week} basePath="/macros" />
     </AppShell>
   );

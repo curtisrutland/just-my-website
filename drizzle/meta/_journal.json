@@ -15,6 +15,13 @@
       "when": 1783304045790,
       "tag": "0001_amused_thunderbird",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783306123125,
+      "tag": "0002_tearful_raider",
+      "breakpoints": true
     }
   ]
 }

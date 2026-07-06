@@ -19,6 +19,14 @@ const MODULES: Module[] = [
     desc: "Log food in plain words; Claude estimates the macros. Dual-target days stay honest about the rest–training range.",
   },
   {
+    glyph: "▸",
+    name: "weight",
+    badge: "LIVE",
+    href: "/weight",
+    active: true,
+    desc: "Daily body weight with a 7-day rolling-average trend. A single day is noise; the line is the truth.",
+  },
+  {
     glyph: "▹",
     name: "shopping",
     badge: "SOON",

@@ -23,6 +23,7 @@ export default async function MacrosDayPage({ params }: { params: Promise<{ date
   return (
     <AppShell
       routeSegment={`macros/${date}`}
+      activeModule="macros"
       headerRight={<DayKindControl kind={rollup.day.kind} action={setDayKindAction.bind(null, date)} />}
       navFooter={<UserButton />}
     >

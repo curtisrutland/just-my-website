@@ -159,6 +159,28 @@ export const macroTargetProfile = pgTable(
   ]
 );
 
+/**
+ * `weight_entry` — one body-weight measurement per day (weight module). A day's weight is noise;
+ * the trend (a rolling average) is the truth — the average is derived in the repo, never stored.
+ */
+export const weightEntry = pgTable(
+  "weight_entry",
+  {
+    ...auditColumns(),
+    // Local calendar date of the weigh-in. One live weight per day (partial-unique below).
+    measuredOn: date("measured_on", { mode: "string" }).notNull(),
+    // Body weight in POUNDS, stored as a plain number ("lb" is display-only).
+    weight: real("weight").notNull(),
+    note: text("note"),
+  },
+  (t) => [
+    index("weight_entry_measured_on_idx").on(t.measuredOn),
+    uniqueIndex("weight_entry_measured_on_key")
+      .on(t.measuredOn)
+      .where(sql`${t.deletedAt} is null`),
+  ]
+);
+
 export type MacroFood = typeof macroFood.$inferSelect;
 export type NewMacroFood = typeof macroFood.$inferInsert;
 export type MacroEntry = typeof macroEntry.$inferSelect;
@@ -167,3 +189,5 @@ export type MacroDayTag = typeof macroDayTag.$inferSelect;
 export type NewMacroDayTag = typeof macroDayTag.$inferInsert;
 export type MacroTargetProfile = typeof macroTargetProfile.$inferSelect;
 export type NewMacroTargetProfile = typeof macroTargetProfile.$inferInsert;
+export type WeightEntry = typeof weightEntry.$inferSelect;
+export type NewWeightEntry = typeof weightEntry.$inferInsert;

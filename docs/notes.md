@@ -4,6 +4,7 @@
 - [x] link to justmy.recipes with that color on sidebar, a more fully branded link on the index page
 - [x] you implemented the design faithfully but the bottom "log>" section should probably not exist as we aren't logging from the site
 - [x] module idea: a daily weight tracker that shows weekly averages and any other interesting stats
+- [ ] I've updated the design to include the justmy.recipes sidebar/index link described in a previous item
 
 # feedback from Claude.ai (all resolved)
 
