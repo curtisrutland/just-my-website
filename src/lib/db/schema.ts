@@ -181,6 +181,39 @@ export const weightEntry = pgTable(
   ]
 );
 
+/**
+ * `shopping_item` — the single flat shopping list (shopping module). One grouping level:
+ * `category` is a FREEFORM STRING, never an entity — grouping happens at read time. No quantity
+ * column (the `text` line carries "2 dozen eggs"); no normalization, so deliberately NO uniqueness
+ * constraint — an item is not an identity ("milk" may legitimately appear twice). Removal is the
+ * standard `deletedAt` soft-delete, NOT a status value: `status` answers "where on the list?",
+ * `deletedAt` answers "does this record exist?".
+ */
+export const shoppingItem = pgTable(
+  "shopping_item",
+  {
+    ...auditColumns(),
+    // Freeform group label ("Produce", "Frozen"). Grouped + sorted case-insensitively at read time.
+    category: text("category").notNull(),
+    // The freeform item line, carrying its own quantity detail ("2 dozen eggs"). No quantity column.
+    text: text("text").notNull(),
+    // 'needed' | 'bought'. Stored as text; the allowed values are enforced by the Zod schema.
+    status: text("status").notNull().default("needed"),
+    // Set to now() when checked off (needed -> bought); cleared on un-check. Drives the 7-day window.
+    checkedAt: timestamp("checked_at", { withTimezone: true }),
+  },
+  (t) => [
+    // Active-list read: live + needed, grouped/ordered by category then text.
+    index("shopping_item_active_idx")
+      .on(t.category, t.text)
+      .where(sql`${t.deletedAt} is null and ${t.status} = 'needed'`),
+    // Recently-bought read: live + bought, windowed + ordered by checkedAt.
+    index("shopping_item_bought_idx")
+      .on(t.checkedAt)
+      .where(sql`${t.deletedAt} is null and ${t.status} = 'bought'`),
+  ]
+);
+
 export type MacroFood = typeof macroFood.$inferSelect;
 export type NewMacroFood = typeof macroFood.$inferInsert;
 export type MacroEntry = typeof macroEntry.$inferSelect;
@@ -191,3 +224,5 @@ export type MacroTargetProfile = typeof macroTargetProfile.$inferSelect;
 export type NewMacroTargetProfile = typeof macroTargetProfile.$inferInsert;
 export type WeightEntry = typeof weightEntry.$inferSelect;
 export type NewWeightEntry = typeof weightEntry.$inferInsert;
+export type ShoppingItem = typeof shoppingItem.$inferSelect;
+export type NewShoppingItem = typeof shoppingItem.$inferInsert;
