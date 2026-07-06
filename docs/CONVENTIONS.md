@@ -129,6 +129,9 @@ math) belongs in `lib`, not `components`.
 
 ### New-module definition of done
 
+> The full workflow for adding a module — including the scoping **interview** Claude runs with
+> Curtis before any code — is `docs/MODULE-RUNBOOK.md`. This section is just its final gate.
+
 A module is not "done" when its code compiles — it's done when it's **wired into everything a
 module is supposed to touch.** The last two items below are the ones nothing auto-generates, so
 they get silently skipped (the weight OpenAPI fragment was missed exactly this way). Every new
