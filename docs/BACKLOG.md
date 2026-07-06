@@ -39,9 +39,10 @@ the top of each section.
       `accounts.`, email DKIM CNAMEs) → set `pk_live`/`sk_live` in Vercel prod env → redeploy. The
       prod instance is already configured (email-only, restricted, Curtis's user). Until then the UI
       runs on the dev instance (dev banner, usage limits, `accounts.dev` sign-in).
-- [~] **`manage-macros` skill** — rebuilt against `justmy.website` (stdlib client, `name` param),
-      verified end-to-end against prod with system python3. Zip is at `skills/dist/manage-macros.zip`.
-      Remaining: Curtis re-uploads the zip to claude.ai (publish step).
+- [x] **Skills uploaded + validated** — both `manage-macros` and `manage-weight` rebuilt against
+      `justmy.website` (stdlib client, `name` param), verified end-to-end against prod with system
+      python3, and now **uploaded to claude.ai and validated** (publish step done). Zips are at
+      `skills/dist/manage-macros.zip` and `skills/dist/manage-weight.zip`.
 
 ## Bugs — fixed
 

@@ -318,11 +318,11 @@ uncertainty is the through-line of everything built here, and it is why the data
 just the UI, is shaped the way it is.
 
 ### Known status & what's next
-Tracked in full in [`BACKLOG.md`](BACKLOG.md). The headline open items: auth currently runs on
-the Clerk **dev** instance (the production-instance switch is configured but deferred to a real
-domain activation step), and the `manage-macros` skill zip awaits a re-upload/publish step on
-claude.ai. A short list of design refinements and optional tech-debt items (Vercel analytics,
-per-request API logging) is deferred, not lost.
+Tracked in full in [`BACKLOG.md`](BACKLOG.md). Both skills (`manage-macros` and
+`manage-weight`) are built, uploaded to claude.ai, and validated. The headline open item: auth
+currently runs on the Clerk **dev** instance (the production-instance switch is configured but
+deferred to a real domain activation step). A short list of design refinements and optional
+tech-debt items (Vercel analytics, per-request API logging) is deferred, not lost.
 
 ---
 
