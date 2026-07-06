@@ -58,6 +58,10 @@ the top of each section.
       3 live"); OpenAPI fragment registered (`openapi/shopping.json`); README + ARCHITECTURE table
       updated. `manage-shopping` skill built + verified (see below). Local UX pass done (2.5s linger,
       recipes-style confirm-delete, mobile always-visible actions, row-tap toggle, "recently checked").
+      **Deployed to production** (`justmy.website`, commit `e1a0d81`): live API verified end-to-end
+      against the domain (`/api/shopping/list` 200 with the two-section shape; 401 unauthed); prod
+      shares the same Neon DB where the migration was applied. Authenticated page render is Curtis's
+      to confirm in-browser (auth-gated; can't be checked headless).
 
 ## Bugs — fixed
 
@@ -114,8 +118,10 @@ the top of each section.
 - [~] **`manage-shopping` skill** — built (`skills/manage-shopping/` — SKILL.md + stdlib Python
   client over `/api/shopping/**`; batch-add, read-the-list, check/uncheck, edit, soft-delete) and
   verified end-to-end against the local dev server (9/9 checks, system python3). Registered in
-  `build-skills.mjs`; zip at `skills/dist/manage-shopping.zip`. **Remaining:** Curtis uploads +
-  validates the zip on claude.ai (publish step), like `manage-macros` / `manage-weight`.
+  `build-skills.mjs`; zip at `skills/dist/manage-shopping.zip`. First upload shipped a zip pointing at
+  `localhost:3000` (the build's old default) — **fixed**: `build-skills.mjs` now defaults the base URL
+  to `https://justmy.website` and warns on localhost; the zip was rebuilt with the prod URL (verified,
+  0 localhost refs). **Remaining:** Curtis re-uploads `skills/dist/manage-shopping.zip` to claude.ai.
 
 - **Shopping refinements (deferred within scope, from `docs/shopping-model.md`).** Store-aisle
   category order (alphabetical for now); old-bought purge (filter-only for now); a real-browser pass
