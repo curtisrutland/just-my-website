@@ -4,9 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node scripts/build-openapi.mjs",
+    "prebuild": "tsx scripts/build-openapi.ts",
     "build": "next build",
-    "openapi:build": "node scripts/build-openapi.mjs",
+    "openapi:build": "tsx scripts/build-openapi.ts",
     "skills:build": "node scripts/build-skills.mjs",
     "start": "next start",
     "lint": "eslint",

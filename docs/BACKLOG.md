@@ -22,12 +22,15 @@ the top of each section.
       placeholder until the skill lands.
 - [x] **Root landing** (Index) — gated `/` module list (macros LIVE, shopping SOON) + no-flash
       theme script in the root layout (persisted theme applied before paint, app-wide).
+- [x] **Skill + Python client** (`manage-macros`) — SKILL.md + client.py (httpx) over the token API;
+      verified end-to-end against the live API (log/review/correct/tag/delete, 12/12). Claude's write path.
+- [x] **Build scripts** — `build-skills.ts`→ token-injected skill under `skills/dist` (gitignored);
+      `build-openapi.ts` → OpenAPI generated from Zod (`npm run build` prebuild works).
 - [ ] **UI Phase 4** — mobile/responsive pass, handled in code (not a separate design spec).
       Reflow: nav rail → compact top bar/drawer, macro grid 3-col → 1-col, entry table → stacked,
       hero corridor full-width. Reviewed live like the other phases.
-- [ ] Skill + Python client (`manage-macros`) — Claude's write path over the token API
-- [ ] `scripts/build-openapi.mjs` (generate OpenAPI from Zod) + `scripts/build-skills.mjs`
-- [ ] First deploy (add `JMW_*` Preview env; push to GitHub)
+- [ ] First deploy (production Clerk domain, `JMW_*` Preview env, set `JMW_BASE_URL` for the built
+      skill to the prod URL, push to GitHub)
 
 ## UI refinements
 

@@ -35,6 +35,12 @@ yarn-error.log*
 # drizzle
 # (migrations under /drizzle ARE committed; only ignore local studio artifacts)
 
+# built skills — contain the injected agent token, never commit
+/skills/dist
+
+# generated OpenAPI (build artifact, regenerated from Zod)
+/openapi
+
 # testing
 /coverage
 
