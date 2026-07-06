@@ -4,15 +4,21 @@ import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "nod
 import { join } from "node:path";
 
 // Injects the agent token + API base URL into the skill's placeholders, producing a built copy
-// under skills/dist/ (gitignored — it contains the secret). At deploy, set JMW_BASE_URL to the
-// production URL; locally it defaults to the dev server.
+// under skills/dist/ (gitignored — it contains the secret). The zips are for UPLOAD to claude.ai,
+// so the base URL defaults to PRODUCTION. Set JMW_BASE_URL=http://localhost:3000 only to build a
+// zip for testing against a local dev server (that zip will not work off your machine).
+const DEFAULT_BASE_URL = "https://justmy.website";
 config({ path: ".env.local" });
 
 const token = process.env.JMW_AGENT_TOKEN;
-const baseUrl = (process.env.JMW_BASE_URL || "http://localhost:3000").replace(/\/$/, "");
+const baseUrl = (process.env.JMW_BASE_URL || DEFAULT_BASE_URL).replace(/\/$/, "");
 if (!token) {
   console.error("JMW_AGENT_TOKEN is not set (need it to build the skill).");
   process.exit(1);
+}
+if (baseUrl.includes("localhost") || baseUrl.includes("127.0.0.1")) {
+  console.warn(`⚠️  Building against a LOCAL base URL (${baseUrl}). This zip only works on your machine —`);
+  console.warn(`   unset JMW_BASE_URL (or set it to ${DEFAULT_BASE_URL}) before building a zip to upload to claude.ai.`);
 }
 
 const SKILLS = ["manage-macros", "manage-weight", "manage-shopping"];
