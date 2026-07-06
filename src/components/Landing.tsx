@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { todayISO } from "@/components/macros/date";
 
 type Module = {
   glyph: string;
@@ -52,9 +53,13 @@ const MODULES: Module[] = [
 
 /** The root landing (Index.dc.html): brand, a terminal `ls modules` line, the module list, footer. */
 export function Landing() {
-  const mods = MODULES.filter((m) => !m.external);
+  // Link macros straight to today's dated view — /macros is a force-dynamic redirect stub, so
+  // linking it forces a hard navigation (redirect hop, no prefetch). The dated URL is a real page.
+  const today = todayISO();
+  const modules = MODULES.map((m) => (m.name === "macros" ? { ...m, href: `/macros/${today}` } : m));
+  const mods = modules.filter((m) => !m.external);
   const live = mods.filter((m) => m.active).length;
-  const sites = MODULES.length - mods.length;
+  const sites = modules.length - mods.length;
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--color-bg)", color: "var(--color-text)", fontFamily: "var(--font-body)", display: "flex", flexDirection: "column", alignItems: "center", padding: "0 24px" }}>
@@ -82,7 +87,7 @@ export function Landing() {
 
         {/* module list */}
         <div style={{ border: "1px solid var(--color-border)", borderRadius: "calc(var(--radius) * 1.5)", overflow: "hidden", background: "var(--color-surface)" }}>
-          {MODULES.map((m, i) => (
+          {modules.map((m, i) => (
             <ModuleRow key={m.name} m={m} first={i === 0} />
           ))}
         </div>

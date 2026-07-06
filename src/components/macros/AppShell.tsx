@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { ThemeToggle } from "./ThemeToggle";
+import { todayISO } from "./date";
 
 /**
  * The shell chrome (UI-CONTRACT §2 / DESIGN-HANDOFF §2): a 210px nav rail, a fixed terminal header
@@ -39,7 +40,11 @@ export function AppShell({
           justmy<span style={{ color: "var(--color-accent)" }}>.website</span>
         </div>
         <nav style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2, padding: "8px 12px" }}>
-          <NavItem label="macros" href="/macros" active={activeModule === "macros"} />
+          <IndexLink />
+          {/* Link straight to today's dated view — /macros is a force-dynamic redirect stub, so
+              linking it would force a hard navigation (redirect hop, no prefetch). The dated URL is
+              a real, prefetchable page → soft client-side transition. */}
+          <NavItem label="macros" href={`/macros/${todayISO()}`} active={activeModule === "macros"} />
           <NavItem label="weight" href="/weight" active={activeModule === "weight"} />
           <RecipesNavLink />
           <NavItem label="shopping" soon />
@@ -56,6 +61,11 @@ export function AppShell({
             background: "var(--color-bg)",
             borderBottom: "1px solid var(--color-border)",
             padding: "13px 24px",
+            // Standardize the terminal-header height across modules to the taller control (macros'
+            // day-kind segmented control). Shorter headerRight content (e.g. weight's TREND readout)
+            // centers in the same height, so switching modules never shifts the content down.
+            boxSizing: "border-box",
+            minHeight: 55,
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
@@ -126,6 +136,32 @@ function NavItem({ label, href, active, soon }: { label: string; href?: string; 
     </Link>
   ) : (
     <div style={style}>{inner}</div>
+  );
+}
+
+/** Return-to-index affordance, styled as a terminal `../` (up a directory) to match the shell
+ *  breadcrumb. Links back to the root module switcher. */
+function IndexLink() {
+  return (
+    <Link
+      href="/"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        padding: "9px 12px",
+        marginBottom: 6,
+        borderBottom: "1px solid var(--color-border)",
+        borderRadius: 0,
+        color: "var(--color-text-muted)",
+        fontFamily: "var(--font-mono)",
+        fontSize: 12.5,
+        textDecoration: "none",
+      }}
+    >
+      <span style={{ color: "var(--color-text-muted)", width: 10 }}>▲</span>
+      <span>../</span>
+    </Link>
   );
 }
 
