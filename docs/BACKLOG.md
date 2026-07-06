@@ -26,11 +26,12 @@ the top of each section.
       verified end-to-end against the live API (log/review/correct/tag/delete, 12/12). Claude's write path.
 - [x] **Build scripts** — `build-skills.ts`→ token-injected skill under `skills/dist` (gitignored);
       `build-openapi.ts` → OpenAPI generated from Zod (`npm run build` prebuild works).
-- [ ] **UI Phase 4** — mobile/responsive pass. The design DID provide the spec (the Weight Tracker's
-      `@media(max-width:768px)` block) — captured in **`docs/design-reference/MOBILE-RESPONSIVE.md`**.
-      **Gotcha:** components use inline `style={{}}` (no `@media` support) → needs CSS classes /
-      Tailwind responsive utilities first. Breakpoint 768px: nav rail → top bar with a horizontal
-      module-chip strip, stat grid 4→2 col, weigh-in table drops the NOTE column, tighter padding.
+- [x] **UI Phase 4** — mobile/responsive pass (done). Shell scaffold moved to CSS classes
+      (`.shell/.rail/.rail-*/.topbar/.content`) so a single `@media(max-width:768px)` block reflows
+      it: nav rail → top bar with a horizontal module-chip strip, stat grid 4→2, weigh-in table drops
+      the NOTE column, macros day-nav stacks + week strip scrolls, entry/macro grids tighten. MacroBar
+      swaps its multi-word state for a directional glyph on mobile (was wrapping + shoving the value).
+      Verified at a true 390px viewport (`scrollWidth === 390`, no overflow).
 - [x] **First deploy** — pushed to GitHub, Vercel production live at `justmy.website` (apex → www);
       API confirmed end-to-end against the domain. Auth is on the Clerk **dev** instance for now.
 - [ ] **Switch auth to Clerk production** on `justmy.website` (deferred — intentionally on dev for now).
@@ -63,9 +64,8 @@ the top of each section.
 
 ## UI refinements
 
-- **Remove the add-entry ("log ›") prompt from the macros page.** We don't log from the site
-  (Option A — Claude adds via the skill; the web only corrects/deletes), so the bottom prompt is
-  misleading. Delete `AddEntryPrompt` from `DayContent` (and the component).
+- [x] **Remove the add-entry ("log ›") prompt from the macros page.** Done — `AddEntryPrompt` is gone
+  from `DayContent`; the web only corrects/deletes (Option A), adding is Claude's skill path.
 - [x] **Index/home link in the sidebar.** Added a terminal-style `../` link at the top of the nav
   rail (matches the shell breadcrumb metaphor) that returns to the root module switcher.
 - [x] **Equal module-header heights.** The terminal header bar's height tracked its `headerRight`
@@ -79,10 +79,9 @@ the top of each section.
 - [x] **`justmy.recipes` cross-link.** Done (⚠️ uncommitted/undeployed): a subtle sidebar-rail link
   + a fully-branded landing row, in the recipes brand color `#c9804f`. Built from the design's
   Index/Weight update. Landing footer now reads "3 modules · 2 live · 1 site". Commit + deploy pending.
-- **GitHub link in the sidebar.** Add a link to this repo (`github.com/curtisrutland/just-my-website`)
-  in the nav rail, alongside the `../` index link and the `recipes` cross-link. A subtle rail
-  affordance (mono, muted) — the machine-facing counterpart to the human-facing module list. Consider
-  grouping it with the `recipes` external link as "off-site" affordances (both `target="_blank"`).
+- [x] **GitHub link in the sidebar + index.** Done — a muted "off-site" repo link in the nav rail
+  (grouped with `recipes`, outline marker + `REPO ↗`) and a matching neutral row on the landing
+  (outline `◇` vs recipes' filled `◆`; footer reads "N off-site").
 - **DayRollup hero corridor legibility.** When the day is "in range" (unspecified), the value fill
   is solid cyan and the corridor band is also cyan-tinted, so they blend and the "honest corridor"
   reads less crisply than it should — and it's the single most important element. Proposed: make the
