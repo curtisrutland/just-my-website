@@ -3,13 +3,13 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db } from "@/lib/db";
 import { shoppingItem } from "@/lib/db/schema";
 import { addItem, getItemById, getList, patchItem, softDeleteItem } from "./repo";
+import type { CategoryGroup } from "./types";
 
 /** Integration test against live Neon. Test rows are namespaced with a `__test__` category prefix;
  *  cleanup hard-deletes only those, never touching real items. */
 
 const T = "__test__";
-const findTest = (list: { category: string; items: { text: string }[] }[]) =>
-  list.filter((g) => g.category.startsWith(T));
+const findTest = (list: CategoryGroup[]) => list.filter((g) => g.category.startsWith(T));
 
 async function wipe() {
   await db.delete(shoppingItem).where(like(shoppingItem.category, `${T}%`));
