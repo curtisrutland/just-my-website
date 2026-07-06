@@ -87,6 +87,8 @@ export const foodPatchSchema = foodBase.partial();
  */
 export const entryCreateSchema = z
   .object({
+    // A concise display label for what was eaten. The `note` stays for the fuzziness/reasoning.
+    name: name.nullish(),
     consumedOn: calendarDate,
     foodId: z.uuid().nullish(),
     quantityGrams: z.number().finite().positive(),

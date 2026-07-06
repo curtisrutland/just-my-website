@@ -1,4 +1,5 @@
 import { config } from "dotenv";
+import { execSync } from "node:child_process";
 import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -28,6 +29,8 @@ for (const name of SKILLS) {
       .replaceAll("__JMW_AGENT_TOKEN__", token);
     writeFileSync(join(outDir, file), content);
   }
-  console.log(`Built skill "${name}" → ${outDir}`);
+  // Package the skill folder into a zip for upload to claude.ai (SKILL.md at manage-macros/ root).
+  execSync(`zip -r -q "${name}.zip" "${name}"`, { cwd: distRoot });
+  console.log(`Built skill "${name}" → ${outDir} (+ ${join(distRoot, `${name}.zip`)})`);
 }
 console.log(`Base URL: ${baseUrl}`);

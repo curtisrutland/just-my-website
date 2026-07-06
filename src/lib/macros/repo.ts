@@ -137,6 +137,7 @@ export async function createEntry(input: EntryCreate): Promise<MacroEntry> {
   const [row] = await db
     .insert(macroEntry)
     .values({
+      name: input.name ?? null,
       consumedOn: input.consumedOn,
       foodId: input.foodId ?? null,
       quantityGrams: input.quantityGrams,
@@ -367,7 +368,8 @@ export async function getDayRollup(date: string): Promise<DayRollup> {
     .select({
       id: macroEntry.id,
       consumedOn: macroEntry.consumedOn,
-      foodName: macroFood.name,
+      // The entry's own label wins; fall back to a linked food's name.
+      foodName: sql<string | null>`coalesce(${macroEntry.name}, ${macroFood.name})`,
       quantityGrams: macroEntry.quantityGrams,
       confidence: macroEntry.confidence,
       note: macroEntry.note,

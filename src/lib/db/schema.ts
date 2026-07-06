@@ -95,6 +95,9 @@ export const macroEntry = pgTable(
   "macro_entry",
   {
     ...auditColumns(),
+    // A short display label for the entry ("grilled chicken breast", "3 large eggs"). Makes an
+    // entry self-describing even with no linked food; falls back to the food's name in the rollup.
+    name: text("name"),
     // A LOCAL calendar date, not a timestamp. No entry time is stored (no meal slots).
     consumedOn: date("consumed_on", { mode: "string" }).notNull(),
     // Reference for "log that again". Nullable: an ad-hoc estimate may match no cataloged food.

@@ -50,11 +50,18 @@ export function addDays(iso: string, n: number): string {
   return `${dt.getUTCFullYear()}-${pad(dt.getUTCMonth() + 1)}-${pad(dt.getUTCDate())}`;
 }
 
-/** Today's calendar date in the server's LOCAL timezone. In production set the `TZ` env var to
- *  Curtis's timezone so "today" matches his day (Vercel runs UTC by default) — see backlog. */
+/** Curtis's timezone. Vercel's `TZ` env is reserved, so it lives here (overridable via JMW_TZ). */
+const APP_TZ = process.env.JMW_TZ || "America/Chicago";
+
+/** Today's calendar date in Curtis's timezone — correct regardless of the server's zone (Vercel
+ *  runs UTC). `en-CA` formats as YYYY-MM-DD. */
 export function todayISO(): string {
-  const dt = new Date();
-  return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: APP_TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
 }
 
 /** Inclusive [from, to] list of calendar dates. */

@@ -8,6 +8,13 @@
       "when": 1783292230203,
       "tag": "0000_long_rockslide",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1783304045790,
+      "tag": "0001_amused_thunderbird",
+      "breakpoints": true
     }
   ]
 }

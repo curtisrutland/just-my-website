@@ -13,41 +13,49 @@ You log what Curtis eats into justmy.website. Curtis describes food in plain, of
 **you estimate the macros**. The whole system is built to be **honest about fuzziness** — never
 record an estimate as if it were a measured fact.
 
-## Setup
+## Requirements
+- **No install needed.** `client.py` uses only the Python standard library.
+- **Network egress:** the skill talks to **`https://justmy.website`** — that host must be reachable.
 
-The client is `client.py` in this skill directory, with the API base URL and Curtis's agent token
-already baked in. In a Python sandbox:
+## Setup
 
 ```python
 from client import MacrosClient
-m = MacrosClient()
+m = MacrosClient()   # base URL + Curtis's agent token are baked in
 ```
 
-Dates are `YYYY-MM-DD` in Curtis's local timezone. "Today" is his local date.
+Dates are `YYYY-MM-DD` in Curtis's local timezone (America/Chicago). "Today" is his local date.
 
 ## The core loop: logging food
 
 1. **Parse** what Curtis said into distinct items.
 2. **Get numbers.** For a recognizable food, prefer real data: `m.search_usda("chicken thigh cooked")`
    → pick an `fdcId` → `m.resolve_usda(fdcId)` (caches it, returns per-100g macros) → scale by the
-   amount. For a custom item (a specific bar, unflavored whey), `m.create_food(...)` once, then reuse.
-   When you can only eyeball it, estimate from your own knowledge.
-3. **Log absolute macros** for the whole entry (quantity already applied):
+   amount. Otherwise estimate from your own knowledge.
+3. **Log** each item with a concise **`name`** and absolute macros (quantity already applied). The
+   call returns the created entry — check its `id` to confirm the write inline (no need to re-read):
 
 ```python
-m.log_entry(
+e = m.log_entry(
     consumed_on="2026-07-05",
+    name="grilled chicken breast",        # display label — ALWAYS set this (or entries read "ad-hoc")
     quantity_grams=180,
     confidence="estimated",
-    note="one big thigh, eyeballed",   # what Curtis actually said — load-bearing on estimates
-    calories=342, protein=47, fat=17, carbs=0,
+    note="one breast, eyeballed ~180g",   # the fuzziness / how you estimated
+    calories=298, protein=56, fat=6, carbs=0,
 )
+assert e["id"]                            # write confirmed
 ```
+
+### `name` vs `note`
+- **`name`** — what it was, short and scannable ("3 large eggs", "half a tub of hummus"). This is the
+  row label in the UI. **Always provide it.**
+- **`note`** — optional: the fuzziness, how you estimated, or Curtis's exact words. This is the audit
+  trail on an estimate, not the label.
 
 ### Confidence — pick honestly
 - `measured` — weighed, or a packaged/known serving.
-- `estimated` — **you inferred the grams/macros from Curtis's words.** Always attach a `note` with
-  his description so the estimate is auditable and re-estimable. This is not decoration.
+- `estimated` — **you inferred it from Curtis's words.** Attach a `note` so it's auditable.
 - `logged_serving` — Curtis gave a household unit (1 scoop, 1 banana) you converted to grams.
 
 Macros are plain numbers: grams for protein/fat/carbs/fiber/sugar/sodium/satfat, kcal for calories.
@@ -65,20 +73,32 @@ m.clear_day_kind("2026-07-05")             # back to unspecified
 **Do not guess.** A day with no tag is `unspecified`, and the rollup deliberately shows BOTH the
 training and rest targets for it — that's correct, not a gap to fill.
 
+## Targets (so the rollup can compare)
+
+Set Curtis's calorie-cycling targets when he gives them (they persist; you only set them when they
+change):
+
+```python
+m.set_target("training", "2026-01-01", calories=2800, protein=160, fat=90, carbs=300)
+m.set_target("rest",     "2026-01-01", calories=2200, protein=160, fat=70,  carbs=200)
+```
+
+Targets are dated — the latest one effective on/before a day applies. If `get_day` returns
+`targets: {}`, no profile is configured yet.
+
 ## Reviewing, correcting, removing
 
 ```python
 day = m.get_day("2026-07-05")   # totals, estimation %, target(s), entries (each with an id)
 m.correct_entry(entry_id, calories=360, protein=50)   # only supplied fields change
-m.correct_entry(entry_id, note="actually two thighs")
+m.correct_entry(entry_id, name="chicken thigh (not breast)")
 m.delete_entry(entry_id)        # soft delete
 ```
 
 When Curtis says "actually that was closer to X," correct the specific entry — don't edit the food.
 
 ## Principles
-- An estimate is information, never a warning. Log it plainly with its note; don't hedge in the data.
-- Snapshot the numbers at log time (the client does this) — correcting a food later must never rewrite
-  past days.
+- An estimate is information, never a warning. Log it plainly with a name + note.
+- The client snapshots the numbers at log time — correcting a food later never rewrites past days.
 - If Curtis is vague, estimate and say so (confidence `estimated` + note). Don't refuse to log because
   the input is fuzzy — that's the normal case.

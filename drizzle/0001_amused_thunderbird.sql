@@ -1,0 +1,1 @@
+ALTER TABLE "macro_entry" ADD COLUMN "name" text;
