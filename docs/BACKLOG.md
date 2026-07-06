@@ -127,6 +127,31 @@ the top of each section.
   category order (alphabetical for now); old-bought purge (filter-only for now); a real-browser pass
   on the live check-off/linger interactions (verified via SSR + data/API so far).
 
+## Soft-delete recovery (trash + undelete)
+
+From claude.ai: the agent can soft-delete but has no way to undo it — no API path and no UI to
+restore — so a soft-delete "feels hard." Soft-delete is a kernel convention (`deletedAt`,
+CONVENTIONS §5), so recovery is **cross-cutting** (macros / weight / shopping all soft-delete the
+same way). Auth model by symmetry: the agent may soft-delete **and restore** (both non-destructive);
+only the primary key may hard-delete / purge — so the agent can fully reverse its own deletes but
+never permanently destroy.
+
+**Status: both tracks backlogged, not scheduled.** Low urgency in practice — if the agent deletes
+something by mistake it can just **recreate** it, and soft-deleted rows are visible/recoverable
+directly in **Neon's admin view** in the meantime. Revisit if that ever feels insufficient. The
+scope below is kept as-is for when we do pick it up.
+
+- **Undelete via API + skill (scoped, deferred).** Per module: `restoreItem(id)` (finds the
+  soft-deleted row bypassing the `live` filter, clears `deletedAt`) + `listDeleted()` in the repo;
+  `POST /api/{module}/items/{id}/restore` (agent-allowed, `requireBearer`) + a trash read
+  (`GET /api/{module}/trash`); a `restore_item` / `list_trash` method on each skill client +
+  SKILL.md guidance. Document restore in CONVENTIONS §5. Dedicated restore endpoint (not a PATCH
+  overload). When picked up, decide: all three modules at once, or shopping-first.
+- **Web trash view (UI — deferred).** A per-module view of soft-deleted rows where Curtis can Restore
+  or **Purge** (hard-delete). The web writes via server actions → repo directly (Curtis is fully
+  trusted; the two-token rule is an API-surface concern), so Purge is a server action calling
+  `hardDelete`. Consumes the same `listDeleted()` read.
+
 ## Deferred decisions
 
 - **Clerk lockdown = Restricted sign-up mode + a manually-created user** (allowlist is Clerk Pro-
