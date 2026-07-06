@@ -2,6 +2,10 @@
 
 > Status: **scoping**, pre-code. This is the agreed shape; it precedes implementation and may
 > shift as we build. Everything below is decided unless marked *open*.
+>
+> _Revised after the shopping module shipped: shopping is now live and **uninstrumented** (so it's a
+> retrofit, not a build-with), its web surface is a **full editor**, and `docs/MODULE-RUNBOOK.md`
+> already exists — the sections below reflect that._
 
 The first **horizontal** feature. Every module so far is a vertical — it owns data a user or
 Claude enters, and both surfaces write to it. Activity is different: it holds no data anyone
@@ -52,9 +56,13 @@ The asymmetry makes entry-point capture clean instead:
 - **API side** — the *entire* token API is Claude. A single `withActivity` wrapper composed into
   each route (alongside `requireBearer`) covers **all** of Claude's actions automatically and
   completely.
-- **Web side** — the web write surface is intentionally tiny (corrections + soft-deletes only; all
-  *creation* is the skill path). Wrapping that handful of server actions with an explicit
-  `logAction()` helper is cheap and honest, and the actor (`web`) is known right there.
+- **Web side** — the web write surface **varies by module**: Option-A modules (macros, weight) write
+  little (corrections + soft-deletes; creation is the skill path), while **shopping is a full web
+  editor** — it *creates*, checks off, edits, and deletes from the UI. Either way each mutating
+  server action calls an explicit `logAction()` helper after its `repo` write, with the actor
+  (`web`) known right there. A full-editor module just has more call-sites than an Option-A one; the
+  pattern is identical. (So the asymmetry that keeps this clean isn't "web is tiny" — it's *one
+  wrapper* on the all-Claude API vs. a *per-action helper* on the web, whatever the web's size.)
 
 The tradeoff we accept: entry-point capture is opt-in, so a *new* write path could forget it. It
 is mitigated exactly the way the platform already mitigates "remember to call `requireBearer`" —
@@ -73,6 +81,11 @@ handler. After the wrapped handler returns successfully, it records one activity
   **every write already returns the full persisted resource**, so the wrapper snapshots it into
   `jsonb` with zero per-route description code. (For a delete, the snapshot is a minimal descriptor:
   the id and what was removed.)
+- **taxonomy** — the *snapshot* is free, but `module` and `entityType` **can't** be inferred from
+  the HTTP method, so each route declares them when composing the wrapper (a one-line addition
+  alongside `requireBearer`). `action` is derived: `POST`→`create` or `upsert` (201 vs 200, per §7),
+  `PATCH`→`update`, and `DELETE`→`soft_delete` or `hard_delete` (from the `?hard=` param / token
+  kind — both arrive as `DELETE`).
 
 **`logAction(...)` — web server actions.** A small kernel helper the (few) mutating server actions
 call after a successful `repo` write, passing `actor: 'web'`, the module/entity/action, and the
@@ -95,7 +108,9 @@ Append-only. Note the deviation from the standard audit columns: **there is no `
 - `id` (uuid) — primary key.
 - `occurredAt` (timestamptz, default now) — the **instant** of the event. This is an event, not a
   calendar day, so it's a real timestamp (unlike the modules' calendar `date` columns).
-- `actor` (text, required) — `agent` | `primary` | `web`. Who did it.
+- `actor` (text, required) — `agent` | `primary` | `web`. Who did it. `agent` is Claude; **both
+  `primary` (Curtis's API key) and `web` (Curtis's session) are Curtis** — distinguished by surface,
+  which is what the feed's "just Claude" filter (`actor = agent`) keys on.
 - `module` (text, required) — `macros` | `weight` | `shopping` | … The module whose data changed.
 - `entityType` (text, required) — e.g. `entry`, `food`, `day_tag`, `target_profile`,
   `weight_entry`. The kind of thing that changed.
@@ -143,10 +158,14 @@ is not done until tracking is universal and the conventions say so. Any implemen
 1. **Instrument every existing module — no exceptions.** Every mutating path in **macros** and
    **weight** (all `POST`/`PATCH`/`DELETE` API routes *and* every mutating web server action) must
    record activity. A module is not "covered" until both its surfaces are wired.
-2. **Include the in-flight `shopping` module.** Shopping is under construction by another agent.
-   Whatever lands here must either instrument shopping directly or hand that agent a ready-to-adopt
-   convention (the `withActivity` wrapper + `logAction()` helper) — coordinate so shopping ships
-   *with* tracking, not retrofitted after. No module reaches production uninstrumented.
+2. **Retrofit the now-live `shopping` module.** Shopping has since shipped to production
+   *uninstrumented* (it landed before this work), so it's a retrofit like macros and weight, not a
+   ship-with: `withActivity` on its mutating API routes (`items` POST, `items/[id]` PATCH/DELETE;
+   `list` is read-only) and `logAction()` in its server actions (`addItemAction` creates,
+   `patchItemAction` updates/checks, `deleteItemAction` soft-deletes). Note shopping's web is a
+   **full editor**, so it has real create/update/delete web paths to cover — not just corrections.
+   The goal shifts from "no module *reaches* production uninstrumented" to "no module *stays*
+   uninstrumented."
 3. **Make tracking a standing convention for all future modules.** New modules must inherit this
    by default, the same way they inherit auth and pagination. That means updating:
    - **`docs/CONVENTIONS.md`** — the module-anatomy / kernel section gains activity capture as a
@@ -155,16 +174,15 @@ is not done until tracking is universal and the conventions say so. Any implemen
      no mutating path ships without it.*
    - **`README.md`** and **`docs/ARCHITECTURE.md`** — document the activity module and the
      capture pattern in the stack/architecture overview.
-4. **Write the build runbook for this tracking style.** Provide a short, followable checklist — a
-   *module build runbook* — that a module author (human or agent) uses so a new module wires
-   capture correctly every time:
+4. **Fold capture into the existing runbook + definition of done.** `docs/MODULE-RUNBOOK.md` already
+   exists (the scoping interview → build order → definition of done), and `CONVENTIONS §8` already
+   carries a "new-module definition of done" checklist. Add the capture steps to both — don't create
+   a new doc — so a module author (human or agent) wires it every time:
    - wrap each mutating API route with `withActivity`;
    - call `logAction()` in each mutating web server action;
    - choose the correct `module` / `entityType` / `action` values;
    - confirm reads are **not** logged and the log has **no** write path.
-   If no standalone runbook doc exists yet, create one (e.g. `docs/MODULE-RUNBOOK.md`) or fold the
-   checklist into `CONVENTIONS.md`'s module-anatomy section — but it must exist as a followable
-   procedure, not tribal knowledge.
+   It must live as a followable step in the runbook / DoD, not tribal knowledge.
 5. **Backfill nothing, silently drop nothing.** Activity begins at instrumentation; there is no
    retroactive history, and that's fine — but if any mutating path is intentionally left
    uninstrumented, it must be called out explicitly, not omitted quietly.
