@@ -9,10 +9,12 @@ import {
   targetProfileCreateSchema,
   targetProfilePatchSchema,
 } from "../src/lib/macros/schema";
+import { weightCreateSchema, weightPatchSchema } from "../src/lib/weight/schema";
 
 /**
- * Generate the macros module's OpenAPI fragment FROM the Zod schemas (CONVENTIONS: schema.ts is the
- * single source of truth; the spec is downstream). Output is a build artifact (gitignored).
+ * Generate each module's OpenAPI fragment FROM its Zod schemas (CONVENTIONS: schema.ts is the single
+ * source of truth; the spec is downstream). One fragment per module, mirroring the module anatomy.
+ * Output is a build artifact (gitignored).
  */
 const js = (schema: z.ZodType) => z.toJSONSchema(schema, { target: "openapi-3.0", io: "input" });
 
@@ -54,7 +56,24 @@ const pageParams = [
 const pathParam = (name: string) => ({ name, in: "path", required: true, schema: { type: "string" } });
 const hardParam = { name: "hard", in: "query", schema: { type: "boolean" }, description: "Hard delete (requires the primary key)" };
 
-const spec = {
+// Shared across every module fragment (the small kernel: two-token auth + the error envelope).
+const securitySchemes = {
+  bearerAuth: { type: "http", scheme: "bearer", description: "JMW_API_KEY or JMW_AGENT_TOKEN" },
+  primaryKey: { type: "http", scheme: "bearer", description: "JMW_API_KEY only — required for hard DELETE" },
+};
+const errorSchema = {
+  type: "object",
+  required: ["error"],
+  properties: {
+    error: {
+      type: "object",
+      required: ["code", "message"],
+      properties: { code: { type: "string" }, message: { type: "string" }, details: { type: "object" } },
+    },
+  },
+};
+
+const macrosSpec = {
   openapi: "3.0.3",
   info: {
     title: "justmy.website — macros",
@@ -63,10 +82,7 @@ const spec = {
   },
   security: [{ bearerAuth: [] }],
   components: {
-    securitySchemes: {
-      bearerAuth: { type: "http", scheme: "bearer", description: "JMW_API_KEY or JMW_AGENT_TOKEN" },
-      primaryKey: { type: "http", scheme: "bearer", description: "JMW_API_KEY only — required for hard DELETE" },
-    },
+    securitySchemes,
     schemas: {
       FoodCreate: js(foodCreateSchema),
       FoodPatch: js(foodPatchSchema),
@@ -76,17 +92,7 @@ const spec = {
       TargetProfileCreate: js(targetProfileCreateSchema),
       TargetProfilePatch: js(targetProfilePatchSchema),
       UsdaResolve: { type: "object", required: ["fdcId"], properties: { fdcId: { type: "integer", minimum: 1 } } },
-      Error: {
-        type: "object",
-        required: ["error"],
-        properties: {
-          error: {
-            type: "object",
-            required: ["code", "message"],
-            properties: { code: { type: "string" }, message: { type: "string" }, details: { type: "object" } },
-          },
-        },
-      },
+      Error: errorSchema,
     },
   },
   paths: {
@@ -135,6 +141,55 @@ const spec = {
   },
 };
 
+const weightSpec = {
+  openapi: "3.0.3",
+  info: {
+    title: "justmy.website — weight",
+    version: "0.1.0",
+    description: "Token API for the weight module. Generated from Zod schemas; do not hand-edit.",
+  },
+  security: [{ bearerAuth: [] }],
+  components: {
+    securitySchemes,
+    schemas: {
+      WeightCreate: js(weightCreateSchema),
+      WeightPatch: js(weightPatchSchema),
+      Error: errorSchema,
+    },
+  },
+  paths: {
+    "/api/weight/entries": {
+      get: { summary: "List weigh-ins", parameters: [...pageParams], responses: { ...okList("WeightCreate"), ...errorResponses } },
+      post: { summary: "Upsert a day's weight (one per day; re-logging replaces it)", requestBody: jsonBody("WeightCreate"), responses: { ...ok("Weigh-in (created or replaced) + Location"), ...errorResponses } },
+    },
+    "/api/weight/entries/{id}": {
+      get: { summary: "Get a weigh-in", parameters: [pathParam("id")], responses: { ...ok("Weigh-in"), ...errorResponses } },
+      patch: { summary: "Correct a weigh-in", parameters: [pathParam("id")], requestBody: jsonBody("WeightPatch"), responses: { ...ok("Updated weigh-in"), ...errorResponses } },
+      delete: { summary: "Soft/hard delete a weigh-in", parameters: [pathParam("id"), hardParam], responses: { ...noContent, ...errorResponses } },
+    },
+    "/api/weight/days/{date}": {
+      get: { summary: "Get a day's weigh-in", parameters: [pathParam("date")], responses: { ...ok("Weigh-in"), ...errorResponses } },
+    },
+    "/api/weight/rollup": {
+      get: {
+        summary: "Trend rollup: per-day series (raw + 7-day average) + summary stats",
+        parameters: [
+          { name: "window", in: "query", schema: { type: "integer", default: 90, minimum: 7, maximum: 3650 }, description: "Days back from `end`" },
+          { name: "end", in: "query", schema: { type: "string", format: "date" }, description: "Last day of the window (default today)" },
+        ],
+        responses: { ...ok("Rollup (series + summary)"), ...errorResponses },
+      },
+    },
+  },
+};
+
+const fragments = [
+  ["macros", macrosSpec],
+  ["weight", weightSpec],
+] as const;
+
 mkdirSync("openapi", { recursive: true });
-writeFileSync("openapi/macros.json", JSON.stringify(spec, null, 2) + "\n");
-console.log(`Generated openapi/macros.json (${Object.keys(spec.paths).length} paths).`);
+for (const [name, spec] of fragments) {
+  writeFileSync(`openapi/${name}.json`, JSON.stringify(spec, null, 2) + "\n");
+  console.log(`Generated openapi/${name}.json (${Object.keys(spec.paths).length} paths).`);
+}

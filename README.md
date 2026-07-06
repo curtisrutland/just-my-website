@@ -4,10 +4,13 @@ A private, single-user personal-data platform. Two users, ever: **Curtis** (huma
 **Claude** (machine, via a Python skill over a token API). Everything sits behind auth —
 there are no public pages and no anonymous reads.
 
-The first module is a **macro / food-intake tracker**: Curtis tells Claude what he ate in
-vague terms ("a couple handfuls of almonds, a big chicken thigh") and Claude logs it. The
-whole design is built around one principle — **be honest about fuzziness.** An estimate is
-never presented with the authority of a measured fact.
+Two modules are live so far: a **macro / food-intake tracker** and a **daily weight tracker**.
+In the macro tracker, Curtis tells Claude what he ate in vague terms ("a couple handfuls of
+almonds, a big chicken thigh") and Claude logs it — the whole design is built around one
+principle: **be honest about fuzziness.** An estimate is never presented with the authority of
+a measured fact. The weight tracker applies the same honesty from the other side: a 7-day
+rolling average leads and any single morning's number stays subordinate — the trend is the
+truth, not the noise.
 
 ## Stack
 
@@ -47,8 +50,9 @@ src/app/(app)/{module}/**  # Clerk-gated UI (thin)
 ```
 
 Tables live in `src/lib/db/schema.ts`, namespaced by module (`macro_food`, `macro_entry`,
-`macro_day_tag`, `macro_target_profile`). The per-module OpenAPI fragment is **generated**
-from Zod, never hand-written.
+`macro_day_tag`, `macro_target_profile`, `weight_entry`). Each module's OpenAPI fragment is
+**generated** from its Zod schemas (`openapi/macros.json`, `openapi/weight.json`), never
+hand-written.
 
 ## Getting started
 
@@ -79,13 +83,14 @@ the Neon and Clerk Marketplace integrations. The rest:
 | Command | Description |
 |---|---|
 | `npm run dev` | Next.js dev server |
-| `npm run build` | Production build (regenerates the OpenAPI spec first) |
+| `npm run build` | Production build (regenerates the OpenAPI fragments first) |
 | `npm run test` | Vitest |
 | `npm run db:generate` | Generate a Drizzle migration from schema changes |
 | `npm run db:migrate` | Apply migrations |
 | `npm run db:push` | Push schema straight to the database (dev) |
+| `npm run db:seed` | Seed dev/sample data |
 | `npm run db:studio` | Drizzle Studio |
-| `npm run openapi:build` | Generate OpenAPI fragments from the Zod schemas |
+| `npm run openapi:build` | Generate the per-module OpenAPI fragments from the Zod schemas |
 | `npm run skills:build` | Build the Claude skill(s) with the agent token injected |
 
 ## Documentation
@@ -95,16 +100,20 @@ the Neon and Clerk Marketplace integrations. The rest:
 | [`AGENTS.md`](AGENTS.md) | Rules for agents working in this repo |
 | [`docs/CONVENTIONS.md`](docs/CONVENTIONS.md) | The platform kernel — auth, error envelope, pagination, write-path discipline, nutrition numeric contract |
 | [`docs/macro-model.md`](docs/macro-model.md) | The macro module's data model (closed spec) |
+| [`docs/weight-model.md`](docs/weight-model.md) | The weight module's data model + trend/rollup math |
 | [`docs/UI-CONTRACT.md`](docs/UI-CONTRACT.md) | Design tokens, component inventory, layout slots |
 | [`docs/HANDOFF-CODE.md`](docs/HANDOFF-CODE.md) | Build brief for the macro module and skill |
 | [`docs/HANDOFF-DESIGN.md`](docs/HANDOFF-DESIGN.md) | Brief for the visual/structural design reference |
+| [`docs/weight-design-brief.md`](docs/weight-design-brief.md) | Brief that fed the weight module's visual design |
+| [`docs/BACKLOG.md`](docs/BACKLOG.md) | Running tracker of outstanding work + deferred decisions |
 
 ## Status
 
-Early. Infrastructure is provisioned (Neon, Clerk, tokens, USDA key) and the specs are
-complete. The application source — schema, repo, API routes, UI, and the `manage-macros`
-skill — is being built against the documents above, following the build order in
-[`docs/HANDOFF-CODE.md`](docs/HANDOFF-CODE.md).
+Live in production at [justmy.website](https://justmy.website). Two modules are deployed —
+**macros** and **weight** — each with its schema, repo, token API routes, Clerk-gated UI,
+generated OpenAPI fragment, and a Python skill (`manage-macros`, `manage-weight`). Auth
+currently runs on the Clerk **dev** instance (the production-instance switch is backlogged).
+Outstanding work and deferred decisions are tracked in [`docs/BACKLOG.md`](docs/BACKLOG.md).
 
 ## Related
 

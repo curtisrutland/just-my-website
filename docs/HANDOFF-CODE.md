@@ -53,7 +53,8 @@ the `justmy.recipes`/`just-my-recipes` convention); the internal code prefix is 
 5. **Skill + Python client** — `skills/manage-macros/` following the justmy.recipes
    pattern (SKILL.md + a thin Python client over the token API, token injected at build
    by `scripts/build-skills.mjs`). This is Claude's sole write path. The client is
-   standalone Python (stdlib + httpx), executable in a sandbox from claude.ai.
+   standalone Python (stdlib only — `urllib`, no third-party deps), executable in a sandbox
+   from claude.ai.
 
 ## The day-rollup endpoint — the one thing the recipes template can't guide
 `GET /api/macros/days/{date}` returns the shape in UI-CONTRACT §4. Logic:

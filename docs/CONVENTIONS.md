@@ -96,10 +96,14 @@ Shared with justmy.recipes so a logged food can resolve macros from a recipe som
 
 ## 7. `get`-after-`create` contract
 
-Preserved from recipes practice: a create returns `201` with a `Location` header and the
-full created resource body. Clients verify visibility by reading back. The kernel does not
-enforce this in code, but every module's create must return the persisted resource so a
-read-back is unnecessary for confirmation yet always consistent if performed.
+Preserved from recipes practice: a first-class **create** returns `201` with a `Location`
+header and the full created resource body. Idempotent **upsert** endpoints — where re-sending
+replaces rather than duplicates (weight `POST /entries`, one weigh-in per day; macros
+`POST /day-tags`) — return `200` + `Location` instead, since the call is a set/replace, not a
+fresh creation. Either way the create/upsert returns the **persisted resource** in the body,
+so a read-back is unnecessary for confirmation yet always consistent if performed. The kernel
+does not enforce the status code in code; each route picks `created()` (201) or `ok()` (200)
+to match its semantics.
 
 ## 8. Module anatomy
 
@@ -109,7 +113,8 @@ src/lib/{module}/
   repo.ts       # Drizzle queries — only place tables are touched
 src/app/api/{module}/**   # token API routes (thin)
 src/app/(app)/{module}/** # Clerk-gated UI (thin)
+openapi/{module}.json     # generated OpenAPI fragment (build artifact, from schema.ts)
 ```
 
 Tables live in `src/lib/db/schema.ts`, namespaced by module (e.g. `macroFood`,
-`macroEntry`, `macroDailyTarget`).
+`macroEntry`, `macroTargetProfile`, `weightEntry`).

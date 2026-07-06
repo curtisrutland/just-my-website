@@ -124,9 +124,13 @@ the top of each section.
   enable web analytics. (Consider `@vercel/speed-insights` + `<SpeedInsights />` at the same time.)
   Note: single-user private app behind auth, so traffic volume is tiny — value is mostly Web Vitals /
   confirming the deploy is healthy, not audience metrics.
-- **Documentation audit.** Review `README.md`, `CLAUDE.md`, and `AGENTS.md` for drift now that two
-  modules (macros, weight) + skills are live: confirm conventions still match the code, the module
-  anatomy list is current, and setup/deploy notes are accurate. Prune anything scaffold-era.
+- [x] **Documentation audit.** Swept README, AGENTS/CLAUDE, CONVENTIONS, the OpenAPI generator, and
+  both skills against the code. Skills + the auth/error/pagination/nutrition kernel verified accurate.
+  Fixes: **weight added to the OpenAPI generator** (`build-openapi.ts` now emits `openapi/weight.json`
+  too — makes the "per-module fragment" convention true); README de-scaffolded (weight + both skills,
+  `weight_entry`, `db:seed`, weight docs); `CONVENTIONS §7` documents the upsert `200`+Location
+  carve-out; `CONVENTIONS §8` fixed `macroDailyTarget`→`macroTargetProfile` + added `weightEntry` and
+  the OpenAPI fragment; `HANDOFF-CODE` dropped the stale `+ httpx` (clients are stdlib-only).
 - **`/preview` route** is dev-only (404s in prod, guarded in proxy). Keep as a component preview
   harness or remove before/at first deploy — decide at deploy time.
 - **API observability.** Route handlers have no per-request logging (Vercel function logs cover the
