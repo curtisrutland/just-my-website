@@ -1,4 +1,4 @@
-import { ENTRY_GRID, EntryRow } from "./EntryRow";
+import { EntryRow } from "./EntryRow";
 import type { RollupEntry } from "./types";
 
 type EntryAction = (entryId: string, formData: FormData) => void | Promise<void>;
@@ -20,7 +20,7 @@ export function EntryList({
   const headers = ["FOOD", "KCAL", "P", "F", "C", ""];
   return (
     <div style={{ marginTop: 24, border: "1px solid var(--color-border)", borderRadius: "var(--radius)", overflow: "hidden" }}>
-      <div style={{ display: "grid", gridTemplateColumns: ENTRY_GRID, gap: 8, padding: "9px 14px", background: "var(--color-surface)" }}>
+      <div className="entry-grid" style={{ display: "grid", padding: "9px 14px", background: "var(--color-surface)" }}>
         {headers.map((h, i) => (
           <span key={h || i} style={{ fontFamily: "var(--font-mono)", fontSize: 9.5, letterSpacing: "0.1em", color: "var(--color-text-muted)", textAlign: i === 0 ? "left" : "right" }}>
             {h}

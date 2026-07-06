@@ -22,7 +22,7 @@ export function WeightStats({ summary, window }: { summary: WeightSummary; windo
   ];
 
   return (
-    <section style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginTop: 16 }}>
+    <section className="stat-grid" style={{ display: "grid", gap: 12, marginTop: 16 }}>
       {tiles.map((t) => (
         <div key={t.label} style={{ border: "1px solid var(--color-border)", borderRadius: "var(--radius)", background: "var(--color-surface)", padding: "14px 16px" }}>
           <div style={{ fontFamily: "var(--font-mono)", fontSize: 9.5, letterSpacing: "0.1em", color: "var(--color-text-muted)" }}>{t.label}</div>

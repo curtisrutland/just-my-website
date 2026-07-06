@@ -23,23 +23,12 @@ export function AppShell({
   children: ReactNode;
 }) {
   return (
-    <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
-      <aside
-        style={{
-          width: 210,
-          flex: "none",
-          background: "var(--color-surface)",
-          borderRight: "1px solid var(--color-border)",
-          display: "flex",
-          flexDirection: "column",
-          padding: "20px 0",
-          overflowY: "auto",
-        }}
-      >
-        <div style={{ padding: "0 20px 16px", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 16, letterSpacing: "-0.01em" }}>
+    <div className="shell">
+      <aside className="rail">
+        <div className="rail-head">
           justmy<span style={{ color: "var(--color-accent)" }}>.website</span>
         </div>
-        <nav style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2, padding: "8px 12px" }}>
+        <nav className="rail-mods">
           <IndexLink />
           {/* Link straight to today's dated view — /macros is a force-dynamic redirect stub, so
               linking it would force a hard navigation (redirect hop, no prefetch). The dated URL is
@@ -47,32 +36,17 @@ export function AppShell({
           <NavItem label="macros" href={`/macros/${todayISO()}`} active={activeModule === "macros"} />
           <NavItem label="weight" href="/weight" active={activeModule === "weight"} />
           <RecipesNavLink />
+          <GithubNavLink />
           <NavItem label="shopping" soon />
         </nav>
-        <div style={{ padding: "12px 16px", borderTop: "1px solid var(--color-border)", display: "flex", flexDirection: "column", gap: 12 }}>
+        <div className="rail-foot">
           {navFooter}
           <ThemeToggle />
         </div>
       </aside>
 
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
-        <header
-          style={{
-            background: "var(--color-bg)",
-            borderBottom: "1px solid var(--color-border)",
-            padding: "13px 24px",
-            // Standardize the terminal-header height across modules to the taller control (macros'
-            // day-kind segmented control). Shorter headerRight content (e.g. weight's TREND readout)
-            // centers in the same height, so switching modules never shifts the content down.
-            boxSizing: "border-box",
-            minHeight: 55,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 16,
-            flex: "none",
-          }}
-        >
+      <div className="main-col">
+        <header className="topbar">
           <div style={{ fontFamily: "var(--font-mono)", fontSize: 12.5, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             <span style={{ color: "var(--color-success)" }}>curtis@justmy</span>
             <span style={{ color: "var(--color-text-muted)" }}> ~/{routeSegment}</span>
@@ -84,8 +58,8 @@ export function AppShell({
           {headerRight}
         </header>
 
-        <main style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
-          <div style={{ maxWidth: 940, margin: "0 auto", padding: "32px 24px 80px" }}>{children}</div>
+        <main className="content">
+          <div className="content-inner">{children}</div>
         </main>
       </div>
     </div>
@@ -145,14 +119,12 @@ function IndexLink() {
   return (
     <Link
       href="/"
+      className="rail-index"
       style={{
         display: "flex",
         alignItems: "center",
         gap: 8,
         padding: "9px 12px",
-        marginBottom: 6,
-        borderBottom: "1px solid var(--color-border)",
-        borderRadius: 0,
         color: "var(--color-text-muted)",
         fontFamily: "var(--font-mono)",
         fontSize: 12.5,
@@ -183,6 +155,29 @@ function RecipesNavLink() {
         <span style={{ fontFamily: "var(--font-mono)", fontSize: 12.5 }}>recipes</span>
       </span>
       <span style={{ fontFamily: "var(--font-mono)", fontSize: 8.5, letterSpacing: "0.08em", border: `1px solid ${RECIPES}`, borderRadius: 3, padding: "2px 5px", color: RECIPES }}>SITE ↗</span>
+    </a>
+  );
+}
+
+const GITHUB_URL = "https://github.com/curtisrutland/just-my-website";
+
+/** Off-site link to the source repo — the machine-facing counterpart to the module list. Muted and
+ *  neutral (an outline marker + REPO badge) so it sits quieter than the recipes site link. */
+function GithubNavLink() {
+  return (
+    <a
+      href={GITHUB_URL}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{ textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 12px", borderRadius: "var(--radius)", color: "var(--color-text-muted)", border: "1px solid transparent" }}
+    >
+      <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ width: 10, display: "flex", justifyContent: "center" }}>
+          <span style={{ width: 8, height: 8, borderRadius: 2, border: "1px solid var(--color-text-muted)" }} />
+        </span>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: 12.5 }}>github</span>
+      </span>
+      <span style={{ fontFamily: "var(--font-mono)", fontSize: 8.5, letterSpacing: "0.08em", border: "1px solid var(--color-border)", borderRadius: 3, padding: "2px 5px", color: "var(--color-text-muted)" }}>REPO ↗</span>
     </a>
   );
 }

@@ -79,6 +79,10 @@ the top of each section.
 - [x] **`justmy.recipes` cross-link.** Done (⚠️ uncommitted/undeployed): a subtle sidebar-rail link
   + a fully-branded landing row, in the recipes brand color `#c9804f`. Built from the design's
   Index/Weight update. Landing footer now reads "3 modules · 2 live · 1 site". Commit + deploy pending.
+- **GitHub link in the sidebar.** Add a link to this repo (`github.com/curtisrutland/just-my-website`)
+  in the nav rail, alongside the `../` index link and the `recipes` cross-link. A subtle rail
+  affordance (mono, muted) — the machine-facing counterpart to the human-facing module list. Consider
+  grouping it with the `recipes` external link as "off-site" affordances (both `target="_blank"`).
 - **DayRollup hero corridor legibility.** When the day is "in range" (unspecified), the value fill
   is solid cyan and the corridor band is also cyan-tinted, so they blend and the "honest corridor"
   reads less crisply than it should — and it's the single most important element. Proposed: make the
@@ -116,6 +120,13 @@ the top of each section.
 
 ## Tech debt / cleanup
 
+- **Vercel Analytics.** Add `@vercel/analytics` and drop `<Analytics />` into the root layout to
+  enable web analytics. (Consider `@vercel/speed-insights` + `<SpeedInsights />` at the same time.)
+  Note: single-user private app behind auth, so traffic volume is tiny — value is mostly Web Vitals /
+  confirming the deploy is healthy, not audience metrics.
+- **Documentation audit.** Review `README.md`, `CLAUDE.md`, and `AGENTS.md` for drift now that two
+  modules (macros, weight) + skills are live: confirm conventions still match the code, the module
+  anatomy list is current, and setup/deploy notes are accurate. Prune anything scaffold-era.
 - **`/preview` route** is dev-only (404s in prod, guarded in proxy). Keep as a component preview
   harness or remove before/at first deploy — decide at deploy time.
 - **API observability.** Route handlers have no per-request logging (Vercel function logs cover the

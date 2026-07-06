@@ -3,6 +3,15 @@ import { Track } from "./Track";
 
 const fmt = (n: number) => Math.round(n).toLocaleString("en-US");
 
+/** A compact directional glyph for narrow (mobile) columns, where the multi-word state ("on
+ *  target", "slightly over", …) would wrap and push the value down. Color still carries severity. */
+function stateGlyph(word: string): string {
+  if (word.startsWith("under")) return "↓";
+  if (word === "on target" || word === "in range") return "✓";
+  if (word.includes("over")) return "↑";
+  return "·"; // no target
+}
+
 /**
  * One macro's value and its bar toward target(s) (UI-CONTRACT §3 MacroBar/MacroValue). Value in
  * mono tabular; a state word colored by the target-state rules; the shared Track; a target caption.
@@ -34,8 +43,11 @@ export function MacroBar({
         >
           {label}
         </span>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.04em", color: state.color }}>
-          {state.word}
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.04em", color: state.color, whiteSpace: "nowrap" }}>
+          <span className="macro-state-word">{state.word}</span>
+          <span className="macro-state-glyph" aria-label={state.word}>
+            {stateGlyph(state.word)}
+          </span>
         </span>
       </div>
       <div style={{ marginBottom: 10 }}>

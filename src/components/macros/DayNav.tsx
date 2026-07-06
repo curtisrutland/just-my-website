@@ -25,7 +25,7 @@ export function DayNav({
   canNext: boolean;
 }) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 20, marginBottom: 24 }}>
+    <div className="day-nav" style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 24 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
         <NavButton glyph="‹" href={`${basePath}/${addDays(selected, -1)}`} />
         <div>
@@ -63,7 +63,7 @@ export function DayNav({
         )}
       </div>
 
-      <div style={{ display: "flex", gap: 6 }}>
+      <div className="week-strip" style={{ display: "flex", gap: 6 }}>
         {week.map((d) => (
           <DayChip key={d.date} day={d} selected={d.date === selected} basePath={basePath} />
         ))}

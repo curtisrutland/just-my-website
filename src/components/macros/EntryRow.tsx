@@ -4,7 +4,6 @@ import { useState } from "react";
 import type { Confidence, RollupEntry } from "./types";
 
 const TAG: Record<Confidence, string> = { measured: "MEAS", estimated: "EST", logged_serving: "SRV" };
-const GRID = "1fr 66px 46px 46px 46px 26px";
 const fmt = (n: number | null) => (n == null ? "—" : Math.round(n).toLocaleString("en-US"));
 
 type FormAction = (formData: FormData) => void | Promise<void>;
@@ -52,7 +51,7 @@ export function EntryRow({
 
   return (
     <>
-      <div style={{ display: "grid", gridTemplateColumns: GRID, alignItems: "center", gap: 8, padding: "11px 14px", borderTop: "1px solid var(--color-border)" }}>
+      <div className="entry-grid" style={{ display: "grid", alignItems: "center", padding: "11px 14px", borderTop: "1px solid var(--color-border)" }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={tagStyle(estimated)}>{TAG[entry.confidence]}</span>
@@ -158,5 +157,3 @@ function btn(color: string): React.CSSProperties {
     cursor: "pointer",
   };
 }
-
-export { GRID as ENTRY_GRID };

@@ -1,5 +1,4 @@
 import type { WeightEntry } from "@/lib/db/schema";
-import { WEIGHT_GRID } from "./format";
 import { WeightRow } from "./WeightRow";
 
 type EntryAction = (entryId: string, formData: FormData) => void | Promise<void>;
@@ -40,9 +39,9 @@ export function WeightList({
         </span>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: WEIGHT_GRID, gap: 10, padding: "6px 14px" }}>
+      <div className="weigh-grid" style={{ display: "grid", gap: 10, padding: "6px 14px" }}>
         {cols.map((c, i) => (
-          <span key={i} style={{ fontFamily: "var(--font-mono)", fontSize: 9.5, letterSpacing: "0.08em", color: "var(--color-text-muted)", textAlign: c.align }}>
+          <span key={i} className={c.label === "NOTE" ? "col-note" : undefined} style={{ fontFamily: "var(--font-mono)", fontSize: 9.5, letterSpacing: "0.08em", color: "var(--color-text-muted)", textAlign: c.align }}>
             {c.label}
           </span>
         ))}

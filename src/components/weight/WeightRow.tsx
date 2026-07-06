@@ -2,13 +2,12 @@
 
 import { useState } from "react";
 import type { WeightEntry } from "@/lib/db/schema";
-import { fmt1, monthDayPad, relLabel, WEIGHT_GRID } from "./format";
+import { fmt1, monthDayPad, relLabel } from "./format";
 
 type FormAction = (formData: FormData) => void | Promise<void>;
 
 const rowStyle: React.CSSProperties = {
   display: "grid",
-  gridTemplateColumns: WEIGHT_GRID,
   gap: 10,
   alignItems: "center",
   padding: "11px 14px",
@@ -42,11 +41,11 @@ export function WeightRow({
     </span>
   );
   const deltaCell = <span style={{ fontFamily: "var(--font-mono)", fontSize: 11.5, fontVariantNumeric: "tabular-nums", textAlign: "right", color: "var(--color-text-muted)" }}>{delta}</span>;
-  const noteCell = <span style={{ fontFamily: "var(--font-mono)", fontSize: 11.5, color: "var(--color-text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.note ?? ""}</span>;
+  const noteCell = <span className="col-note" style={{ fontFamily: "var(--font-mono)", fontSize: 11.5, color: "var(--color-text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.note ?? ""}</span>;
 
   if (editing && patchAction) {
     return (
-      <form action={patchAction} style={rowStyle} onSubmit={() => setEditing(false)}>
+      <form action={patchAction} className="weigh-grid" style={rowStyle} onSubmit={() => setEditing(false)}>
         {dateCell}
         <input
           name="weight"
@@ -66,7 +65,7 @@ export function WeightRow({
   }
 
   return (
-    <div style={rowStyle}>
+    <div className="weigh-grid" style={rowStyle}>
       {dateCell}
       <span style={{ fontFamily: "var(--font-mono)", fontSize: 13.5, fontWeight: 500, fontVariantNumeric: "tabular-nums", textAlign: "right", color: "var(--color-text)" }}>{fmt1(entry.weight)}</span>
       {deltaCell}

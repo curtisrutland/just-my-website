@@ -10,9 +10,11 @@ type Module = {
   active: boolean;
   external?: boolean;
   color?: string; // brand color for a cross-link (overrides the accent/muted scheme)
+  muted?: boolean; // neutral off-site link (e.g. the repo) — quieter than a branded cross-link
 };
 
 const RECIPES = "#c9804f";
+const GITHUB_URL = "https://github.com/curtisrutland/just-my-website";
 
 const MODULES: Module[] = [
   {
@@ -40,6 +42,16 @@ const MODULES: Module[] = [
     external: true,
     color: RECIPES,
     desc: "Curtis’s recipe box — protein-forward, freezer-friendly, and mercifully free of life stories. A separate site.",
+  },
+  {
+    glyph: "◇",
+    name: "github",
+    badge: "REPO ↗",
+    href: GITHUB_URL,
+    active: true,
+    external: true,
+    muted: true,
+    desc: "The source — Next.js, Neon, Drizzle; one human user and one machine user. Built in the open.",
   },
   {
     glyph: "▹",
@@ -95,7 +107,7 @@ export function Landing() {
         {/* footer */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 24, fontFamily: "var(--font-mono)", fontSize: 10.5, color: "var(--color-text-muted)" }}>
           <span>
-            {mods.length} modules · {live} live{sites ? ` · ${sites} site` : ""}
+            {mods.length} modules · {live} live{sites ? ` · ${sites} off-site` : ""}
           </span>
           <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--color-success)" }} />
@@ -109,6 +121,13 @@ export function Landing() {
 
 function ModuleRow({ m, first }: { m: Module; first: boolean }) {
   const arrow = m.external ? "↗" : m.active ? "›" : "";
+  // Three schemes: branded cross-link (hex `color`, alpha-blended marker), neutral off-site
+  // (`muted`, theme-aware tokens), or the default accent/soon scheme.
+  const accent = m.color ?? (m.muted ? "var(--color-text-muted)" : m.active ? "var(--color-accent)" : "var(--color-text-muted)");
+  const markerBorder = m.color ? `${m.color}66` : "var(--color-border)";
+  const markerBg = m.color ? `${m.color}1f` : "var(--color-surface-raised)";
+  const badgeBorder = m.color ?? (m.muted ? "var(--color-border)" : m.active ? "var(--color-accent)" : "var(--color-border)");
+  const arrowColor = m.color ?? (m.muted ? "var(--color-text-muted)" : m.active ? "var(--color-accent)" : "var(--color-border)");
   const row: React.CSSProperties = {
     display: "flex",
     alignItems: "flex-start",
@@ -130,11 +149,11 @@ function ModuleRow({ m, first }: { m: Module; first: boolean }) {
           justifyContent: "center",
           borderRadius: "var(--radius)",
           fontFamily: "var(--font-mono)",
-          fontSize: m.color ? 14 : 15,
+          fontSize: m.external ? 14 : 15,
           lineHeight: 1,
-          border: `1px solid ${m.color ? `${m.color}66` : "var(--color-border)"}`,
-          background: m.color ? `${m.color}1f` : "var(--color-surface-raised)",
-          color: m.color ? m.color : m.active ? "var(--color-accent)" : "var(--color-text-muted)",
+          border: `1px solid ${markerBorder}`,
+          background: markerBg,
+          color: accent,
         }}
       >
         {m.glyph}
@@ -149,8 +168,8 @@ function ModuleRow({ m, first }: { m: Module; first: boolean }) {
               letterSpacing: "0.1em",
               padding: "2px 6px",
               borderRadius: 3,
-              border: `1px solid ${m.color ? m.color : m.active ? "var(--color-accent)" : "var(--color-border)"}`,
-              color: m.color ? m.color : m.active ? "var(--color-accent)" : "var(--color-text-muted)",
+              border: `1px solid ${badgeBorder}`,
+              color: accent,
             }}
           >
             {m.badge}
@@ -158,7 +177,7 @@ function ModuleRow({ m, first }: { m: Module; first: boolean }) {
         </span>
         <span style={{ display: "block", fontSize: 13, color: "var(--color-text-muted)", marginTop: 5, lineHeight: 1.5 }}>{m.desc}</span>
       </span>
-      <span style={{ fontFamily: "var(--font-mono)", fontSize: 16, alignSelf: "center", color: m.color ? m.color : m.active ? "var(--color-accent)" : "var(--color-border)" }}>{arrow}</span>
+      <span style={{ fontFamily: "var(--font-mono)", fontSize: 16, alignSelf: "center", color: arrowColor }}>{arrow}</span>
     </>
   );
 

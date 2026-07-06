@@ -25,6 +25,7 @@ export function ThemeToggle() {
     <button
       type="button"
       onClick={toggle}
+      className="theme-toggle"
       style={{
         fontFamily: "var(--font-mono)",
         fontSize: 11,
@@ -34,7 +35,6 @@ export function ThemeToggle() {
         borderRadius: "var(--radius)",
         padding: "6px 10px",
         cursor: "pointer",
-        width: "100%",
         textAlign: "left",
       }}
     >

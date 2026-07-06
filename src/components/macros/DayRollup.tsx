@@ -85,11 +85,11 @@ export function DayRollup({ rollup }: { rollup: DayRollupData }) {
 
   return (
     <div
+      className="rollup-card"
       style={{
         background: "var(--color-surface-raised)",
         border: "1px solid var(--color-border)",
         borderRadius: "calc(var(--radius) * 1.5)",
-        padding: 26,
       }}
     >
       {/* header row */}
@@ -135,7 +135,7 @@ export function DayRollup({ rollup }: { rollup: DayRollupData }) {
       <CalorieHero value={totals.calories ?? 0} targets={calorieTargets} />
 
       {/* macro grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 22 }}>
+      <div className="macro-grid" style={{ display: "grid" }}>
         {macros.map((m) => (
           <MacroBar
             key={m.key}
