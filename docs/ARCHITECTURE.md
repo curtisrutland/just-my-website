@@ -25,12 +25,13 @@ Everything sits behind authentication. There are **no public pages and no anonym
 reads** — this is not a product with a signup funnel, it is one person's data with a
 second, machine-shaped door into it.
 
-Two feature modules are live today:
+Three feature modules are live today:
 
 | Module | What it stores | The honesty principle it encodes |
 |---|---|---|
 | **macros** | Food-intake log + calorie/macro targets | An estimate is never dressed up as a measured fact. Every entry carries a `confidence` and (for estimates) a `note` explaining the guess. |
 | **weight** | One body-weight measurement per day | A single day's number is noise; the **7-day rolling average is the truth.** The trend leads, the raw weigh-in is subordinate. |
+| **shopping** | A single flat list of items, one category level deep | Restraint: a plain working utility, not a dashboard. No quantities (the words carry it), no normalization, no history beyond a 7-day "recently bought". Its web UI is a **full editor** (add/check/edit/delete), not just review. |
 
 Those two "honesty" principles aren't decoration — they're the reason the data model
 looks the way it does (snapshotted macros, a derived-not-stored rolling average). Keep

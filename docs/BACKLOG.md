@@ -48,6 +48,16 @@ the top of each section.
       routes), `src/app/(app)/weight/` (live trend, stat tiles, entry form + list, correct/soft-delete
       server actions). Wired as an active nav item and landing card; OpenAPI fragment generated
       (`openapi/weight.json`). Live.
+- [x] **Shopping module** — third module, full anatomy per `docs/shopping-model.md` +
+      `docs/shopping-design-handoff.md`: `src/lib/shopping/` (schema, repo with two-section
+      `getList`, repo tests — 4 suites green vs Neon), `shopping_item` table + migration
+      `0003_*` (applied), `src/app/api/shopping/` (items/[id]/list; 11 live smoke checks incl. the
+      two-token rule), `src/app/(app)/shopping/` + `src/components/shopping/ShoppingBoard.tsx` (the
+      web-primary full editor — grouped list, check-off grace timer with linger/drain/undo, inline
+      edit, collapsed recently-bought). Nav chip + landing flipped to LIVE (landing now "3 modules ·
+      3 live"); OpenAPI fragment registered (`openapi/shopping.json`); README + ARCHITECTURE table
+      updated. **Remaining:** `manage-shopping` skill (deferred — see below); a real-browser pass on
+      the live interactions (verified via SSR + the data/API layers so far).
 
 ## Bugs — fixed
 
@@ -97,15 +107,17 @@ the top of each section.
 
 ## Future modules
 
-- **Shopping list.** The remaining `SOON` module (disabled nav chip in `AppShell.tsx` + landing row
-  in `Landing.tsx`). Tagline: *"a running list that knows what the kitchen already has."*
-  **Scoped — see `docs/shopping-model.md`.** Single flat table `shopping_item`, two levels
-  (category-string → item), no quantity column, no item normalization. Two-section view (active
-  grouped by category alphabetical; recently-bought within 7 days pre-collapsed, filter-only history).
-  Web-primary **full editor** (add/check/edit/delete) — a deliberate departure from macros' Option A;
-  Claude also manages via API/skill. Own module under `src/lib/shopping/` + `src/app/(app)/shopping/`;
-  flip the nav chip + landing row to live. Deferred within scope: store-aisle category order,
-  old-bought purge, `manage-shopping` skill, check-off grace timer. Ready to build.
+- _(none queued — macros, weight, and shopping are all live.)_
+
+- **`manage-shopping` skill.** The shopping module's Claude write path (like `manage-macros` /
+  `manage-weight`): SKILL.md + a stdlib Python client over the token API (`/api/shopping/**`), token
+  injected at build. Marquee action is batch-add ("add the ingredients for X"); also read the active
+  list and check items off. Build after the web + API (which are live). Then rebuild + upload +
+  validate the zip like the other skills.
+
+- **Shopping refinements (deferred within scope, from `docs/shopping-model.md`).** Store-aisle
+  category order (alphabetical for now); old-bought purge (filter-only for now); a real-browser pass
+  on the live check-off/linger interactions (verified via SSR + data/API so far).
 
 ## Deferred decisions
 

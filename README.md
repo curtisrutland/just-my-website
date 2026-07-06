@@ -4,13 +4,15 @@ A private, single-user personal-data platform. Two users, ever: **Curtis** (huma
 **Claude** (machine, via a Python skill over a token API). Everything sits behind auth —
 there are no public pages and no anonymous reads.
 
-Two modules are live so far: a **macro / food-intake tracker** and a **daily weight tracker**.
-In the macro tracker, Curtis tells Claude what he ate in vague terms ("a couple handfuls of
-almonds, a big chicken thigh") and Claude logs it — the whole design is built around one
+Three modules are live: a **macro / food-intake tracker**, a **daily weight tracker**, and a
+**shopping list**. In the macro tracker, Curtis tells Claude what he ate in vague terms ("a couple
+handfuls of almonds, a big chicken thigh") and Claude logs it — the whole design is built around one
 principle: **be honest about fuzziness.** An estimate is never presented with the authority of
 a measured fact. The weight tracker applies the same honesty from the other side: a 7-day
 rolling average leads and any single morning's number stays subordinate — the trend is the
-truth, not the noise.
+truth, not the noise. The shopping list is the plain-utility counterpoint: one grouping level
+(category → item), no quantities or normalization, tuned for adding and checking off — and unlike
+the others its web UI is a full editor, not just a review surface.
 
 ## Stack
 
@@ -50,7 +52,7 @@ src/app/(app)/{module}/**  # Clerk-gated UI (thin)
 ```
 
 Tables live in `src/lib/db/schema.ts`, namespaced by module (`macro_food`, `macro_entry`,
-`macro_day_tag`, `macro_target_profile`, `weight_entry`). Each module's OpenAPI fragment is
+`macro_day_tag`, `macro_target_profile`, `weight_entry`, `shopping_item`). Each module's OpenAPI fragment is
 **generated** from its Zod schemas (`openapi/macros.json`, `openapi/weight.json`), never
 hand-written.
 

@@ -9,6 +9,7 @@ import {
   targetProfileCreateSchema,
   targetProfilePatchSchema,
 } from "../src/lib/macros/schema";
+import { shoppingCreateSchema, shoppingPatchSchema } from "../src/lib/shopping/schema";
 import { weightCreateSchema, weightPatchSchema } from "../src/lib/weight/schema";
 
 /**
@@ -183,9 +184,46 @@ const weightSpec = {
   },
 };
 
+const shoppingSpec = {
+  openapi: "3.0.3",
+  info: {
+    title: "justmy.website — shopping",
+    version: "0.1.0",
+    description: "Token API for the shopping module. Generated from Zod schemas; do not hand-edit.",
+  },
+  security: [{ bearerAuth: [] }],
+  components: {
+    securitySchemes,
+    schemas: {
+      ShoppingCreate: js(shoppingCreateSchema),
+      ShoppingPatch: js(shoppingPatchSchema),
+      Error: errorSchema,
+    },
+  },
+  paths: {
+    "/api/shopping/items": {
+      get: { summary: "List items", parameters: [...pageParams], responses: { ...okList("ShoppingCreate"), ...errorResponses } },
+      post: { summary: "Add an item", requestBody: jsonBody("ShoppingCreate"), responses: { ...created("Created item"), ...errorResponses } },
+    },
+    "/api/shopping/items/{id}": {
+      get: { summary: "Get an item", parameters: [pathParam("id")], responses: { ...ok("Item"), ...errorResponses } },
+      patch: { summary: "Edit or check/un-check an item", parameters: [pathParam("id")], requestBody: jsonBody("ShoppingPatch"), responses: { ...ok("Updated item"), ...errorResponses } },
+      delete: { summary: "Soft/hard delete an item", parameters: [pathParam("id"), hardParam], responses: { ...noContent, ...errorResponses } },
+    },
+    "/api/shopping/list": {
+      get: {
+        summary: "The two-section list view (active grouped by category + recently bought + activeCount)",
+        parameters: [{ name: "boughtWithinDays", in: "query", schema: { type: "integer", default: 7, minimum: 1, maximum: 365 }, description: "Recently-bought window (days)" }],
+        responses: { ...ok("Two-section list"), ...errorResponses },
+      },
+    },
+  },
+};
+
 const fragments = [
   ["macros", macrosSpec],
   ["weight", weightSpec],
+  ["shopping", shoppingSpec],
 ] as const;
 
 mkdirSync("openapi", { recursive: true });
