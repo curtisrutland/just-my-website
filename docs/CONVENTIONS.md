@@ -126,3 +126,21 @@ Tables live in `src/lib/db/schema.ts`, namespaced by module (e.g. `macroFood`,
 pure utilities live in `src/lib/` (e.g. `date.ts`). The dependency rule is one-directional —
 **UI may import from `lib`, never the reverse** — so anything `lib` needs (domain types, date
 math) belongs in `lib`, not `components`.
+
+### New-module definition of done
+
+A module is not "done" when its code compiles — it's done when it's **wired into everything a
+module is supposed to touch.** The last two items below are the ones nothing auto-generates, so
+they get silently skipped (the weight OpenAPI fragment was missed exactly this way). Every new
+module plan MUST include them:
+
+- [ ] `schema.ts`, `repo.ts`, `types.ts`, tables in `src/lib/db/schema.ts` (+ migration)
+- [ ] API routes under `src/app/api/{module}/` and UI under `src/app/(app)/{module}/`
+- [ ] Nav entry (`AppShell.tsx`) + landing card (`Landing.tsx`) flipped to LIVE
+- [ ] **OpenAPI: register in `scripts/build-openapi.ts`.** Owning a `schema.ts` does NOT
+      auto-emit a fragment. You must (1) import the module's Zod schemas, (2) build a
+      `{module}Spec` object, and (3) add `["{module}", {module}Spec]` to the `fragments`
+      array. Then `npm run openapi:build` emits `openapi/{module}.json` (it also runs as
+      `prebuild` on every `npm run build`). Verify the file appears.
+- [ ] **Docs: add `docs/{module}-model.md`, update the README module list, and update
+      `docs/BACKLOG.md`.** If there's a design handoff, add `docs/{module}-design-brief.md` too.

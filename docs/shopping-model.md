@@ -229,6 +229,20 @@ utility surface, not a dashboard.
 
 ---
 
+## Build checklist (definition of done)
+
+Per `CONVENTIONS §8` — the last two are the ones nothing auto-generates, so they must be in the plan:
+
+- [ ] `src/lib/shopping/` — `schema.ts`, `repo.ts`, `types.ts`
+- [ ] `shopping_item` table in `src/lib/db/schema.ts` + migration
+- [ ] API routes under `src/app/api/shopping/` (items, items/[id], list)
+- [ ] UI under `src/app/(app)/shopping/` + `src/components/shopping/`
+- [ ] Flip the `shopping` nav chip (`AppShell.tsx`) + landing card (`Landing.tsx`) to LIVE
+- [ ] **OpenAPI:** register in `scripts/build-openapi.ts` (import schemas → build `shoppingSpec` →
+      add `["shopping", shoppingSpec]` to `fragments`), then `npm run openapi:build` and confirm
+      `openapi/shopping.json` appears.
+- [ ] **Docs:** this file is the model; update the README module list + `docs/BACKLOG.md` on ship.
+
 ## Open / deferred (for the backlog)
 
 - **Store-aisle category order.** Alphabetical for v1. A fixed display order (produce→frozen matching
