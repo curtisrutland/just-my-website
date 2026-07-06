@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useRef, useState, useTransition } from "react";
-import type { CategoryGroup, ShoppingItemView, ShoppingList } from "@/lib/shopping/types";
+import { distinctCategories, groupByCategory } from "@/lib/shopping/group";
+import type { ShoppingItemView, ShoppingList } from "@/lib/shopping/types";
 
 /** How long a checked row lingers in place (with an undo + draining bar) before it slides into the
  *  Recently bought section. Purely visual — the check is persisted immediately. */
@@ -9,8 +10,6 @@ const LINGER_SECONDS = 4;
 const WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
 type Patch = { category?: string; text?: string; status?: "needed" | "bought" };
-
-const ci = (a: string, b: string) => a.toLowerCase().localeCompare(b.toLowerCase());
 
 /** "today" / "yesterday" / "N days ago" from an ISO instant, by the viewer's local calendar day. */
 function relWhen(iso: string): string {
@@ -59,23 +58,16 @@ export function ShoppingBoard({
   // -- derived view ----------------------------------------------------------
   const { groups, recent, catOptions, activeCount } = useMemo(() => {
     const active = items.filter((it) => it.status === "needed" || lingering[it.id]);
-    const byCat = new Map<string, ShoppingItemView[]>();
-    for (const it of active) {
-      const list = byCat.get(it.category) ?? [];
-      list.push(it);
-      byCat.set(it.category, list);
-    }
-    const groups: CategoryGroup[] = [...byCat.keys()].sort(ci).map((category) => ({
-      category,
-      items: (byCat.get(category) as ShoppingItemView[]).slice().sort((a, b) => ci(a.text, b.text)),
-    }));
+    const groups = groupByCategory(active);
 
     const now = Date.now();
     const recent = items
       .filter((it) => it.status === "bought" && !lingering[it.id] && it.checkedAt != null && now - Date.parse(it.checkedAt) <= WINDOW_MS)
       .sort((a, b) => Date.parse(b.checkedAt as string) - Date.parse(a.checkedAt as string));
 
-    const catOptions = [...new Set(items.map((it) => it.category))].sort(ci);
+    // Suggestions come from ALL items (not just active) so a category isn't lost once its items
+    // are all checked off.
+    const catOptions = distinctCategories(items);
     return { groups, recent, catOptions, activeCount: active.length };
   }, [items, lingering]);
 

@@ -30,8 +30,11 @@ this departure is intentional and consistent with the platform.
 Conventions as every table: `id` (uuid), `createdAt`, `updatedAt`, nullable `deletedAt`
 (soft-delete; reads exclude deleted).
 
-- `category` (text, required) — a **freeform string** ("Produce", "Frozen"). Grouped and sorted
-  **case-insensitively alphabetical** at read time. Not an entity, not enumerated, no fixed
+- `category` (text, required) — a **freeform string** ("Produce", "Frozen"). Grouping is
+  **case-insensitive**: "Produce" / "produce" / "PRODUCE" collapse into **one** group (labelled with
+  the most common casing), then groups + items sort **case-insensitively alphabetical**, at read
+  time. The stored value keeps its original casing (no write-time normalization); the merge is a
+  read-time concern, shared by the repo and the UI (`src/lib/shopping/group.ts`). Not an entity, not enumerated, no fixed
   store-aisle order (alphabetical for now — order is a possible later refinement, noted below).
 - `text` (text, required) — the freeform item line, **carrying its own quantity detail**
   ("2 dozen eggs", "a big thing of spinach"). There is deliberately **no quantity column**.

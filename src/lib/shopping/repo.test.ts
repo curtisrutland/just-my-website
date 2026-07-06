@@ -33,6 +33,18 @@ describe("getList: grouping, sorting, activeCount", () => {
     // activeCount counts ALL needed items (whole table), so it's at least our three test rows.
     expect(activeCount).toBeGreaterThanOrEqual(3);
   });
+
+  it("groups categories case-insensitively (mixed casing → one group)", async () => {
+    // Same category, three casings — must collapse to a single group.
+    await addItem({ category: `${T}Zed`, text: "one" });
+    await addItem({ category: `${T}zed`, text: "two" });
+    await addItem({ category: `${T}ZED`, text: "three" });
+
+    const { active } = await getList();
+    const zed = active.filter((g) => g.category.toLowerCase() === `${T}zed`.toLowerCase());
+    expect(zed).toHaveLength(1); // one group, not three
+    expect(zed[0].items.map((i) => i.text)).toEqual(["one", "three", "two"]); // all three items, ci-sorted
+  });
 });
 
 describe("check / uncheck lifecycle", () => {

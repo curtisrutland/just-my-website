@@ -1,8 +1,9 @@
 import { and, count, desc, eq, gte, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { shoppingItem, type ShoppingItem } from "@/lib/db/schema";
+import { groupByCategory } from "./group";
 import type { ShoppingCreate, ShoppingPatch } from "./schema";
-import type { CategoryGroup, ShoppingItemView, ShoppingList, ShoppingStatus } from "./types";
+import type { ShoppingItemView, ShoppingList, ShoppingStatus } from "./types";
 
 /**
  * Shopping module — repository. The only place `shopping_item` is touched. Reads exclude
@@ -12,7 +13,6 @@ import type { CategoryGroup, ShoppingItemView, ShoppingList, ShoppingStatus } fr
 
 const live = isNull(shoppingItem.deletedAt);
 const RECENT_DAYS = 7;
-const ci = (a: string, b: string) => a.toLowerCase().localeCompare(b.toLowerCase());
 
 /** Row → the lean, serialization-safe shape the UI consumes (audit columns dropped). */
 function toView(row: ShoppingItem): ShoppingItemView {
@@ -116,16 +116,7 @@ export async function getList(opts: { boughtWithinDays?: number } = {}): Promise
     .from(shoppingItem)
     .where(and(live, eq(shoppingItem.status, "needed")));
 
-  const byCat = new Map<string, ShoppingItemView[]>();
-  for (const row of activeRows) {
-    const list = byCat.get(row.category) ?? [];
-    list.push(toView(row));
-    byCat.set(row.category, list);
-  }
-  const active: CategoryGroup[] = [...byCat.keys()].sort(ci).map((category) => ({
-    category,
-    items: (byCat.get(category) as ShoppingItemView[]).sort((a, b) => ci(a.text, b.text)),
-  }));
+  const active = groupByCategory(activeRows.map(toView));
 
   const cutoff = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000);
   const boughtRows = await db

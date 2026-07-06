@@ -16,6 +16,8 @@ export function buildMockShoppingList(): ShoppingList {
     { category: "Household", items: [need("m6", "Household", "dish soap"), need("m7", "Household", "kitchen roll")] },
     { category: "Pantry", items: [need("m8", "Pantry", "3 cans chickpeas"), need("m9", "Pantry", "jar of peanut butter"), need("m10", "Pantry", "olive oil")] },
     { category: "Produce", items: [need("m11", "Produce", "2 dozen eggs"), need("m12", "Produce", "a big thing of spinach"), need("m13", "Produce", "bananas")] },
+    // Mixed casing on purpose: this "produce" merges into "Produce" above (case-insensitive grouping).
+    { category: "produce", items: [need("m17", "produce", "lemons")] },
   ];
 
   return {
