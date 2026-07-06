@@ -6,8 +6,13 @@ import type { ShoppingItemView, ShoppingList } from "@/lib/shopping/types";
 
 /** How long a checked row lingers in place (with an undo + draining bar) before it slides into the
  *  Recently bought section. Purely visual — the check is persisted immediately. */
-const LINGER_SECONDS = 4;
+const LINGER_SECONDS = 2.5;
 const WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** Two-step delete (recipes pattern): `delete` → `confirm`, which stays inert for CONFIRM_ARM_MS
+ *  (the fat-finger guard) then arms; it auto-reverts to `delete` after CONFIRM_REVERT_MS. */
+const CONFIRM_ARM_MS = 500;
+const CONFIRM_REVERT_MS = 3000;
 
 type Patch = { category?: string; text?: string; status?: "needed" | "bought" };
 
@@ -43,15 +48,17 @@ export function ShoppingBoard({
     ...initial.recentlyBought,
   ]);
   const [lingering, setLingering] = useState<Record<string, boolean>>({});
-  const [hoverId, setHoverId] = useState<string | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
   const [editCat, setEditCat] = useState("");
   const [editText, setEditText] = useState("");
   const [addCat, setAddCat] = useState("");
   const [addText, setAddText] = useState("");
   const [recentOpen, setRecentOpen] = useState(false);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [confirmArmed, setConfirmArmed] = useState(false);
 
   const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const confirmTimers = useRef<{ arm?: ReturnType<typeof setTimeout>; revert?: ReturnType<typeof setTimeout> }>({});
   const tmp = useRef(0);
   const [, startTransition] = useTransition();
 
@@ -96,7 +103,7 @@ export function ShoppingBoard({
     const stamp = new Date().toISOString();
     setItems((prev) => prev.map((it) => (it.id === id ? { ...it, status: "bought", checkedAt: stamp } : it)));
     setLingering((l) => ({ ...l, [id]: true }));
-    setHoverId(null);
+    cancelConfirm();
     clearTimeout(timers.current[id]);
     timers.current[id] = setTimeout(() => {
       setLingering((l) => {
@@ -127,15 +134,34 @@ export function ShoppingBoard({
       return next;
     });
     setItems((prev) => prev.filter((it) => it.id !== id));
-    setHoverId(null);
     if (deleteAction) startTransition(() => void deleteAction(id));
   }
 
+  // Two-step delete: first `delete` arms a `confirm` (inert for CONFIRM_ARM_MS), which auto-reverts.
+  function cancelConfirm() {
+    clearTimeout(confirmTimers.current.arm);
+    clearTimeout(confirmTimers.current.revert);
+    setConfirmId(null);
+    setConfirmArmed(false);
+  }
+  function requestDelete(id: string) {
+    cancelConfirm();
+    setConfirmId(id);
+    setConfirmArmed(false);
+    confirmTimers.current.arm = setTimeout(() => setConfirmArmed(true), CONFIRM_ARM_MS);
+    confirmTimers.current.revert = setTimeout(cancelConfirm, CONFIRM_REVERT_MS);
+  }
+  function confirmDelete(id: string) {
+    if (confirmId !== id || !confirmArmed) return; // inert during the guard window
+    cancelConfirm();
+    remove(id);
+  }
+
   function startEdit(it: ShoppingItemView) {
+    cancelConfirm();
     setEditId(it.id);
     setEditCat(it.category);
     setEditText(it.text);
-    setHoverId(null);
   }
   function cancelEdit() {
     setEditId(null);
@@ -254,13 +280,18 @@ export function ShoppingBoard({
                   );
                 }
                 return (
-                  <div key={it.id} style={{ position: "relative", overflow: "hidden" }} onMouseEnter={() => setHoverId(it.id)} onMouseLeave={() => setHoverId((h) => (h === it.id ? null : h))}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "9px 4px", borderBottom: "1px solid var(--color-border)" }}>
+                  <div key={it.id} className="shop-row" style={{ position: "relative", overflow: "hidden" }}>
+                    {/* The whole row is a tap target for the primary action (toggle); the checkbox and
+                        each action cluster stop propagation so their buttons keep their own behavior. */}
+                    <div onClick={() => (lin ? toNeeded(it.id) : check(it.id))} style={{ display: "flex", alignItems: "center", gap: 12, padding: "9px 4px", borderBottom: "1px solid var(--color-border)", cursor: "pointer" }}>
                       <button
                         type="button"
                         className="shop-check"
                         data-checked={lin ? "true" : "false"}
-                        onClick={() => (lin ? toNeeded(it.id) : check(it.id))}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          lin ? toNeeded(it.id) : check(it.id);
+                        }}
                         aria-label={lin ? "Undo" : "Check off"}
                         style={{ width: 20, height: 20, flex: "none", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "var(--radius)", cursor: "pointer", padding: 0 }}
                       >
@@ -268,18 +299,32 @@ export function ShoppingBoard({
                       </button>
                       <span style={{ flex: 1, minWidth: 0, fontFamily: "var(--font-body)", fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: lin ? "var(--color-text-muted)" : "var(--color-text)" }}>{it.text}</span>
                       {lin ? (
-                        <span style={{ display: "flex", alignItems: "center", gap: 10, flex: "none" }}>
+                        <span onClick={(e) => e.stopPropagation()} style={{ display: "flex", alignItems: "center", gap: 10, flex: "none" }}>
                           <span style={{ fontFamily: mono, fontSize: 10, color: "var(--color-text-muted)", letterSpacing: "0.04em" }}>checked off</span>
                           <button type="button" onClick={() => toNeeded(it.id)} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: mono, fontSize: 11, color: "var(--color-accent)", padding: "2px 4px" }}>
                             undo
                           </button>
                         </span>
+                      ) : confirmId === it.id ? (
+                        <span className="shop-afford shop-afford--show" onClick={(e) => e.stopPropagation()} style={{ display: "flex", alignItems: "center", gap: 14, flex: "none" }}>
+                          <button
+                            type="button"
+                            onClick={() => confirmDelete(it.id)}
+                            disabled={!confirmArmed}
+                            style={{ background: "none", border: "none", cursor: confirmArmed ? "pointer" : "default", fontFamily: mono, fontSize: 10.5, letterSpacing: "0.04em", fontWeight: 600, color: confirmArmed ? "var(--color-over)" : "var(--color-text-muted)", padding: "2px 3px", transition: "color 0.2s" }}
+                          >
+                            confirm
+                          </button>
+                          <button type="button" onClick={cancelConfirm} className="shop-edit" style={{ background: "none", border: "none", cursor: "pointer", fontFamily: mono, fontSize: 10.5, letterSpacing: "0.04em", color: "var(--color-text-muted)", padding: "2px 3px" }}>
+                            cancel
+                          </button>
+                        </span>
                       ) : (
-                        <span style={{ display: "flex", alignItems: "center", gap: 14, flex: "none", opacity: hoverId === it.id ? 1 : 0, transition: "opacity 0.12s" }}>
+                        <span className="shop-afford" onClick={(e) => e.stopPropagation()} style={{ display: "flex", alignItems: "center", gap: 14, flex: "none" }}>
                           <button type="button" className="shop-edit" onClick={() => startEdit(it)} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: mono, fontSize: 10.5, letterSpacing: "0.04em", color: "var(--color-text-muted)", padding: "2px 3px" }}>
                             edit
                           </button>
-                          <button type="button" className="shop-del" onClick={() => remove(it.id)} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: mono, fontSize: 10.5, letterSpacing: "0.04em", color: "var(--color-text-muted)", padding: "2px 3px" }}>
+                          <button type="button" className="shop-del" onClick={() => requestDelete(it.id)} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: mono, fontSize: 10.5, letterSpacing: "0.04em", color: "var(--color-text-muted)", padding: "2px 3px" }}>
                             delete
                           </button>
                         </span>
@@ -298,7 +343,7 @@ export function ShoppingBoard({
       <section style={{ marginTop: 32 }}>
         <button type="button" onClick={() => setRecentOpen((o) => !o)} style={{ display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", cursor: "pointer", padding: "8px 4px", width: "100%" }}>
           <span style={{ fontFamily: mono, fontSize: 10, color: "var(--color-text-muted)", width: 10 }}>{recentOpen ? "▾" : "▸"}</span>
-          <span style={{ fontFamily: mono, fontSize: 11, letterSpacing: "0.06em", color: "var(--color-text-muted)" }}>recently bought · {recent.length}</span>
+          <span style={{ fontFamily: mono, fontSize: 11, letterSpacing: "0.06em", color: "var(--color-text-muted)" }}>recently checked · {recent.length}</span>
           <span style={{ flex: 1, height: 1, background: "var(--color-border)" }} />
         </button>
         {recentOpen && (

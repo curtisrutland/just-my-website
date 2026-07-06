@@ -135,6 +135,25 @@
   color: var(--color-text) !important;
 }
 
+/* Row affordances (edit/delete): always visible on touch (no hover), revealed on hover/focus where
+ * a real pointer exists. A row mid-confirm forces them visible regardless. */
+.shop-afford {
+  opacity: 1;
+  transition: opacity 0.12s;
+}
+@media (hover: hover) and (pointer: fine) and (min-width: 769px) {
+  .shop-afford {
+    opacity: 0;
+  }
+  .shop-row:hover .shop-afford,
+  .shop-row:focus-within .shop-afford {
+    opacity: 1;
+  }
+}
+.shop-afford--show {
+  opacity: 1 !important;
+}
+
 /* ============================================================================
  * App shell — responsive chrome (AppShell.tsx). Desktop base + one <=768px
  * reflow. These class names are the design's; components apply them because
