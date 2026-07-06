@@ -36,38 +36,34 @@ the top of each section.
       `accounts.`, email DKIM CNAMEs) → set `pk_live`/`sk_live` in Vercel prod env → redeploy. The
       prod instance is already configured (email-only, restricted, Curtis's user). Until then the UI
       runs on the dev instance (dev banner, usage limits, `accounts.dev` sign-in).
-- [ ] **Rebuild + publish the `manage-macros` skill** pointed at `justmy.website` (`JMW_BASE_URL`).
-      The token API is already live on the domain; just needs the built skill wired to it + published
-      where the claude.ai sandbox can load it.
+- [~] **`manage-macros` skill** — rebuilt against `justmy.website` (stdlib client, `name` param),
+      verified end-to-end against prod with system python3. Zip is at `skills/dist/manage-macros.zip`.
+      Remaining: Curtis re-uploads the zip to claude.ai (publish step).
 
-## Bugs
+## Bugs — fixed
 
-- **"today" uses UTC in production.** `todayISO()` returns the *server's* local date; Vercel runs UTC,
-  so the `/macros` redirect and the "TODAY" label land a day ahead for Curtis (America/Chicago,
-  UTC−5/−6). Fix: set `TZ=America/Chicago` in Vercel env (production + preview) and redeploy — Node
-  honors `TZ` and `todayISO()` already uses local date methods. (Local dev is already correct.)
-- **Entries render "ad-hoc" instead of a food name.** `macro_entry` carries no name of its own — the
-  display name comes only from a linked food (`foodId → macro_food.name`). The skill logs eyeballed
-  estimates without a food (valid per the model), and the notes hold estimation *reasoning* not a
-  clean label, so every entry shows "ad-hoc". Fix (flagged model gap): add an optional `name`/`label`
-  to `macro_entry`; have the skill set a concise food name on every log (note stays for the
-  fuzziness/reasoning); surface it in the rollup + EntryRow (coalesce entry-name → food-name).
+- [x] **"today" used UTC in production.** Fixed: `todayISO()` computes the date in Curtis's timezone
+  via `Intl` (`America/Chicago`, overridable with `JMW_TZ`) — correct on any server zone. (Vercel's
+  `TZ` env name is reserved, so it's in code.) Deployed + serving.
+- [x] **Entries rendered "ad-hoc".** Fixed: added `name` to `macro_entry` (migration); `log_entry`
+  takes a `name`; the rollup coalesces entry-name → food-name. Verified live (`foodName` shows the
+  label).
 
-## Skill hardening (from claude.ai feedback)
+## Skill hardening (from claude.ai feedback) — fixed
 
-- **Targets don't resolve — none are configured.** After the reset, all target profiles are gone, so
-  a tagged day returns `targets: {}`. Not a code bug — configure Curtis's real training/rest target
-  profiles (via `set_target` or seed). The rollup's value prop (target comparison) needs them.
-- **`client.py` depends on `httpx`, absent in the sandbox** (`ModuleNotFoundError`). Rewrite the HTTP
-  layer on the stdlib (`urllib`) → zero dependencies, works in any sandbox without a pip round-trip.
-- **Declare required network egress in SKILL.md** — the skill needs egress to `justmy.website`
-  (mirror how `manage-recipes` states it) so the requirement is discoverable up front.
-- **Clarify `log_entry`'s return in SKILL.md** — it already returns the created entry; show capturing
-  it so a batch write is verifiable inline without a follow-up `get_day`.
-- **`log_entry` gains a `name` param** (see Bugs → "ad-hoc") so entries are self-describing.
+- [x] **Targets configured** — training/rest profiles set (2800 / 2200), so tagged and unspecified
+  days resolve target(s). Verified live.
+- [x] **Zero dependencies** — `client.py` rewritten on the stdlib (`urllib`); ran green with system
+  `python3` (no venv, no pip).
+- [x] **Egress declared** — SKILL.md states the skill needs `https://justmy.website`.
+- [x] **`log_entry` return clarified** — SKILL.md shows capturing the created entry to confirm inline.
+- [x] **`log_entry` `name` param** — entries are self-describing (see the ad-hoc fix).
 
 ## UI refinements
 
+- **Remove the add-entry ("log ›") prompt from the macros page.** We don't log from the site
+  (Option A — Claude adds via the skill; the web only corrects/deletes), so the bottom prompt is
+  misleading. Delete `AddEntryPrompt` from `DayContent` (and the component).
 - **Index/home link in the sidebar.** The nav rail lists modules but has no way back to the root
   landing. Add a home/index affordance in the rail (alongside the module list) so you can get back to
   the module switcher from within a module.
@@ -79,6 +75,12 @@ the top of each section.
   value fill more translucent, strengthen the corridor's accent hairline edges, and make the
   text-colored value marker more prominent, so the total visibly sits *within* the rest→training
   corridor. (Raised Phase 1; approved look otherwise.)
+
+## Future modules
+
+- **Weight tracker.** A daily body-weight module: log a weight per day, show weekly rolling averages
+  (smooths daily noise) and other useful stats/trends. Its own module under `src/lib/weight/` +
+  `src/app/(app)/weight/` following the module anatomy; add a nav entry + a landing card.
 
 ## Deferred decisions
 

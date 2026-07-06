@@ -1,4 +1,3 @@
-import { AddEntryPrompt } from "./AddEntryPrompt";
 import { todayISO } from "./date";
 import { DayNav } from "./DayNav";
 import { DayRollup } from "./DayRollup";
@@ -31,7 +30,6 @@ export function DayContent({
       <DayNav week={week} selected={rollup.day.date} isToday={rollup.day.date === today} today={today} basePath={basePath} canNext={rollup.day.date < today} />
       <DayRollup rollup={rollup} />
       <EntryList entries={rollup.entries} patchAction={patchEntryAction} deleteAction={deleteEntryAction} />
-      <AddEntryPrompt />
     </>
   );
 }
