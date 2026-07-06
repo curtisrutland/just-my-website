@@ -97,6 +97,7 @@ the Neon and Clerk Marketplace integrations. The rest:
 
 | Doc | What it covers |
 |---|---|
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Project overview for developers new to the stack — the stack, the module/API/skill pattern and its justification, and the overall picture |
 | [`AGENTS.md`](AGENTS.md) | Rules for agents working in this repo |
 | [`docs/CONVENTIONS.md`](docs/CONVENTIONS.md) | The platform kernel — auth, error envelope, pagination, write-path discipline, nutrition numeric contract |
 | [`docs/macro-model.md`](docs/macro-model.md) | The macro module's data model (closed spec) |
