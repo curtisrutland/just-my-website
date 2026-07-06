@@ -26,9 +26,11 @@ the top of each section.
       verified end-to-end against the live API (log/review/correct/tag/delete, 12/12). Claude's write path.
 - [x] **Build scripts** — `build-skills.ts`→ token-injected skill under `skills/dist` (gitignored);
       `build-openapi.ts` → OpenAPI generated from Zod (`npm run build` prebuild works).
-- [ ] **UI Phase 4** — mobile/responsive pass, handled in code (not a separate design spec).
-      Reflow: nav rail → compact top bar/drawer, macro grid 3-col → 1-col, entry table → stacked,
-      hero corridor full-width. Reviewed live like the other phases.
+- [ ] **UI Phase 4** — mobile/responsive pass. The design DID provide the spec (the Weight Tracker's
+      `@media(max-width:768px)` block) — captured in **`docs/design-reference/MOBILE-RESPONSIVE.md`**.
+      **Gotcha:** components use inline `style={{}}` (no `@media` support) → needs CSS classes /
+      Tailwind responsive utilities first. Breakpoint 768px: nav rail → top bar with a horizontal
+      module-chip strip, stat grid 4→2 col, weigh-in table drops the NOTE column, tighter padding.
 - [x] **First deploy** — pushed to GitHub, Vercel production live at `justmy.website` (apex → www);
       API confirmed end-to-end against the domain. Auth is on the Clerk **dev** instance for now.
 - [ ] **Switch auth to Clerk production** on `justmy.website` (deferred — intentionally on dev for now).
@@ -67,8 +69,9 @@ the top of each section.
 - **Index/home link in the sidebar.** The nav rail lists modules but has no way back to the root
   landing. Add a home/index affordance in the rail (alongside the module list) so you can get back to
   the module switcher from within a module.
-- **`justmy.recipes` cross-link.** Add a link to the sibling site — a subtle entry in the sidebar
-  rail styled in the recipes brand color, and a more fully branded link on the index/landing page.
+- [x] **`justmy.recipes` cross-link.** Done (⚠️ uncommitted/undeployed): a subtle sidebar-rail link
+  + a fully-branded landing row, in the recipes brand color `#c9804f`. Built from the design's
+  Index/Weight update. Landing footer now reads "3 modules · 2 live · 1 site". Commit + deploy pending.
 - **DayRollup hero corridor legibility.** When the day is "in range" (unspecified), the value fill
   is solid cyan and the corridor band is also cyan-tinted, so they blend and the "honest corridor"
   reads less crisply than it should — and it's the single most important element. Proposed: make the

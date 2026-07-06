@@ -41,6 +41,7 @@ export function AppShell({
         <nav style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2, padding: "8px 12px" }}>
           <NavItem label="macros" href="/macros" active={activeModule === "macros"} />
           <NavItem label="weight" href="/weight" active={activeModule === "weight"} />
+          <RecipesNavLink />
           <NavItem label="shopping" soon />
         </nav>
         <div style={{ padding: "12px 16px", borderTop: "1px solid var(--color-border)", display: "flex", flexDirection: "column", gap: 12 }}>
@@ -125,5 +126,27 @@ function NavItem({ label, href, active, soon }: { label: string; href?: string; 
     </Link>
   ) : (
     <div style={style}>{inner}</div>
+  );
+}
+
+const RECIPES = "#c9804f"; // justmy.recipes brand color (terracotta)
+
+/** A subtle cross-link out to the sibling site, in the recipes brand color. */
+function RecipesNavLink() {
+  return (
+    <a
+      href="https://justmy.recipes"
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{ textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 12px", borderRadius: "var(--radius)", color: "var(--color-text-muted)", border: "1px solid transparent" }}
+    >
+      <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ width: 10, display: "flex", justifyContent: "center" }}>
+          <span style={{ width: 8, height: 8, borderRadius: 2, background: RECIPES }} />
+        </span>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: 12.5 }}>recipes</span>
+      </span>
+      <span style={{ fontFamily: "var(--font-mono)", fontSize: 8.5, letterSpacing: "0.08em", border: `1px solid ${RECIPES}`, borderRadius: 3, padding: "2px 5px", color: RECIPES }}>SITE ↗</span>
+    </a>
   );
 }

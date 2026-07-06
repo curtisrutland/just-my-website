@@ -7,7 +7,11 @@ type Module = {
   desc: string;
   href: string | null;
   active: boolean;
+  external?: boolean;
+  color?: string; // brand color for a cross-link (overrides the accent/muted scheme)
 };
+
+const RECIPES = "#c9804f";
 
 const MODULES: Module[] = [
   {
@@ -24,7 +28,17 @@ const MODULES: Module[] = [
     badge: "LIVE",
     href: "/weight",
     active: true,
-    desc: "Daily body weight with a 7-day rolling-average trend. A single day is noise; the line is the truth.",
+    desc: "Weigh in daily; the 7-day rolling average leads and the raw dots stay subordinate. The trend is the truth, not any single morning.",
+  },
+  {
+    glyph: "◆",
+    name: "recipes",
+    badge: "SITE ↗",
+    href: "https://justmy.recipes",
+    active: true,
+    external: true,
+    color: RECIPES,
+    desc: "Curtis’s recipe box — protein-forward, freezer-friendly, and mercifully free of life stories. A separate site.",
   },
   {
     glyph: "▹",
@@ -38,7 +52,10 @@ const MODULES: Module[] = [
 
 /** The root landing (Index.dc.html): brand, a terminal `ls modules` line, the module list, footer. */
 export function Landing() {
-  const live = MODULES.filter((m) => m.active).length;
+  const mods = MODULES.filter((m) => !m.external);
+  const live = mods.filter((m) => m.active).length;
+  const sites = MODULES.length - mods.length;
+
   return (
     <div style={{ minHeight: "100vh", background: "var(--color-bg)", color: "var(--color-text)", fontFamily: "var(--font-body)", display: "flex", flexDirection: "column", alignItems: "center", padding: "0 24px" }}>
       <div style={{ width: "100%", maxWidth: 640, padding: "88px 0 60px" }}>
@@ -73,7 +90,7 @@ export function Landing() {
         {/* footer */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 24, fontFamily: "var(--font-mono)", fontSize: 10.5, color: "var(--color-text-muted)" }}>
           <span>
-            {MODULES.length} modules · {live} live
+            {mods.length} modules · {live} live{sites ? ` · ${sites} site` : ""}
           </span>
           <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--color-success)" }} />
@@ -86,6 +103,7 @@ export function Landing() {
 }
 
 function ModuleRow({ m, first }: { m: Module; first: boolean }) {
+  const arrow = m.external ? "↗" : m.active ? "›" : "";
   const row: React.CSSProperties = {
     display: "flex",
     alignItems: "flex-start",
@@ -107,11 +125,11 @@ function ModuleRow({ m, first }: { m: Module; first: boolean }) {
           justifyContent: "center",
           borderRadius: "var(--radius)",
           fontFamily: "var(--font-mono)",
-          fontSize: 15,
+          fontSize: m.color ? 14 : 15,
           lineHeight: 1,
-          border: "1px solid var(--color-border)",
-          background: "var(--color-surface-raised)",
-          color: m.active ? "var(--color-accent)" : "var(--color-text-muted)",
+          border: `1px solid ${m.color ? `${m.color}66` : "var(--color-border)"}`,
+          background: m.color ? `${m.color}1f` : "var(--color-surface-raised)",
+          color: m.color ? m.color : m.active ? "var(--color-accent)" : "var(--color-text-muted)",
         }}
       >
         {m.glyph}
@@ -126,8 +144,8 @@ function ModuleRow({ m, first }: { m: Module; first: boolean }) {
               letterSpacing: "0.1em",
               padding: "2px 6px",
               borderRadius: 3,
-              border: `1px solid ${m.active ? "var(--color-accent)" : "var(--color-border)"}`,
-              color: m.active ? "var(--color-accent)" : "var(--color-text-muted)",
+              border: `1px solid ${m.color ? m.color : m.active ? "var(--color-accent)" : "var(--color-border)"}`,
+              color: m.color ? m.color : m.active ? "var(--color-accent)" : "var(--color-text-muted)",
             }}
           >
             {m.badge}
@@ -135,12 +153,17 @@ function ModuleRow({ m, first }: { m: Module; first: boolean }) {
         </span>
         <span style={{ display: "block", fontSize: 13, color: "var(--color-text-muted)", marginTop: 5, lineHeight: 1.5 }}>{m.desc}</span>
       </span>
-      <span style={{ fontFamily: "var(--font-mono)", fontSize: 16, alignSelf: "center", color: m.active ? "var(--color-accent)" : "var(--color-border)" }}>
-        {m.active ? "›" : ""}
-      </span>
+      <span style={{ fontFamily: "var(--font-mono)", fontSize: 16, alignSelf: "center", color: m.color ? m.color : m.active ? "var(--color-accent)" : "var(--color-border)" }}>{arrow}</span>
     </>
   );
 
+  if (m.external && m.href) {
+    return (
+      <a href={m.href} target="_blank" rel="noopener noreferrer" style={row}>
+        {content}
+      </a>
+    );
+  }
   return m.href ? (
     <Link href={m.href} style={row}>
       {content}
