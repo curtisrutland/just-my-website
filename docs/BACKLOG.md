@@ -56,8 +56,8 @@ the top of each section.
       web-primary full editor — grouped list, check-off grace timer with linger/drain/undo, inline
       edit, collapsed recently-bought). Nav chip + landing flipped to LIVE (landing now "3 modules ·
       3 live"); OpenAPI fragment registered (`openapi/shopping.json`); README + ARCHITECTURE table
-      updated. **Remaining:** `manage-shopping` skill (deferred — see below); a real-browser pass on
-      the live interactions (verified via SSR + the data/API layers so far).
+      updated. `manage-shopping` skill built + verified (see below). Local UX pass done (2.5s linger,
+      recipes-style confirm-delete, mobile always-visible actions, row-tap toggle, "recently checked").
 
 ## Bugs — fixed
 
@@ -109,11 +109,13 @@ the top of each section.
 
 - _(none queued — macros, weight, and shopping are all live.)_
 
-- **`manage-shopping` skill.** The shopping module's Claude write path (like `manage-macros` /
-  `manage-weight`): SKILL.md + a stdlib Python client over the token API (`/api/shopping/**`), token
-  injected at build. Marquee action is batch-add ("add the ingredients for X"); also read the active
-  list and check items off. Build after the web + API (which are live). Then rebuild + upload +
-  validate the zip like the other skills.
+## Pending publish / follow-ups
+
+- [~] **`manage-shopping` skill** — built (`skills/manage-shopping/` — SKILL.md + stdlib Python
+  client over `/api/shopping/**`; batch-add, read-the-list, check/uncheck, edit, soft-delete) and
+  verified end-to-end against the local dev server (9/9 checks, system python3). Registered in
+  `build-skills.mjs`; zip at `skills/dist/manage-shopping.zip`. **Remaining:** Curtis uploads +
+  validates the zip on claude.ai (publish step), like `manage-macros` / `manage-weight`.
 
 - **Shopping refinements (deferred within scope, from `docs/shopping-model.md`).** Store-aisle
   category order (alphabetical for now); old-bought purge (filter-only for now); a real-browser pass

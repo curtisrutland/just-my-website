@@ -15,7 +15,7 @@ if (!token) {
   process.exit(1);
 }
 
-const SKILLS = ["manage-macros", "manage-weight"];
+const SKILLS = ["manage-macros", "manage-weight", "manage-shopping"];
 const distRoot = "skills/dist";
 rmSync(distRoot, { recursive: true, force: true });
 
