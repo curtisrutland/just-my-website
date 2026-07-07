@@ -56,7 +56,7 @@ export function EntryRow({
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={tagStyle(estimated)}>{TAG[entry.confidence]}</span>
             <span style={{ fontFamily: "var(--font-body)", fontSize: 13.5, color: "var(--color-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {entry.foodName ?? "ad-hoc"}
+              {entry.name ?? "ad-hoc"}
             </span>
           </div>
           <div style={{ fontFamily: "var(--font-mono)", fontSize: 10.5, color: "var(--color-text-muted)", marginTop: 3 }}>{fmt(entry.quantityGrams)} g</div>

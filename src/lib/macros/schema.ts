@@ -32,6 +32,13 @@ const name = z.string().trim().min(1);
 const macro = z.number().finite().nonnegative().nullish();
 
 /**
+ * A macro value AS READ BACK: the same number, but the key is ALWAYS present — `null` when
+ * unknown, never absent. Read shapes use this (not `macro`) so a consumer that asks for a field
+ * gets an explicit `null`, not silent `undefined` from a missing key.
+ */
+const macroRead = z.number().finite().nonnegative().nullable();
+
+/**
  * The eight schema.org NutritionInformation fields. Reused for `macro_food` (per-100g) and
  * `macro_entry` (absolute). Each is individually nullable — a food may know calories + protein
  * but not fiber.
@@ -100,6 +107,41 @@ export const entryCreateSchema = z
 
 export const entryPatchSchema = entryCreateSchema.partial();
 
+/**
+ * Batch log: an array of the SAME per-entry payloads `entryCreateSchema` accepts. Validated as a
+ * whole up front — if any element fails, the request is rejected before a single row is written
+ * (the repo then inserts the lot in one atomic statement). Capped so a batch stays a "meal", not a
+ * bulk import.
+ */
+export const entryCreateBatchSchema = z.array(entryCreateSchema).min(1).max(100);
+
+/**
+ * The canonical READ shape for a logged entry — IDENTICAL across every read endpoint
+ * (`GET /entries` items and the day-rollup `entries`). One entry schema, one set of keys, so
+ * knowledge of a field name transfers between endpoints (this is the fix for the get_day/
+ * list_entries `foodName`-vs-`name` split). `name` is the resolved label: the entry's own label,
+ * falling back to the linked food's name. Every macro key is always present (null when unknown).
+ */
+export const entryViewSchema = z
+  .object({
+    id: z.uuid(),
+    name: z.string().nullable(),
+    consumedOn: calendarDate,
+    foodId: z.uuid().nullable(),
+    quantityGrams: z.number().finite().positive(),
+    confidence: entryConfidence,
+    note: z.string().nullable(),
+    calories: macroRead,
+    proteinContent: macroRead,
+    fatContent: macroRead,
+    carbohydrateContent: macroRead,
+    fiberContent: macroRead,
+    sugarContent: macroRead,
+    sodiumContent: macroRead,
+    saturatedFatContent: macroRead,
+  })
+  .strict();
+
 // --- Day tag (three-valued by design; absence = unspecified) ---
 
 /** Tag a day's kind. Upsert semantics: one live tag per day (partial-unique in the DB). */
@@ -135,6 +177,8 @@ export type FoodCreate = z.infer<typeof foodCreateSchema>;
 export type FoodPatch = z.infer<typeof foodPatchSchema>;
 export type EntryCreate = z.infer<typeof entryCreateSchema>;
 export type EntryPatch = z.infer<typeof entryPatchSchema>;
+export type EntryView = z.infer<typeof entryViewSchema>;
+export type EntryCreateBatch = z.infer<typeof entryCreateBatchSchema>;
 export type DayTagCreate = z.infer<typeof dayTagCreateSchema>;
 export type DayTagPatch = z.infer<typeof dayTagPatchSchema>;
 export type TargetProfileCreate = z.infer<typeof targetProfileCreateSchema>;

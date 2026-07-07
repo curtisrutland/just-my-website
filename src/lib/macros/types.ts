@@ -13,10 +13,14 @@ export type MacroSet = {
   carbohydrateContent: number | null;
 };
 
+/**
+ * The subset of the API's entry shape (`EntryView`) that the UI renders. `name` is the resolved
+ * label (entry's own label, else the linked food's name) — the same key the read endpoints return.
+ */
 export type RollupEntry = {
   id: string;
   consumedOn: string;
-  foodName: string | null;
+  name: string | null;
   quantityGrams: number;
   confidence: Confidence;
   note: string | null;

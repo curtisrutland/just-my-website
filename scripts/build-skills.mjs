@@ -25,15 +25,21 @@ const SKILLS = ["manage-macros", "manage-weight", "manage-shopping"];
 const distRoot = "skills/dist";
 rmSync(distRoot, { recursive: true, force: true });
 
+// Only real source files belong in the built skill. Skip directories (e.g. Python's `__pycache__`,
+// created just by importing client.py) and local junk (dotfiles like .DS_Store, compiled `.pyc`) —
+// otherwise the copy loop crashes on a dir and/or that junk gets bundled into the upload zip.
+const isIgnored = (fileName) => fileName.startsWith(".") || fileName.endsWith(".pyc");
+
 for (const name of SKILLS) {
   const srcDir = join("skills", name);
   const outDir = join(distRoot, name);
   mkdirSync(outDir, { recursive: true });
-  for (const file of readdirSync(srcDir)) {
-    const content = readFileSync(join(srcDir, file), "utf8")
+  for (const entry of readdirSync(srcDir, { withFileTypes: true })) {
+    if (!entry.isFile() || isIgnored(entry.name)) continue;
+    const content = readFileSync(join(srcDir, entry.name), "utf8")
       .replaceAll("__JMW_BASE_URL__", baseUrl)
       .replaceAll("__JMW_AGENT_TOKEN__", token);
-    writeFileSync(join(outDir, file), content);
+    writeFileSync(join(outDir, entry.name), content);
   }
   // Package the skill folder into a zip for upload to claude.ai (SKILL.md at manage-macros/ root).
   execSync(`zip -r -q "${name}.zip" "${name}"`, { cwd: distRoot });

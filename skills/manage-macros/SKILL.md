@@ -24,7 +24,21 @@ from client import MacrosClient
 m = MacrosClient()   # base URL + Curtis's agent token are baked in
 ```
 
-Dates are `YYYY-MM-DD` in Curtis's local timezone (America/Chicago). "Today" is his local date.
+## Get the date right — before every log
+
+**Establish the actual current date first: call `m.today()`** (Curtis's local date, America/Chicago).
+Do NOT infer the day from the conversation. If you've been talking *about* yesterday, or catching up
+on an earlier meal, the day you log against is still **today's real date** unless Curtis actually says
+the food was eaten on another day. Set each entry's `consumed_on` deliberately — a wrong date silently
+lands food on the wrong day's totals.
+
+- "I had eggs for breakfast" (no day mentioned) → `m.today()`.
+- "yesterday I…" or an explicit date → that day (e.g. `addDays` in your head from `m.today()`).
+- **Unsure which day it belongs to** — late-night eating, a chat that spanned midnight, or the
+  conversational context is pulling you toward a different date than the calendar — **ask Curtis which
+  date to log it against. Don't guess.**
+
+Dates are always `YYYY-MM-DD` in Curtis's local timezone.
 
 ## The core loop: logging food
 
@@ -37,15 +51,33 @@ Dates are `YYYY-MM-DD` in Curtis's local timezone (America/Chicago). "Today" is 
 
 ```python
 e = m.log_entry(
-    consumed_on="2026-07-05",
+    consumed_on=m.today(),                 # the real current date — not a date carried from the chat
     name="grilled chicken breast",        # display label — ALWAYS set this (or entries read "ad-hoc")
     quantity_grams=180,
     confidence="estimated",
     note="one breast, eyeballed ~180g",   # the fuzziness / how you estimated
-    calories=298, protein=56, fat=6, carbs=0,
+    calories=298, proteinContent=56, fatContent=6, carbohydrateContent=0,
 )
 assert e["id"]                            # write confirmed
 ```
+
+### A composite meal → log it atomically with `log_entries`
+When one thing Curtis ate is really several components (a restaurant plate, a smoothie broken into
+constituents), log them in **one atomic call** instead of a loop. All the components land or none do
+— you never get a half-logged meal. Each item is a dict with the SAME fields as `log_entry`:
+
+```python
+plate = m.log_entries([
+    {"consumed_on": "2026-07-05", "name": "sirloin", "quantity_grams": 200, "confidence": "estimated", "calories": 430, "proteinContent": 62, "fatContent": 20, "carbohydrateContent": 0},
+    {"consumed_on": "2026-07-05", "name": "baked potato", "quantity_grams": 250, "confidence": "estimated", "calories": 260, "proteinContent": 6, "fatContent": 0, "carbohydrateContent": 60},
+    {"consumed_on": "2026-07-05", "name": "side salad + dressing", "quantity_grams": 150, "confidence": "estimated", "calories": 180, "proteinContent": 3, "fatContent": 15, "carbohydrateContent": 8},
+])
+# Returns the created entries (read shape, input order). If any component is bad, NOTHING is logged
+# and the call raises, naming the offending index — so a "success" always means the whole plate landed.
+```
+
+Use a single `log_entry` for a single item; reach for `log_entries` only when the components belong
+to one meal and you want the all-or-nothing guarantee.
 
 ### `name` vs `note`
 - **`name`** — what it was, short and scannable ("3 large eggs", "half a tub of hummus"). This is the
@@ -58,8 +90,11 @@ assert e["id"]                            # write confirmed
 - `estimated` — **you inferred it from Curtis's words.** Attach a `note` so it's auditable.
 - `logged_serving` — Curtis gave a household unit (1 scoop, 1 banana) you converted to grams.
 
-Macros are plain numbers: grams for protein/fat/carbs/fiber/sugar/sodium/satfat, kcal for calories.
-Provide what you know; leave the rest out (unknown ≠ zero).
+Macros are plain numbers (grams for mass macros, kcal for `calories`) and use the **schema.org
+field names — the same on write and read**: `calories`, `proteinContent`, `fatContent`,
+`carbohydrateContent`, `fiberContent`, `sugarContent`, `sodiumContent`, `saturatedFatContent`.
+The name you log with is the name you read back. Provide what you know; leave the rest out
+(unknown ≠ zero).
 
 ## Day kind (which target applies)
 
@@ -79,8 +114,8 @@ Set Curtis's calorie-cycling targets when he gives them (they persist; you only 
 change):
 
 ```python
-m.set_target("training", "2026-01-01", calories=2800, protein=160, fat=90, carbs=300)
-m.set_target("rest",     "2026-01-01", calories=2200, protein=160, fat=70,  carbs=200)
+m.set_target("training", "2026-01-01", calories=2800, proteinContent=160, fatContent=90, carbohydrateContent=300)
+m.set_target("rest",     "2026-01-01", calories=2200, proteinContent=160, fatContent=70,  carbohydrateContent=200)
 ```
 
 Targets are dated — the latest one effective on/before a day applies. If `get_day` returns
@@ -90,12 +125,47 @@ Targets are dated — the latest one effective on/before a day applies. If `get_
 
 ```python
 day = m.get_day("2026-07-05")   # totals, estimation %, target(s), entries (each with an id)
-m.correct_entry(entry_id, calories=360, protein=50)   # only supplied fields change
+m.correct_entry(entry_id, calories=360, proteinContent=50)   # only supplied fields change
 m.correct_entry(entry_id, name="chicken thigh (not breast)")
+m.correct_entry(entry_id, consumed_on="2026-07-06")          # move it to another day (no delete-and-recreate)
 m.delete_entry(entry_id)        # soft delete
 ```
 
 When Curtis says "actually that was closer to X," correct the specific entry — don't edit the food.
+
+`correct_entry` **errors on any field it doesn't recognise** — a typo'd or non-correctable field
+raises instead of silently succeeding, so a "success" always means the change landed.
+
+### Reading it back — the entry shape
+`get_day(...)["entries"]` and `list_entries(...)["items"]` return the **identical** entry object —
+same keys, every time:
+- **`name`** — the entry's label (its own, or the linked food's name). It is `name` on *both*
+  endpoints (there is no `foodName`).
+- macros under their **schema.org names** (`proteinContent`, `carbohydrateContent`, ...) — the same
+  names you write with. Every macro key is always present, `null` when unknown.
+
+Read a macro by its exact schema.org key. A missing/mistyped key yields `None` **silently** — so
+never conclude "no data" from a blank; if a value looks absent, re-check the key name against the
+list above before reasoning from a blank.
+
+## Multi-day questions — `get_range`
+
+For anything spanning more than one day ("how's the fat trend this week," "am I consistently under
+calories on rest days," pairing with the weight trend view), pull the whole span in one call instead
+of looping `get_day`:
+
+```python
+days = m.get_range("2026-07-01", "2026-07-07")   # inclusive; one object per day, chronological
+# each: {"date", "kind", "totals": {calories, proteinContent, fatContent, carbohydrateContent}, "targets"}
+avg_fat = sum(d["totals"]["fatContent"] for d in days) / len(days)
+```
+
+- `totals` is the **four tracked macros** (calories/protein/fat/carb) — the same rollup shape
+  `get_day` returns. Range does not expand to the other macros.
+- **Empty days are present and zeroed**, never dropped — a zeroed day means "nothing logged," which
+  is not the same as a missing row. Don't infer a day is missing; it never is.
+- You get the daily **series**; do the aggregation the question needs (average, trend, over/under
+  counts) yourself — the endpoint deliberately doesn't pre-average.
 
 ## Principles
 - An estimate is information, never a warning. Log it plainly with a name + note.

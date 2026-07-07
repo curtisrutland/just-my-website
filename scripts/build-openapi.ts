@@ -2,8 +2,10 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import * as z from "zod";
 import {
   dayTagCreateSchema,
+  entryCreateBatchSchema,
   entryCreateSchema,
   entryPatchSchema,
+  entryViewSchema,
   foodCreateSchema,
   foodPatchSchema,
   targetProfileCreateSchema,
@@ -88,7 +90,55 @@ const macrosSpec = {
       FoodCreate: js(foodCreateSchema),
       FoodPatch: js(foodPatchSchema),
       EntryCreate: js(entryCreateSchema),
+      EntryCreateBatch: js(entryCreateBatchSchema),
       EntryPatch: js(entryPatchSchema),
+      // The canonical READ shape — identical for `GET /entries` items and the day-rollup entries.
+      EntryView: js(entryViewSchema),
+      RangeDay: {
+        type: "object",
+        required: ["date", "kind", "totals", "targets"],
+        properties: {
+          date: { type: "string", format: "date" },
+          kind: { type: "string", enum: ["training", "rest", "unspecified"] },
+          totals: { $ref: "#/components/schemas/MacroTotals" },
+          targets: {
+            type: "object",
+            properties: { training: { $ref: "#/components/schemas/MacroTotals" }, rest: { $ref: "#/components/schemas/MacroTotals" } },
+          },
+        },
+      },
+      DayRollup: {
+        type: "object",
+        required: ["day", "totals", "estimation", "targets", "entries"],
+        properties: {
+          day: {
+            type: "object",
+            required: ["date", "kind"],
+            properties: { date: { type: "string", format: "date" }, kind: { type: "string", enum: ["training", "rest", "unspecified"] } },
+          },
+          totals: { $ref: "#/components/schemas/MacroTotals" },
+          estimation: {
+            type: "object",
+            required: ["estimatedFraction", "entryCount", "estimatedCount"],
+            properties: { estimatedFraction: { type: "number" }, entryCount: { type: "integer" }, estimatedCount: { type: "integer" } },
+          },
+          targets: {
+            type: "object",
+            properties: { training: { $ref: "#/components/schemas/MacroTotals" }, rest: { $ref: "#/components/schemas/MacroTotals" } },
+          },
+          entries: { type: "array", items: { $ref: "#/components/schemas/EntryView" } },
+        },
+      },
+      MacroTotals: {
+        type: "object",
+        required: ["calories", "proteinContent", "fatContent", "carbohydrateContent"],
+        properties: {
+          calories: { type: "number", nullable: true },
+          proteinContent: { type: "number", nullable: true },
+          fatContent: { type: "number", nullable: true },
+          carbohydrateContent: { type: "number", nullable: true },
+        },
+      },
       DayTagCreate: js(dayTagCreateSchema),
       TargetProfileCreate: js(targetProfileCreateSchema),
       TargetProfilePatch: js(targetProfilePatchSchema),
@@ -107,8 +157,21 @@ const macrosSpec = {
       delete: { summary: "Soft/hard delete a food", parameters: [pathParam("id"), hardParam], responses: { ...noContent, ...errorResponses } },
     },
     "/api/macros/entries": {
-      get: { summary: "List entries", parameters: [...pageParams, { name: "on", in: "query", schema: { type: "string", format: "date" } }], responses: { ...okList("EntryCreate"), ...errorResponses } },
+      get: { summary: "List entries", parameters: [...pageParams, { name: "on", in: "query", schema: { type: "string", format: "date" } }], responses: { ...okList("EntryView"), ...errorResponses } },
       post: { summary: "Log an entry", requestBody: jsonBody("EntryCreate"), responses: { ...created("Logged entry"), ...errorResponses } },
+    },
+    "/api/macros/entries/batch": {
+      post: {
+        summary: "Atomically log multiple entries (all-or-nothing)",
+        requestBody: jsonBody("EntryCreateBatch"),
+        responses: {
+          "201": {
+            description: "All entries created, in input order (EntryView shape). On any failure, zero are written.",
+            content: { "application/json": { schema: { type: "array", items: { $ref: "#/components/schemas/EntryView" } } } },
+          },
+          ...errorResponses,
+        },
+      },
     },
     "/api/macros/entries/{id}": {
       get: { summary: "Get an entry", parameters: [pathParam("id")], responses: { ...ok("Entry"), ...errorResponses } },
@@ -131,7 +194,30 @@ const macrosSpec = {
       delete: { summary: "Soft/hard delete a target profile", parameters: [pathParam("id"), hardParam], responses: { ...noContent, ...errorResponses } },
     },
     "/api/macros/days/{date}": {
-      get: { summary: "Day rollup (totals, estimation, target(s), entries)", parameters: [pathParam("date")], responses: { ...ok("Day rollup"), ...errorResponses } },
+      get: {
+        summary: "Day rollup (totals, estimation, target(s), entries)",
+        parameters: [pathParam("date")],
+        responses: {
+          "200": { description: "Day rollup", content: { "application/json": { schema: { $ref: "#/components/schemas/DayRollup" } } } },
+          ...errorResponses,
+        },
+      },
+    },
+    "/api/macros/range": {
+      get: {
+        summary: "Per-day four-macro totals across an inclusive [start, end] span",
+        parameters: [
+          { name: "start", in: "query", required: true, schema: { type: "string", format: "date" } },
+          { name: "end", in: "query", required: true, schema: { type: "string", format: "date" } },
+        ],
+        responses: {
+          "200": {
+            description: "One row per day (chronological); empty days are zeroed, never missing",
+            content: { "application/json": { schema: { type: "array", items: { $ref: "#/components/schemas/RangeDay" } } } },
+          },
+          ...errorResponses,
+        },
+      },
     },
     "/api/macros/usda/search": {
       get: { summary: "Search USDA FoodData Central", parameters: [{ name: "q", in: "query", required: true, schema: { type: "string" } }], responses: { ...ok("Search hits"), ...errorResponses } },

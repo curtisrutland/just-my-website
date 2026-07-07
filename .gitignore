@@ -38,6 +38,10 @@ yarn-error.log*
 # built skills — contain the injected agent token, never commit
 /skills/dist
 
+# Python bytecode cache — created just by importing a skill's client.py locally
+__pycache__/
+*.pyc
+
 # generated OpenAPI (build artifact, regenerated from Zod)
 /openapi
 

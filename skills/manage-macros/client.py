@@ -10,9 +10,12 @@ The base URL and agent token are injected at build time by scripts/build-skills.
 __JMW_*__ placeholders); both can also be overridden via the JMW_BASE_URL / JMW_AGENT_TOKEN
 environment variables for local development.
 
-Nutrition contract: macros are plain numbers — grams for mass macros, kcal for energy. The client
-exposes friendly names (protein/fat/carbs/...) and maps them to the API's schema.org field names.
-Every write returns the created/updated object, so you can verify a write inline (check the `id`).
+Nutrition contract: macros are plain numbers — grams for mass macros, kcal for energy. Field names
+are the SAME everywhere — the schema.org NutritionInformation names (proteinContent, fatContent,
+carbohydrateContent, ...) — on the fields you WRITE and the fields you READ BACK. The name you pass
+to log_entry is the name you get from get_day / list_entries. No short aliases, no per-endpoint
+renaming. Every write returns the created/updated object, so you can verify a write inline (check
+the `id`).
 """
 
 from __future__ import annotations
@@ -22,24 +25,39 @@ import os
 import urllib.error
 import urllib.parse
 import urllib.request
+from datetime import datetime
 from typing import Any, Optional
+from zoneinfo import ZoneInfo
 
 BASE_URL = (os.environ.get("JMW_BASE_URL") or "__JMW_BASE_URL__").rstrip("/")
 TOKEN = os.environ.get("JMW_AGENT_TOKEN") or "__JMW_AGENT_TOKEN__"
 
+# Curtis's timezone — the calendar day a meal belongs to is his LOCAL day, not UTC, not the sandbox's.
+APP_TZ = ZoneInfo(os.environ.get("JMW_TZ", "America/Chicago"))
+
 CONFIDENCE = ("measured", "estimated", "logged_serving")
 KIND = ("training", "rest")
 
-# friendly name -> schema.org NutritionInformation field
-_MACROS = {
-    "calories": "calories",
-    "protein": "proteinContent",
-    "fat": "fatContent",
-    "carbs": "carbohydrateContent",
-    "fiber": "fiberContent",
-    "sugar": "sugarContent",
-    "sodium": "sodiumContent",
-    "satfat": "saturatedFatContent",
+# The macro field names — schema.org NutritionInformation, used verbatim on read AND write.
+_MACRO_FIELDS = (
+    "calories",
+    "proteinContent",
+    "fatContent",
+    "carbohydrateContent",
+    "fiberContent",
+    "sugarContent",
+    "sodiumContent",
+    "saturatedFatContent",
+)
+
+# Structural (non-macro) fields correct_entry may change -> the API field name it maps to.
+# `consumed_on` is here on purpose: an entry CAN be moved to another day (no delete-and-recreate).
+_CORRECTABLE = {
+    "name": "name",
+    "consumed_on": "consumedOn",
+    "quantity_grams": "quantityGrams",
+    "confidence": "confidence",
+    "note": "note",
 }
 
 
@@ -48,12 +66,51 @@ class MacrosError(RuntimeError):
 
 
 def _macros_payload(values: dict[str, Optional[float]]) -> dict[str, float]:
-    out: dict[str, float] = {}
-    for friendly, field in _MACROS.items():
-        v = values.get(friendly)
-        if v is not None:
-            out[field] = v
-    return out
+    """Keep the supplied (non-None) macros. Reject any key that isn't a real macro field, rather
+    than silently dropping it — a mistyped field name is a bug, not a no-op."""
+    unknown = [k for k in values if k not in _MACRO_FIELDS]
+    if unknown:
+        raise MacrosError(f"unknown macro field(s) {unknown}; valid macros are {list(_MACRO_FIELDS)}")
+    return {k: v for k, v in values.items() if v is not None}
+
+
+# Friendly (snake_case) structural field -> API field. Macros are handled via _MACRO_FIELDS.
+_LOG_STRUCTURAL = {
+    "consumed_on": "consumedOn",
+    "quantity_grams": "quantityGrams",
+    "confidence": "confidence",
+    "name": "name",
+    "note": "note",
+    "food_id": "foodId",
+}
+_LOG_REQUIRED = ("consumed_on", "quantity_grams", "confidence")
+
+
+def _entry_payload(fields: dict[str, Any], *, where: str = "entry") -> dict[str, Any]:
+    """Build one entry's API payload from the friendly field names `log_entry` accepts. Raises
+    MacrosError — naming `where` — on a missing required field, an unrecognised field, or a bad
+    confidence, so a malformed item (e.g. one row of a batch) is rejected loudly, with its position,
+    before anything is written."""
+    missing = [k for k in _LOG_REQUIRED if fields.get(k) is None]
+    if missing:
+        raise MacrosError(f"{where}: missing required field(s) {missing}")
+    payload: dict[str, Any] = {}
+    macros: dict[str, Any] = {}
+    unknown: list[str] = []
+    for key, value in fields.items():
+        if key in _LOG_STRUCTURAL:
+            if value is not None:
+                payload[_LOG_STRUCTURAL[key]] = value
+        elif key in _MACRO_FIELDS:
+            macros[key] = value
+        else:
+            unknown.append(key)
+    if unknown:
+        raise MacrosError(f"{where}: unrecognised field(s) {unknown}")
+    if fields["confidence"] not in CONFIDENCE:
+        raise MacrosError(f"{where}: confidence must be one of {CONFIDENCE}")
+    payload.update(_macros_payload(macros))
+    return payload
 
 
 class MacrosClient:
@@ -88,7 +145,18 @@ class MacrosClient:
                 parsed = {}
             err = parsed.get("error", {}) if isinstance(parsed, dict) else {}
             message = err.get("message") or raw.decode("utf-8", "replace")
+            details = err.get("details") if isinstance(err, dict) else None
+            if details:
+                # Carry field-path details through (e.g. which batch index / field failed validation).
+                message = f"{message} ({details})"
             raise MacrosError(f"{exc.code} {err.get('code', 'error')}: {message}") from None
+
+    # -- dates ------------------------------------------------------------------
+    @staticmethod
+    def today() -> str:
+        """Curtis's CURRENT local calendar date ('YYYY-MM-DD', America/Chicago). Call this to anchor
+        what day a meal is logged against — never infer the date from the conversation."""
+        return datetime.now(APP_TZ).date().isoformat()
 
     # -- day view ---------------------------------------------------------------
     def get_day(self, date: str) -> dict:
@@ -97,6 +165,14 @@ class MacrosClient:
 
     def list_entries(self, on: Optional[str] = None, limit: int = 50, offset: int = 0) -> dict:
         return self._request("GET", "/entries", params={"on": on, "limit": limit, "offset": offset})
+
+    def get_range(self, start: str, end: str) -> list:
+        """Per-day four-macro totals across the inclusive span [start, end] (YYYY-MM-DD) — for any
+        multi-day / trend question ("fat trend this week", "under calories on rest days"). Returns
+        ONE object per day, chronological: {date, kind, totals, targets}. Empty days come back ZEROED,
+        never missing, so a gap can't be mistaken for an unlogged day. `totals` is the four tracked
+        macros; aggregate (average / trend / over-under counts) yourself as the question needs."""
+        return self._request("GET", "/range", params={"start": start, "end": end})
 
     # -- logging (the main write path) ------------------------------------------
     def log_entry(
@@ -109,40 +185,83 @@ class MacrosClient:
         note: Optional[str] = None,
         food_id: Optional[str] = None,
         calories: Optional[float] = None,
-        protein: Optional[float] = None,
-        fat: Optional[float] = None,
-        carbs: Optional[float] = None,
-        fiber: Optional[float] = None,
-        sugar: Optional[float] = None,
-        sodium: Optional[float] = None,
-        satfat: Optional[float] = None,
+        proteinContent: Optional[float] = None,
+        fatContent: Optional[float] = None,
+        carbohydrateContent: Optional[float] = None,
+        fiberContent: Optional[float] = None,
+        sugarContent: Optional[float] = None,
+        sodiumContent: Optional[float] = None,
+        saturatedFatContent: Optional[float] = None,
     ) -> dict:
         """Log a consumed food on `consumed_on` (YYYY-MM-DD). ALWAYS pass a concise `name` (e.g.
         "grilled chicken breast", "3 large eggs") — it's the entry's display label. Provide absolute
-        macros for the whole entry (quantity already applied). Use confidence 'estimated' + a `note`
-        capturing the fuzziness / how you estimated. Returns the created entry (check its `id`)."""
-        if confidence not in CONFIDENCE:
-            raise MacrosError(f"confidence must be one of {CONFIDENCE}")
-        payload: dict[str, Any] = {"consumedOn": consumed_on, "quantityGrams": quantity_grams, "confidence": confidence}
-        if name is not None:
-            payload["name"] = name
-        if note is not None:
-            payload["note"] = note
-        if food_id is not None:
-            payload["foodId"] = food_id
-        payload.update(_macros_payload(dict(calories=calories, protein=protein, fat=fat, carbs=carbs, fiber=fiber, sugar=sugar, sodium=sodium, satfat=satfat)))
+        macros for the whole entry (quantity already applied), using the schema.org field names
+        (proteinContent, fatContent, carbohydrateContent, ...) — the SAME names you read back. Use
+        confidence 'estimated' + a `note` capturing the fuzziness / how you estimated. Returns the
+        created entry (check its `id`)."""
+        payload = _entry_payload(
+            {
+                "consumed_on": consumed_on,
+                "quantity_grams": quantity_grams,
+                "confidence": confidence,
+                "name": name,
+                "note": note,
+                "food_id": food_id,
+                "calories": calories,
+                "proteinContent": proteinContent,
+                "fatContent": fatContent,
+                "carbohydrateContent": carbohydrateContent,
+                "fiberContent": fiberContent,
+                "sugarContent": sugarContent,
+                "sodiumContent": sodiumContent,
+                "saturatedFatContent": saturatedFatContent,
+            }
+        )
         return self._request("POST", "/entries", body=payload)
 
+    def log_entries(self, entries: list[dict[str, Any]]) -> list[dict]:
+        """Log several entries in ONE ATOMIC call — all succeed or none do. Use this for a composite
+        meal (a restaurant plate broken into components, a smoothie's constituents): the meal is a
+        unit, so "the plate logged or it didn't" is the only state worth having.
+
+        Each item is a dict with the SAME field names `log_entry` takes — `consumed_on`,
+        `quantity_grams`, `confidence` (required), plus `name`/`note`/`food_id` and macros by their
+        schema.org names. Returns the created entries in read (`EntryView`) shape, in input order, so
+        you can read-after-write without a follow-up call. If ANY item is malformed or the write
+        fails, NOTHING is logged and this raises (identifying the offending index)."""
+        if not entries:
+            raise MacrosError("log_entries needs at least one entry")
+        payload = [_entry_payload(dict(e), where=f"entries[{i}]") for i, e in enumerate(entries)]
+        return self._request("POST", "/entries/batch", body=payload)
+
     def correct_entry(self, entry_id: str, **fields: Any) -> dict:
-        """Correct an entry. Accepts name, quantity_grams, confidence, note, and any macro
-        (calories/protein/fat/carbs/...). Only supplied fields change. Returns the updated entry."""
+        """Correct an entry. Structural fields: `name`, `consumed_on` (move it to another day),
+        `quantity_grams`, `confidence`, `note`. Plus any macro by its schema.org name
+        (calories / proteinContent / carbohydrateContent / ...). Only the fields you pass change.
+
+        Passing a field this method doesn't recognise is an ERROR, not a silent no-op — so a typo,
+        or an attempt to change something that isn't correctable, surfaces immediately instead of
+        returning success while quietly doing nothing. Returns the updated entry."""
         patch: dict[str, Any] = {}
-        for key in ("name", "confidence", "note"):
-            if key in fields:
-                patch[key] = fields.pop(key)
-        if "quantity_grams" in fields:
-            patch["quantityGrams"] = fields.pop("quantity_grams")
-        patch.update(_macros_payload(fields))
+        macros: dict[str, Any] = {}
+        unknown: list[str] = []
+        for key, value in fields.items():
+            if key in _CORRECTABLE:
+                patch[_CORRECTABLE[key]] = value
+            elif key in _MACRO_FIELDS:
+                macros[key] = value
+            else:
+                unknown.append(key)
+        if unknown:
+            raise MacrosError(
+                f"correct_entry got unrecognised field(s) {unknown}; correctable fields are "
+                f"{list(_CORRECTABLE)} plus macros {list(_MACRO_FIELDS)}"
+            )
+        if "confidence" in patch and patch["confidence"] not in CONFIDENCE:
+            raise MacrosError(f"confidence must be one of {CONFIDENCE}")
+        patch.update(_macros_payload(macros))
+        if not patch:
+            raise MacrosError("correct_entry called with nothing to change")
         return self._request("PATCH", f"/entries/{entry_id}", body=patch)
 
     def delete_entry(self, entry_id: str) -> None:
@@ -185,10 +304,24 @@ class MacrosClient:
         return self._request("GET", "/foods", params={"q": q, "limit": limit, "offset": offset})
 
     # -- targets ----------------------------------------------------------------
-    def set_target(self, kind: str, effective_from: str, *, calories: Optional[float] = None, protein: Optional[float] = None, fat: Optional[float] = None, carbs: Optional[float] = None) -> dict:
-        """Create a dated target profile for a kind (training/rest), effective from a date."""
+    def set_target(
+        self,
+        kind: str,
+        effective_from: str,
+        *,
+        calories: Optional[float] = None,
+        proteinContent: Optional[float] = None,
+        fatContent: Optional[float] = None,
+        carbohydrateContent: Optional[float] = None,
+    ) -> dict:
+        """Create a dated target profile for a kind (training/rest), effective from a date. Macros
+        use the schema.org names (proteinContent, ...) — the same ones every read returns."""
         if kind not in KIND:
             raise MacrosError(f"kind must be one of {KIND}")
         payload: dict[str, Any] = {"kind": kind, "effectiveFrom": effective_from}
-        payload.update(_macros_payload(dict(calories=calories, protein=protein, fat=fat, carbs=carbs)))
+        payload.update(
+            _macros_payload(
+                dict(calories=calories, proteinContent=proteinContent, fatContent=fatContent, carbohydrateContent=carbohydrateContent)
+            )
+        )
         return self._request("POST", "/target-profiles", body=payload)
