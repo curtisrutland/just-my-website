@@ -84,3 +84,49 @@ describe("entry macro snapshotting", () => {
     expect(entry.foodId).toBe(food.id);
   });
 });
+
+// Serialization guards for the two 2026-07 bug reports (both were consumer reads of keys that don't
+// exist on the payload). The day-rollup response must carry the day's kind at `day.kind` (not a
+// top-level `day_kind`), and every entry must serialize its macros under the schema.org names,
+// consistent with the day totals. The sum==totals check is the one the report says would catch Bug 2.
+describe("day-rollup response shape", () => {
+  const MACRO_KEYS = [
+    "calories",
+    "proteinContent",
+    "fatContent",
+    "carbohydrateContent",
+    "fiberContent",
+    "sugarContent",
+    "sodiumContent",
+    "saturatedFatContent",
+  ] as const;
+
+  it("carries day.kind and per-entry macros (no day_kind, no short/`foodName` keys)", async () => {
+    const r = await getDayRollup(DAY);
+    expect(r.entries.length).toBeGreaterThan(0);
+
+    // The day's kind is at `day.kind` (a non-empty string), NOT a top-level `day_kind`.
+    expect(typeof r.day.kind).toBe("string");
+    expect(r.day.kind.length).toBeGreaterThan(0);
+    expect("day_kind" in r).toBe(false);
+
+    for (const e of r.entries) {
+      // Every macro key is present (value may be null) under its schema.org name.
+      for (const k of MACRO_KEYS) expect(k in e).toBe(true);
+      // The keys the bug reports guessed do NOT exist.
+      expect("protein" in e).toBe(false);
+      expect("fat" in e).toBe(false);
+      expect("carbs" in e).toBe(false);
+      expect("foodName" in e).toBe(false);
+    }
+
+    // Per-entry macros are consistent with the day totals (the Bug 2 regression guard).
+    const sum = (k: (typeof MACRO_KEYS)[number]) => r.entries.reduce((a, e) => a + ((e[k] as number | null) ?? 0), 0);
+    expect(sum("proteinContent")).toBeCloseTo(r.totals.proteinContent ?? 0, 6);
+    expect(sum("fatContent")).toBeCloseTo(r.totals.fatContent ?? 0, 6);
+    expect(sum("carbohydrateContent")).toBeCloseTo(r.totals.carbohydrateContent ?? 0, 6);
+
+    // And the values genuinely exist (not just the keys) — at least one entry has real macros.
+    expect(r.entries.some((e) => e.proteinContent != null && e.proteinContent > 0)).toBe(true);
+  });
+});

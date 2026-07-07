@@ -136,6 +136,14 @@ When Curtis says "actually that was closer to X," correct the specific entry —
 `correct_entry` **errors on any field it doesn't recognise** — a typo'd or non-correctable field
 raises instead of silently succeeding, so a "success" always means the change landed.
 
+### Reading it back — the day shape
+`get_day(date)` returns `{"day": {...}, "totals", "estimation", "targets", "entries"}`:
+- The day's tag is at **`day["day"]["kind"]`** — `"training"`, `"rest"`, or `"unspecified"`. There is
+  **no top-level `day_kind`**; reading one yields `None` and misreads every tagged day as untagged.
+  (A tagged day also narrows `targets` to that one kind; an unspecified day returns both — so if
+  `targets` has a single kind, the day IS tagged, and `day["day"]["kind"]` will say which.)
+- `totals` is the four-macro day sum; each of `entries` is the object below.
+
 ### Reading it back — the entry shape
 `get_day(...)["entries"]` and `list_entries(...)["items"]` return the **identical** entry object —
 same keys, every time:

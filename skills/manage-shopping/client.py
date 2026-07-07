@@ -57,6 +57,9 @@ class ShoppingClient:
                 parsed = {}
             err = parsed.get("error", {}) if isinstance(parsed, dict) else {}
             message = err.get("message") or raw.decode("utf-8", "replace")
+            details = err.get("details") if isinstance(err, dict) else None
+            if details:
+                message = f"{message} ({details})"
             raise ShoppingError(f"{exc.code} {err.get('code', 'error')}: {message}") from None
 
     # -- writes -----------------------------------------------------------------
@@ -75,8 +78,23 @@ class ShoppingClient:
         return created
 
     def edit_item(self, item_id: str, **fields: Any) -> dict:
-        """Correct an item's `category` and/or `text`. Only supplied fields change."""
-        patch = {k: fields[k] for k in ("category", "text") if k in fields}
+        """Correct an item's `category` and/or `text`. Only supplied fields change. To check/un-check
+        an item use check_item()/uncheck_item(), not this. Raises on any unrecognised field, so a typo
+        is a loud error, not a silent no-op that returns success without changing anything."""
+        allowed = ("category", "text")
+        patch: dict[str, Any] = {}
+        unknown: list[str] = []
+        for key, value in fields.items():
+            if key in allowed:
+                patch[key] = value
+            elif key == "status":
+                raise ShoppingError("use check_item()/uncheck_item() to change an item's status, not edit_item()")
+            else:
+                unknown.append(key)
+        if unknown:
+            raise ShoppingError(f"edit_item got unrecognised field(s) {unknown}; editable: {list(allowed)}")
+        if not patch:
+            raise ShoppingError("edit_item called with nothing to change")
         return self._request("PATCH", f"/items/{item_id}", body=patch)
 
     def check_item(self, item_id: str) -> dict:

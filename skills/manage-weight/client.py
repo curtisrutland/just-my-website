@@ -56,6 +56,9 @@ class WeightClient:
                 parsed = {}
             err = parsed.get("error", {}) if isinstance(parsed, dict) else {}
             message = err.get("message") or raw.decode("utf-8", "replace")
+            details = err.get("details") if isinstance(err, dict) else None
+            if details:
+                message = f"{message} ({details})"
             raise WeightError(f"{exc.code} {err.get('code', 'error')}: {message}") from None
 
     # -- writes -----------------------------------------------------------------
@@ -67,12 +70,27 @@ class WeightClient:
         return self._request("POST", "/entries", body=body)
 
     def correct_weight(self, entry_id: str, **fields: Any) -> dict:
-        """Correct an entry (weight, note). Only supplied fields change. Returns the updated entry."""
+        """Correct a weigh-in's `weight` and/or `note`. Only supplied fields change. Weigh-ins are
+        keyed one-per-day, so `measured_on` is NOT correctable here — to move one to another date,
+        log_weight() on the correct day and delete this entry. Raises on any unrecognised field, so a
+        typo is a loud error, not a silent no-op that returns success without changing anything."""
+        allowed = ("weight", "note")
         patch: dict[str, Any] = {}
-        if "weight" in fields:
-            patch["weight"] = fields["weight"]
-        if "note" in fields:
-            patch["note"] = fields["note"]
+        unknown: list[str] = []
+        for key, value in fields.items():
+            if key in allowed:
+                patch[key] = value
+            elif key == "measured_on":
+                raise WeightError(
+                    "measured_on is not correctable (weigh-ins are one-per-day); to move one, "
+                    "log_weight() on the correct day and delete this entry"
+                )
+            else:
+                unknown.append(key)
+        if unknown:
+            raise WeightError(f"correct_weight got unrecognised field(s) {unknown}; correctable: {list(allowed)}")
+        if not patch:
+            raise WeightError("correct_weight called with nothing to change")
         return self._request("PATCH", f"/entries/{entry_id}", body=patch)
 
     def delete_weight(self, entry_id: str) -> None:

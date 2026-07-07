@@ -46,10 +46,19 @@ Report the **average and the trend rate**, e.g. "7-day average 178.4 lb, trendin
 a single day's raw number as noise, not a verdict. Down-trend is usually the goal, but keep it
 factual — information, not judgment.
 
+`t["series"]` is the per-day trend line — each point is `{"date", "weight" (raw; `null` on a gap),
+"avg" (7-day rolling)}`. **Mind the day key:** a stored weigh-in keys the day as `measured_on`
+(what you write) / `measuredOn` (what `get_weight` returns); the derived series keys it as `date`.
+Read each by its own key — the wrong one yields a silent `None`.
+
 ## Correcting / removing
 
 ```python
 w.get_weight("2026-07-05")            # the entry for a day, or None
-w.correct_weight(entry_id, weight=178.0)
+w.correct_weight(entry_id, weight=178.0)   # corrects weight/note only; raises on an unknown field
 w.delete_weight(entry_id)             # soft delete
 ```
+
+`correct_weight` changes `weight`/`note` in place. To move a weigh-in to a **different day**, don't
+try to correct the date — `log_weight()` on the correct day (it replaces that day's value) and
+`delete_weight()` the wrong one. A weigh-in is keyed one-per-day.
