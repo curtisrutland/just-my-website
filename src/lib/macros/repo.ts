@@ -97,11 +97,17 @@ export async function findLiveFoodByFdcId(fdcId: number): Promise<MacroFood | nu
   return row ?? null;
 }
 
-export async function listFoods(opts: Page & { q?: string } = {}): Promise<Paged<MacroFood>> {
-  const { limit = 50, offset = 0, q } = opts;
-  const where = q
-    ? and(live(macroFood.deletedAt), ilike(macroFood.name, `%${q}%`))
-    : live(macroFood.deletedAt);
+export async function listFoods(
+  opts: Page & { q?: string; category?: string; brand?: string } = {}
+): Promise<Paged<MacroFood>> {
+  const { limit = 50, offset = 0, q, category, brand } = opts;
+  // Fuzzy name (ilike %q%) + exact category + case-insensitive exact brand. The brand+category
+  // pair is the dedupe cohort (register_ingredient searches it before inserting).
+  const conds = [live(macroFood.deletedAt)];
+  if (q) conds.push(ilike(macroFood.name, `%${q}%`));
+  if (category) conds.push(eq(macroFood.category, category));
+  if (brand) conds.push(ilike(macroFood.brand, brand));
+  const where = and(...conds);
   const items = await db
     .select()
     .from(macroFood)

@@ -38,6 +38,34 @@ APP_TZ = ZoneInfo(os.environ.get("JMW_TZ", "America/Chicago"))
 CONFIDENCE = ("measured", "estimated", "logged_serving")
 KIND = ("training", "rest")
 
+# A catalog food's PROVENANCE / trust, one axis (ingredient registry). 'usda' carries an fdcId;
+# the other three are non-usda and MUST carry a category. 'scanned' = a real label (highest trust),
+# 'proxy' = a deliberate stand-in (visibly a guess, upgradeable), 'estimated' = memory, no label.
+SOURCE = ("usda", "scanned", "proxy", "estimated")
+
+# The closed category vocabulary — narrows matching so "yogurt" doesn't collide across brands.
+# 'other' is the escape hatch so a write is never blocked on category modeling.
+CATEGORY = (
+    "plant-milk",
+    "dairy-milk",
+    "yogurt",
+    "protein-powder",
+    "fruit",
+    "vegetable",
+    "nut-butter",
+    "oil-fat",
+    "grain",
+    "meat",
+    "seafood",
+    "condiment",
+    "sweetener",
+    "egg",
+    "legume",
+    "beverage",
+    "cheese",
+    "other",
+)
+
 # The macro field names — schema.org NutritionInformation, used verbatim on read AND write.
 _MACRO_FIELDS = (
     "calories",
@@ -59,6 +87,25 @@ _CORRECTABLE = {
     "confidence": "confidence",
     "note": "note",
 }
+
+
+# Structural (non-macro) food fields register/update accept -> the API field name. Macros are
+# handled separately via _MACRO_FIELDS (per-100g on a food).
+_FOOD_STRUCTURAL = {
+    "name": "name",
+    "source": "source",
+    "brand": "brand",
+    "category": "category",
+    "tags": "tags",
+    "label_basis": "labelBasis",
+    "serving_label": "servingLabel",
+    "serving_grams": "servingGrams",
+    "fdc_id": "fdcId",
+}
+
+# The four macros a registered ingredient must carry (per-100g) — the whole point is a pinned value,
+# so a macro-less row is rejected. Everything else (fiber/sugar/sodium/satfat) is optional.
+_CORE_MACROS = ("calories", "proteinContent", "fatContent", "carbohydrateContent")
 
 
 class MacrosError(RuntimeError):
@@ -121,6 +168,9 @@ class MacrosClient:
             raise MacrosError("agent token not configured (build the skill or set JMW_AGENT_TOKEN)")
         self._base = f"{base_url}/api/macros"
         self._headers = {"authorization": f"Bearer {token}", "content-type": "application/json"}
+        # Session cache-on-resolve for ingredients (mirrors USDA's cache-on-first-resolve): repeated
+        # logging of the same ingredient in one session is a dict hit, not a re-fetch. Keyed by id.
+        self._ingredient_cache: dict[str, dict] = {}
 
     # -- low level (stdlib urllib) ----------------------------------------------
     def _request(self, method: str, path: str, *, body: Any = None, params: Any = None) -> Any:
@@ -287,10 +337,32 @@ class MacrosClient:
         """Resolve + cache a USDA food by fdcId (cache-on-first-resolve). Returns the cached food."""
         return self._request("POST", "/usda/resolve", body={"fdcId": fdc_id})
 
-    def create_food(self, name: str, *, source: str = "custom", fdc_id: Optional[int] = None, serving_label: Optional[str] = None, serving_grams: Optional[float] = None, **macros: Any) -> dict:
-        """Create a catalog food (per-100g macros). Use for reusable custom foods (a specific bar,
-        unflavored whey) — not one-off estimates; those just get a `name` on the entry."""
+    def create_food(
+        self,
+        name: str,
+        *,
+        source: str = "estimated",
+        category: Optional[str] = None,
+        brand: Optional[str] = None,
+        tags: Optional[list[str]] = None,
+        label_basis: Optional[dict[str, Any]] = None,
+        fdc_id: Optional[int] = None,
+        serving_label: Optional[str] = None,
+        serving_grams: Optional[float] = None,
+        **macros: Any,
+    ) -> dict:
+        """LOW-LEVEL catalog write (per-100g macros). Prefer `register_ingredient`, which dedupe-checks
+        first; reach for this only when you deliberately want a raw insert with no dedupe. A non-usda
+        food needs a `category` (the API rejects it otherwise). Returns the created food."""
         payload: dict[str, Any] = {"name": name, "source": source}
+        if category is not None:
+            payload["category"] = category
+        if brand is not None:
+            payload["brand"] = brand
+        if tags is not None:
+            payload["tags"] = tags
+        if label_basis is not None:
+            payload["labelBasis"] = label_basis
         if fdc_id is not None:
             payload["fdcId"] = fdc_id
         if serving_label is not None:
@@ -300,8 +372,134 @@ class MacrosClient:
         payload.update(_macros_payload(macros))
         return self._request("POST", "/foods", body=payload)
 
-    def list_foods(self, q: Optional[str] = None, limit: int = 50, offset: int = 0) -> dict:
-        return self._request("GET", "/foods", params={"q": q, "limit": limit, "offset": offset})
+    def list_foods(
+        self,
+        q: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+        *,
+        category: Optional[str] = None,
+        brand: Optional[str] = None,
+    ) -> dict:
+        """LOW-LEVEL catalog read (paginated). `search_ingredient` is the friendlier front door."""
+        return self._request(
+            "GET", "/foods", params={"q": q, "category": category, "brand": brand, "limit": limit, "offset": offset}
+        )
+
+    # -- ingredient registry ----------------------------------------------------
+    # A pinned catalog of branded/label foods (per-100g) so a smoothie's macros come from a fixed
+    # row, not re-estimated from memory each time. Method shape mirrors the USDA search->resolve path.
+    def search_ingredient(
+        self, query: Optional[str] = None, *, category: Optional[str] = None, brand: Optional[str] = None, limit: int = 10
+    ) -> dict:
+        """Find candidate ingredients by fuzzy name, optionally narrowed by category and/or brand.
+        Returns {items, ...} with each candidate's per-100g macros + source (source carries the trust
+        signal). NEVER auto-pick — surface the candidates and CONFIRM which row, exactly as with the
+        USDA search->resolve discipline (that is how a sweetened-vs-unsweetened mix-up slips in)."""
+        if category is not None and category not in CATEGORY:
+            raise MacrosError(f"category must be one of {CATEGORY}")
+        return self.list_foods(query, limit=limit, category=category, brand=brand)
+
+    def resolve_ingredient(self, ingredient_id: str) -> dict:
+        """Return the full ingredient row by id, caching it for the session (cache-on-resolve) so
+        repeated logging of the same ingredient doesn't re-fetch. `register`/`update` refresh the cache."""
+        cached = self._ingredient_cache.get(ingredient_id)
+        if cached is not None:
+            return cached
+        row = self._request("GET", f"/foods/{ingredient_id}")
+        self._ingredient_cache[ingredient_id] = row
+        return row
+
+    def register_ingredient(
+        self,
+        name: str,
+        category: str,
+        *,
+        source: str,
+        brand: Optional[str] = None,
+        tags: Optional[list[str]] = None,
+        serving_label: Optional[str] = None,
+        serving_grams: Optional[float] = None,
+        label_basis: Optional[dict[str, Any]] = None,
+        confirm: bool = False,
+        **per100g: Any,
+    ) -> dict:
+        """Register a branded / label-scanned ingredient (per-100g macros, by schema.org name).
+
+        REQUIRED: `name`, `category`, `source`, and per-100g `calories`/`proteinContent`/`fatContent`/
+        `carbohydrateContent` (the pinned value is the whole point). `source` carries trust — use
+        'scanned' for a real label, 'proxy' for a deliberate stand-in, 'estimated' for memory (there
+        is NO separate confidence arg). When registering from a scan, pass `label_basis` = the printed
+        serving + printed macros VERBATIM, so the per-100g values stay auditable.
+
+        DEDUPE IS MANDATORY and happens here: before inserting, this searches the brand+category
+        cohort (or fuzzy name within the category when no brand). If likely matches exist and you did
+        NOT pass confirm=True, it does NOT insert — it returns
+        {"created": None, "duplicate_candidates": [...]} so you can decide update-#id vs. new (this is
+        the single most important guard against registry rot — e.g. "Ripple" vs "Ripple Unsweetened"
+        a month apart). Pass confirm=True to insert anyway (a genuine new variant). On insert it
+        returns {"created": <row>, "duplicate_candidates": []}."""
+        if source not in SOURCE:
+            raise MacrosError(f"source must be one of {SOURCE}")
+        if category not in CATEGORY:
+            raise MacrosError(f"category must be one of {CATEGORY}")
+        missing = [m for m in _CORE_MACROS if per100g.get(m) is None]
+        if missing:
+            raise MacrosError(f"register_ingredient needs per-100g macro(s) {missing} (the pinned value is the point)")
+
+        if not confirm:
+            probe = self.search_ingredient(None if brand else name, category=category, brand=brand)
+            candidates = probe.get("items", []) if isinstance(probe, dict) else []
+            if candidates:
+                return {"created": None, "duplicate_candidates": candidates}
+
+        created = self.create_food(
+            name,
+            source=source,
+            category=category,
+            brand=brand,
+            tags=tags,
+            label_basis=label_basis,
+            serving_label=serving_label,
+            serving_grams=serving_grams,
+            **per100g,
+        )
+        self._ingredient_cache[created["id"]] = created
+        return {"created": created, "duplicate_candidates": []}
+
+    def update_ingredient(self, ingredient_id: str, **fields: Any) -> dict:
+        """Update an ingredient in place (SAME id, so entry history that snapshotted from it stays
+        intact). The canonical use is UPGRADING a proxy/estimated row to 'scanned' once the real label
+        appears — pass source='scanned' plus the corrected per-100g macros and a `label_basis`. Also
+        for fixing a value or adding brand/tags. Structural fields (snake_case): `name`, `source`,
+        `brand`, `category`, `tags`, `label_basis`, `serving_label`, `serving_grams`, `fdc_id`; plus
+        any per-100g macro by its schema.org name. Passing an unrecognised field is an ERROR, not a
+        silent no-op. Returns the updated row."""
+        patch: dict[str, Any] = {}
+        macros: dict[str, Any] = {}
+        unknown: list[str] = []
+        for key, value in fields.items():
+            if key in _FOOD_STRUCTURAL:
+                patch[_FOOD_STRUCTURAL[key]] = value
+            elif key in _MACRO_FIELDS:
+                macros[key] = value
+            else:
+                unknown.append(key)
+        if unknown:
+            raise MacrosError(
+                f"update_ingredient got unrecognised field(s) {unknown}; updatable fields are "
+                f"{list(_FOOD_STRUCTURAL)} plus macros {list(_MACRO_FIELDS)}"
+            )
+        if "source" in patch and patch["source"] not in SOURCE:
+            raise MacrosError(f"source must be one of {SOURCE}")
+        if "category" in patch and patch["category"] not in CATEGORY:
+            raise MacrosError(f"category must be one of {CATEGORY}")
+        patch.update(_macros_payload(macros))
+        if not patch:
+            raise MacrosError("update_ingredient called with nothing to change")
+        row = self._request("PATCH", f"/foods/{ingredient_id}", body=patch)
+        self._ingredient_cache[ingredient_id] = row  # refresh the session cache
+        return row
 
     # -- targets ----------------------------------------------------------------
     def set_target(

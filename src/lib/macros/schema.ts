@@ -13,9 +13,43 @@ import * as z from "zod";
 
 // --- Enums (the closed vocabularies) ---
 
-/** 'usda' (resolved from FoodData Central + cached) or 'custom' (Curtis-defined). */
-export const foodSource = z.enum(["usda", "custom"]);
-/** The schema's honesty about fuzziness — three coarse buckets, not a 1-10 scale. */
+/**
+ * A food's PROVENANCE / trust, one axis (ingredient-registry, see docs/ingredient-registry-brief.md):
+ *  - 'usda'      resolved from FoodData Central (carries an fdcId). High trust, generic.
+ *  - 'scanned'   from a real label Curtis showed. Highest trust.
+ *  - 'proxy'     a deliberate stand-in (e.g. Greek yogurt for skyr) — visibly a guess, upgradeable.
+ *  - 'estimated' Claude's own knowledge, no label. Lowest trust.
+ * Replaces the old 'usda'|'custom' pair; 'custom' rows migrated to 'estimated' (0004). There is NO
+ * separate `confidence` field on foods — `source` carries trust (entry-level `confidence` is unrelated).
+ */
+export const foodSource = z.enum(["usda", "scanned", "proxy", "estimated"]);
+/**
+ * A small, closed category vocabulary — narrows matching so "yogurt" doesn't collide across brands.
+ * REQUIRED on new food writes; `other` is the escape hatch so a write is never blocked on modeling.
+ * Start small; add values only when a real ingredient genuinely doesn't fit.
+ */
+export const foodCategory = z.enum([
+  "plant-milk",
+  "dairy-milk",
+  "yogurt",
+  "protein-powder",
+  "fruit",
+  "vegetable",
+  "nut-butter",
+  "oil-fat",
+  "grain",
+  "meat",
+  "seafood",
+  "condiment",
+  "sweetener",
+  "egg",
+  "legume",
+  "beverage",
+  "cheese",
+  "other",
+]);
+/** The schema's honesty about ENTRY fuzziness — three coarse buckets, not a 1-10 scale. Distinct
+ * from `foodSource`: this is per-logged-entry, that is per-catalog-food. */
 export const entryConfidence = z.enum(["measured", "estimated", "logged_serving"]);
 /** Which calorie target applies. Extensible (e.g. 'big_training') via a future migration. */
 export const dayKind = z.enum(["training", "rest"]);
@@ -56,11 +90,33 @@ const nutritionShape = {
 
 // --- Food ---
 
+/**
+ * The printed label captured VERBATIM (as printed, per serving) so the per-100g values a food
+ * stores stay auditable back to their source scan — a mis-scan can be caught later. Not normalized:
+ * this is the raw label, not the storage basis. Every field optional (labels vary in completeness).
+ */
+export const labelBasisSchema = z
+  .object({
+    servingLabel: z.string().trim().min(1).nullish(),
+    servingGrams: z.number().finite().positive().nullish(),
+    ...nutritionShape, // AS PRINTED, per serving (not per-100g)
+  })
+  .strict();
+
 const foodBase = z
   .object({
     name,
     source: foodSource,
     fdcId: z.int().positive().nullish(),
+    // Groups product variants and drives dedupe (e.g. "Ripple" over sweetened/unsweetened).
+    brand: z.string().trim().min(1).nullish(),
+    // Narrows matching. Nullish in the base so USDA foods (matched by fdcId) and patches need not
+    // carry one; the create refinement below requires it for every NON-usda food.
+    category: foodCategory.nullish(),
+    // Freeform, for Curtis's own querying later — NOT a matching key, NOT a controlled vocabulary.
+    tags: z.array(z.string().trim().min(1)).nullish(),
+    // The source label, kept for audit (see labelBasisSchema).
+    labelBasis: labelBasisSchema.nullish(),
     // Optional household serving (input sugar only; never changes the per-100g storage basis).
     servingLabel: z.string().trim().min(1).nullish(),
     servingGrams: z.number().finite().positive().nullish(),
@@ -69,17 +125,23 @@ const foodBase = z
   .strict();
 
 /**
- * Create a catalog food. A USDA-sourced food must carry its `fdcId` (for dedupe/re-resolution);
- * a custom food must not.
+ * Create a catalog food / register an ingredient. Cross-field invariants:
+ *  - a USDA food MUST carry its `fdcId` (for dedupe/re-resolution); any non-usda food must NOT;
+ *  - every non-usda food MUST carry a `category` (it's the match-narrowing key — USDA foods are
+ *    matched by fdcId instead, so category is optional there).
  */
 export const foodCreateSchema = foodBase
   .refine((d) => d.source !== "usda" || d.fdcId != null, {
     error: "usda foods require an fdcId",
     path: ["fdcId"],
   })
-  .refine((d) => d.source !== "custom" || d.fdcId == null, {
-    error: "custom foods must not carry an fdcId",
+  .refine((d) => d.source === "usda" || d.fdcId == null, {
+    error: "non-usda foods must not carry an fdcId",
     path: ["fdcId"],
+  })
+  .refine((d) => d.source === "usda" || d.category != null, {
+    error: "a category is required for non-usda foods",
+    path: ["category"],
   });
 
 /** Partial update. Cross-field invariants aren't re-checked here — the DB holds the rest. */
@@ -175,6 +237,9 @@ export const targetProfilePatchSchema = targetProfileCreateSchema.partial();
 
 export type FoodCreate = z.infer<typeof foodCreateSchema>;
 export type FoodPatch = z.infer<typeof foodPatchSchema>;
+export type FoodCategory = z.infer<typeof foodCategory>;
+export type FoodSource = z.infer<typeof foodSource>;
+export type LabelBasis = z.infer<typeof labelBasisSchema>;
 export type EntryCreate = z.infer<typeof entryCreateSchema>;
 export type EntryPatch = z.infer<typeof entryPatchSchema>;
 export type EntryView = z.infer<typeof entryViewSchema>;

@@ -60,10 +60,12 @@ async function main() {
     await db.insert(macroDayTag).values(tagged.map((w) => ({ day: w.date, kind: w.kind })));
   }
 
-  // Foods (custom) exist so entries show a name. Entries snapshot absolute macros regardless.
+  // Placeholder foods exist so entries show a name. Entries snapshot absolute macros regardless.
+  // Seeded as source 'estimated' (no label) + category 'other' — the honest values for throwaway
+  // placeholders (see the ingredient-registry provenance expansion; 'custom' is retired).
   const foods = await db
     .insert(macroFood)
-    .values(foodNames.map((name) => ({ name, source: "custom" })))
+    .values(foodNames.map((name) => ({ name, source: "estimated", category: "other" })))
     .returning({ id: macroFood.id, name: macroFood.name });
   const idByName = new Map(foods.map((f) => [f.name, f.id]));
 
