@@ -158,9 +158,8 @@ is already a fixed-frame layout, so `display: standalone` is a natural fit.
 
 **Verified here:** `tsc` clean; `next build` compiles + typechecks the PWA additions successfully
 (build only stops later on `DATABASE_URL`, the pre-existing env need); `manifest()` output shape and
-icon dimensions checked; icons eyeballed. **Not verifiable in this env:** the on-device iOS install —
-needs Curtis's iPhone against the live deploy (add to home screen → confirm full-screen standalone,
-black status bar, correct icon/splash).
+icon dimensions checked; icons eyeballed. **On-device iOS install: tested + valid** (Curtis confirmed
+add-to-home-screen → full-screen standalone, status bar, icon on the live deploy). **PWA done.**
 
 **Deferred (only if a concrete need appears):** a service worker for **offline** and/or **web push**
 (iOS push requires an installed PWA + SW). Both are purely additive later — none of the above blocks
@@ -204,20 +203,21 @@ per-serving values, /100g is computed from them. **Status: BUILT + verified loca
 `ingredient-registry`** — migration `0004` (new food fields + `custom`→`estimated`, applied to Neon),
 expanded `source`/new `foodCategory` Zod enums, `listFoods` category/brand filters, `search`/`register`
 (dedupe)/`resolve` (session cache)/`update` (loud) methods on `manage-macros`, SKILL.md registry section,
-OpenAPI regenerated. 48/48 tests green; 14/14 end-to-end skill checks green against local. **Committed +
-pushed; PR [#7](https://github.com/curtisrutland/just-my-website/pull/7) open against `main`. Pending:**
-review/merge → deploy → skill re-upload to claude.ai (`skills/dist/manage-macros.zip`). (No local poke —
-claude.ai's sandbox can't reach a localhost URL, so the real validation is post-deploy against prod.)
+OpenAPI regenerated. 48/48 tests green. **DONE + LIVE** (PR
+[#7](https://github.com/curtisrutland/just-my-website/pull/7) merged, deployed to `justmy.website`,
+verified end-to-end against the prod domain — register/dedupe/update round-trip). Ingredient adding
+has been exercised successfully in real use. skyr `proxy`→`scanned` upgrade remains as a natural
+future validation when its label is in hand (not a task).
 
 ## Pending publish / follow-ups
 
-- [~] **`manage-shopping` skill** — built (`skills/manage-shopping/` — SKILL.md + stdlib Python
+- [x] **`manage-shopping` skill** — built (`skills/manage-shopping/` — SKILL.md + stdlib Python
   client over `/api/shopping/**`; batch-add, read-the-list, check/uncheck, edit, soft-delete) and
   verified end-to-end against the local dev server (9/9 checks, system python3). Registered in
   `build-skills.mjs`; zip at `skills/dist/manage-shopping.zip`. First upload shipped a zip pointing at
   `localhost:3000` (the build's old default) — **fixed**: `build-skills.mjs` now defaults the base URL
-  to `https://justmy.website` and warns on localhost; the zip was rebuilt with the prod URL (verified,
-  0 localhost refs). **Remaining:** Curtis re-uploads `skills/dist/manage-shopping.zip` to claude.ai.
+  to `https://justmy.website` and warns on localhost; the zip was rebuilt with the prod URL. Uploaded
+  to claude.ai (done).
 
 - **Shopping refinements (deferred within scope, from `docs/shopping-model.md`).** Store-aisle
   category order (alphabetical for now); old-bought purge (filter-only for now); a real-browser pass
