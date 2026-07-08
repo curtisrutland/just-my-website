@@ -26,7 +26,6 @@ const num: React.CSSProperties = {
   fontSize: 12.5,
   fontVariantNumeric: "tabular-nums",
   color: "var(--color-text)",
-  textAlign: "right",
 };
 
 /**
@@ -52,20 +51,22 @@ export function EntryRow({
   return (
     <>
       <div className="entry-grid" style={{ display: "grid", alignItems: "center", padding: "11px 14px", borderTop: "1px solid var(--color-border)" }}>
-        <div style={{ minWidth: 0 }}>
+        <div className="entry-cell-name" style={{ minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={tagStyle(estimated)}>{TAG[entry.confidence]}</span>
-            <span style={{ fontFamily: "var(--font-body)", fontSize: 13.5, color: "var(--color-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <span className="entry-name" style={{ fontFamily: "var(--font-body)", fontSize: 13.5, color: "var(--color-text)" }}>
               {entry.name ?? "ad-hoc"}
             </span>
           </div>
           <div style={{ fontFamily: "var(--font-mono)", fontSize: 10.5, color: "var(--color-text-muted)", marginTop: 3 }}>{fmt(entry.quantityGrams)} g</div>
         </div>
-        <span style={{ ...num, ...(estimated ? { borderBottom: "1px dotted var(--color-accent)", paddingBottom: 1 } : {}) }}>{fmt(entry.calories)}</span>
-        <span style={num}>{fmt(entry.proteinContent)}</span>
-        <span style={num}>{fmt(entry.fatContent)}</span>
-        <span style={num}>{fmt(entry.carbohydrateContent)}</span>
-        <span style={{ textAlign: "right" }}>
+        <span className="entry-num entry-cell-kcal" style={{ ...num, ...(estimated ? { borderBottom: "1px dotted var(--color-accent)", paddingBottom: 1 } : {}) }}>
+          <span className="entry-num-label">KCAL</span>{fmt(entry.calories)}
+        </span>
+        <span className="entry-num entry-cell-p" style={num}><span className="entry-num-label">P</span>{fmt(entry.proteinContent)}</span>
+        <span className="entry-num entry-cell-f" style={num}><span className="entry-num-label">F</span>{fmt(entry.fatContent)}</span>
+        <span className="entry-num entry-cell-c" style={num}><span className="entry-num-label">C</span>{fmt(entry.carbohydrateContent)}</span>
+        <span className="entry-cell-caret" style={{ textAlign: "right" }}>
           {expandable ? (
             <button
               type="button"
