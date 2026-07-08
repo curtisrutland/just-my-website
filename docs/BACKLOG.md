@@ -102,6 +102,14 @@ the top of each section.
 - [x] **GitHub link in the sidebar + index.** Done — a muted "off-site" repo link in the nav rail
   (grouped with `recipes`, outline marker + `REPO ↗`) and a matching neutral row on the landing
   (outline `◇` vs recipes' filled `◆`; footer reads "N off-site").
+- **Macros grid → two lines on mobile ([#3]).** The three MacroBars (protein/fat/carbs) still render
+  as one row of three narrow columns on mobile — the mobile `.macro-grid` rule (`src/app/globals.css`
+  ~L348) only tightens the gap and inherits `grid-template-columns: repeat(3, 1fr)` from the desktop
+  rule. Fix: set `repeat(2, 1fr)` in that mobile block so the macros reflow 2+1 across two rows. ~2-line
+  CSS edit, one file, no `.tsx` changes. Those narrow 3-up columns are exactly why the state label had
+  to collapse word→glyph on mobile (`.macro-state-word`→`.macro-state-glyph`, globals.css ~L362); with
+  wider 2-up cells, check whether the full state word fits again and drop the swap if so. Verify at a
+  true 390px viewport (no overflow). **Effort: XS.**
 - **DayRollup hero corridor legibility.** When the day is "in range" (unspecified), the value fill
   is solid cyan and the corridor band is also cyan-tinted, so they blend and the "honest corridor"
   reads less crisply than it should — and it's the single most important element. Proposed: make the
@@ -112,6 +120,45 @@ the top of each section.
 ## Future modules
 
 - _(none queued — macros, weight, and shopping are all live.)_
+
+## PWA — installable to home screen ([#4])
+
+**Goal:** installable on iOS (add to home screen) and Android, running standalone with no browser
+chrome. The shell is already a fixed-frame layout (nav rail + terminal topbar + single scrolling
+content slot, `src/components/shell/AppShell.tsx`), so a `display: standalone` window is a natural
+fit — no chrome is expected to be there anyway.
+
+**Current state.** Next `16.2.10` (the modified fork), App Router. Root layout
+(`src/app/layout.tsx`) exports only `title`/`description` — no `viewport`, `themeColor`, `appleWebApp`,
+or `manifest`. Icons exist as Next file-based metadata: `src/app/icon.svg` (512 teal mark on
+`#0f151a`) + `src/app/apple-icon.png` (auto apple-touch-icon). There is **no** `public/` dir, **no**
+manifest, **no** service worker, and **no** raster PNG icon set. `next.config.ts` is empty; no PWA deps
+(`next-pwa` / `@serwist/next` / workbox).
+
+**Scope.**
+1. **Manifest** — add `src/app/manifest.ts` (Next metadata route): `name` / `short_name`, `start_url`,
+   `display: "standalone"`, `background_color` + `theme_color` `#0f151a`, and an `icons` array.
+2. **Icons** — generate raster PNGs from `icon.svg` (min 192×192 and 512×512, plus a maskable 512 for
+   Android). `apple-icon.png` already covers the apple-touch-icon.
+3. **iOS meta** — add `appleWebApp` (`capable`, status-bar style, title) and a `viewport` export with
+   `themeColor` + `viewport-fit=cover` via the layout's metadata/viewport exports.
+4. **Service worker** — *optional for install.* iOS add-to-home-screen works from manifest + apple meta
+   alone; a SW is only needed for offline/reliable caching. If we do add one, vet `@serwist/next`
+   against the 16.2.10 fork first (or hand-roll a minimal SW).
+
+**Gotcha (must-do).** The Clerk auth proxy matcher (`src/proxy.ts` ~L21) whitelists `.webmanifest` but
+**not** `.json` (the `js(?!on)` term excludes `.js` and leaves `.json` gated). The manifest, any SW,
+and the icons **must be reachable unauthenticated** or the browser can't fetch the manifest / show the
+install prompt. Serve the manifest at a `.webmanifest` path, or add the manifest/SW/icon routes to the
+proxy's public exclusions.
+
+**Before coding.** `npm install`, then read the fork's own docs under `node_modules/next/dist/docs/`
+to confirm the `manifest` / `viewport` / `appleWebApp` API shapes — per AGENTS.md this Next has
+breaking changes vs stock, so don't assume the stock metadata signatures.
+
+**Open question (Curtis):** do we want true **offline** support, or just installable/standalone? That's
+the fork in the road — standalone-only is **S** (manifest + icons + meta, no SW); offline adds a
+service worker and bumps it to **M**.
 
 ## Pending publish / follow-ups
 
@@ -193,3 +240,6 @@ scope below is kept as-is for when we do pick it up.
   basics). Add structured logging/error tracking if debugging needs it.
 - **Preview env for `JMW_*` tokens.** Skipped due to an outdated Vercel CLI quirk; add before the
   first preview deploy (or after `npm i -g vercel@latest`).
+
+[#3]: https://github.com/curtisrutland/just-my-website/issues/3
+[#4]: https://github.com/curtisrutland/just-my-website/issues/4
