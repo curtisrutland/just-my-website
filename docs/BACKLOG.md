@@ -102,6 +102,25 @@ the top of each section.
 - [x] **GitHub link in the sidebar + index.** Done — a muted "off-site" repo link in the nav rail
   (grouped with `recipes`, outline marker + `REPO ↗`) and a matching neutral row on the landing
   (outline `◇` vs recipes' filled `◆`; footer reads "N off-site").
+- **Food list rows → clean two-row item on mobile ([#3]).** On the macros page the food/entry list
+  (`EntryList`/`EntryRow`, `.entry-grid`) is a single 6-column row — `FOOD name | KCAL | P | F | C |
+  caret` — kept as one row on mobile too (mobile `.entry-grid` is just narrower:
+  `minmax(0,1fr) 48px 32px 32px 32px 20px`, `src/app/globals.css` ~L341-343). That leaves ~190px for
+  the name on a 390px screen, so names truncate hard ("Chocolate stra…", "2 Alaska cod fi…"). Want:
+  each entry lays out as a **two-row item** on mobile — the full food name (with its MEAS/EST/SRV badge
+  and qty) on line 1, wrapping without an ellipsis; the KCAL/P/F/C numbers on line 2. Everything fits,
+  nothing truncates.
+  - **Not pure CSS.** The name span carries *inline* `whiteSpace:nowrap; overflow:hidden;
+    textOverflow:ellipsis` (`EntryRow.tsx` L58), and inline styles can't be overridden by `@media` —
+    so the truncation lives in the component, not the stylesheet. Move those onto a class (e.g.
+    `.entry-name`) so the mobile rule can allow the name to wrap.
+  - **Reflow the grid.** Give mobile `.entry-grid` a two-row `grid-template-areas` layout (name block
+    spanning row 1, the four numbers + caret on row 2) instead of the 6-across columns; assign each
+    `EntryRow` cell to its area via a class.
+  - **Header row.** `EntryList`'s `FOOD/KCAL/P/F/C` header also uses `.entry-grid` (L23-29) and won't
+    line up over the new two-row items — hide it or simplify it on mobile.
+  - Files: `src/app/globals.css`, `src/components/macros/EntryRow.tsx`, `src/components/macros/EntryList.tsx`.
+    Verify at a true 390px viewport (full names visible, no overflow, numbers still aligned). **Effort: S.**
 - **DayRollup hero corridor legibility.** When the day is "in range" (unspecified), the value fill
   is solid cyan and the corridor band is also cyan-tinted, so they blend and the "honest corridor"
   reads less crisply than it should — and it's the single most important element. Proposed: make the
@@ -112,6 +131,45 @@ the top of each section.
 ## Future modules
 
 - _(none queued — macros, weight, and shopping are all live.)_
+
+## PWA — installable to home screen ([#4])
+
+**Goal:** installable on iOS (add to home screen) and Android, running standalone with no browser
+chrome. The shell is already a fixed-frame layout (nav rail + terminal topbar + single scrolling
+content slot, `src/components/shell/AppShell.tsx`), so a `display: standalone` window is a natural
+fit — no chrome is expected to be there anyway.
+
+**Current state.** Next `16.2.10` (the modified fork), App Router. Root layout
+(`src/app/layout.tsx`) exports only `title`/`description` — no `viewport`, `themeColor`, `appleWebApp`,
+or `manifest`. Icons exist as Next file-based metadata: `src/app/icon.svg` (512 teal mark on
+`#0f151a`) + `src/app/apple-icon.png` (auto apple-touch-icon). There is **no** `public/` dir, **no**
+manifest, **no** service worker, and **no** raster PNG icon set. `next.config.ts` is empty; no PWA deps
+(`next-pwa` / `@serwist/next` / workbox).
+
+**Scope.**
+1. **Manifest** — add `src/app/manifest.ts` (Next metadata route): `name` / `short_name`, `start_url`,
+   `display: "standalone"`, `background_color` + `theme_color` `#0f151a`, and an `icons` array.
+2. **Icons** — generate raster PNGs from `icon.svg` (min 192×192 and 512×512, plus a maskable 512 for
+   Android). `apple-icon.png` already covers the apple-touch-icon.
+3. **iOS meta** — add `appleWebApp` (`capable`, status-bar style, title) and a `viewport` export with
+   `themeColor` + `viewport-fit=cover` via the layout's metadata/viewport exports.
+4. **Service worker** — *optional for install.* iOS add-to-home-screen works from manifest + apple meta
+   alone; a SW is only needed for offline/reliable caching. If we do add one, vet `@serwist/next`
+   against the 16.2.10 fork first (or hand-roll a minimal SW).
+
+**Gotcha (must-do).** The Clerk auth proxy matcher (`src/proxy.ts` ~L21) whitelists `.webmanifest` but
+**not** `.json` (the `js(?!on)` term excludes `.js` and leaves `.json` gated). The manifest, any SW,
+and the icons **must be reachable unauthenticated** or the browser can't fetch the manifest / show the
+install prompt. Serve the manifest at a `.webmanifest` path, or add the manifest/SW/icon routes to the
+proxy's public exclusions.
+
+**Before coding.** `npm install`, then read the fork's own docs under `node_modules/next/dist/docs/`
+to confirm the `manifest` / `viewport` / `appleWebApp` API shapes — per AGENTS.md this Next has
+breaking changes vs stock, so don't assume the stock metadata signatures.
+
+**Open question (Curtis):** do we want true **offline** support, or just installable/standalone? That's
+the fork in the road — standalone-only is **S** (manifest + icons + meta, no SW); offline adds a
+service worker and bumps it to **M**.
 
 ## Pending publish / follow-ups
 
@@ -193,3 +251,6 @@ scope below is kept as-is for when we do pick it up.
   basics). Add structured logging/error tracking if debugging needs it.
 - **Preview env for `JMW_*` tokens.** Skipped due to an outdated Vercel CLI quirk; add before the
   first preview deploy (or after `npm i -g vercel@latest`).
+
+[#3]: https://github.com/curtisrutland/just-my-website/issues/3
+[#4]: https://github.com/curtisrutland/just-my-website/issues/4

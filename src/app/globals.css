@@ -309,8 +309,20 @@
   grid-template-columns: 130px 96px 64px 1fr 64px;
 }
 .entry-grid {
+  display: grid;
   grid-template-columns: 1fr 66px 46px 46px 46px 26px;
   gap: 8px;
+}
+.entry-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.entry-num {
+  text-align: right;
+}
+.entry-num-label {
+  display: none;
 }
 .rollup-card {
   padding: 26px;
@@ -338,9 +350,50 @@
   .col-note {
     display: none;
   }
+  .entry-head {
+    display: none;
+  }
   .entry-grid {
-    grid-template-columns: minmax(0, 1fr) 48px 32px 32px 32px 20px;
-    gap: 6px;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-areas:
+      "name name name caret"
+      "kcal prot fat carb";
+    column-gap: 6px;
+    row-gap: 9px;
+  }
+  .entry-cell-name {
+    grid-area: name;
+  }
+  .entry-cell-caret {
+    grid-area: caret;
+  }
+  .entry-cell-kcal {
+    grid-area: kcal;
+  }
+  .entry-cell-p {
+    grid-area: prot;
+  }
+  .entry-cell-f {
+    grid-area: fat;
+  }
+  .entry-cell-c {
+    grid-area: carb;
+  }
+  .entry-name {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+  }
+  .entry-num {
+    text-align: left;
+  }
+  .entry-num-label {
+    display: inline;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    color: var(--color-text-muted);
+    margin-right: 5px;
   }
   .rollup-card {
     padding: 18px;
