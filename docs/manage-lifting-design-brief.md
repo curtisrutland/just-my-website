@@ -75,8 +75,9 @@ deliberate platform decision — flag it, don't bake it in here.
 
 ## 4. Screen specs
 
-### 4.1 Import  *(POST /api/lifting/import)*
-- File picker + drag/drop for one Hevy CSV. Nothing else.
+### 4.1 Import  *(web server action `importHevyCsv`, not a token endpoint)*
+- File picker + drag/drop for one Hevy CSV. Nothing else. Submitting calls the server action and
+  renders its returned summary — there is no API call from the UI.
 - On success, echo the import summary **verbatim from the response**: inserted / updated /
   unchanged / workouts_seen.
 - **`unmapped_exercises` must be surfaced prominently, not buried** — if non-empty, show a clear
@@ -84,6 +85,10 @@ deliberate platform decision — flag it, don't bake it in here.
   but won't count toward muscle-group volume until mapped." This callout is the UI's job precisely
   because it's the one place a new lift needs attention (see contract import note). Show `warnings` if present.
 - Empty/first-run state everywhere else points here ("Import your Hevy export to get started").
+- **Import freshness** *(GET /api/lifting/last-import)*: surface "Last import: 3 days ago" (from
+  `imported_at`) as a small, glanceable line on the dashboard — this is Hevy-mirrored data, so how
+  stale it is matters. Before the first upload `imported_at` is `null` → show the first-run prompt
+  instead. Keep it subtle (a caption, not a hero); it's a freshness cue, not a metric.
 
 ### 4.2 Recent workouts  *(GET /api/lifting/recent-workouts?limit=n)*
 - List, most recent first. Each row: session `title`, date, total volume (lbs), set count, duration.

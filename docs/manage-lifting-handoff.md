@@ -5,6 +5,13 @@
 (Next.js / Neon Postgres / Drizzle, API-first, Clerk auth, Python skill client over the
 token API — same shape as `manage-macros` / `manage-recipes`).
 
+> **Superseded where reconciled:** `docs/lifting-model.md` is the approved code spec and **overrides
+> this brief wherever they differ** — specifically: no `user_id`/RLS (single-user platform); import is
+> a web server action, not a token endpoint, and the skill is read-only (no `import` command);
+> don't-prune on Hevy deletions (v1); muscle slug is `glutes` (this brief's §8 `glutes/hips`);
+> plus a new `lifting_import` log + `last-import` endpoint. Read the model doc's reconciliation
+> ledger first; this brief remains the source for everything it doesn't touch.
+
 **Related docs (three-agent split):**
 - **`manage-lifting-contract.md`** — the shared read-API contract. **This brief's backend OWNS
   and implements it.** The §7 endpoints below must match the contract's response shapes exactly;
