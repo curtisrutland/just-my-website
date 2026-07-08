@@ -102,14 +102,25 @@ the top of each section.
 - [x] **GitHub link in the sidebar + index.** Done — a muted "off-site" repo link in the nav rail
   (grouped with `recipes`, outline marker + `REPO ↗`) and a matching neutral row on the landing
   (outline `◇` vs recipes' filled `◆`; footer reads "N off-site").
-- **Macros grid → two lines on mobile ([#3]).** The three MacroBars (protein/fat/carbs) still render
-  as one row of three narrow columns on mobile — the mobile `.macro-grid` rule (`src/app/globals.css`
-  ~L348) only tightens the gap and inherits `grid-template-columns: repeat(3, 1fr)` from the desktop
-  rule. Fix: set `repeat(2, 1fr)` in that mobile block so the macros reflow 2+1 across two rows. ~2-line
-  CSS edit, one file, no `.tsx` changes. Those narrow 3-up columns are exactly why the state label had
-  to collapse word→glyph on mobile (`.macro-state-word`→`.macro-state-glyph`, globals.css ~L362); with
-  wider 2-up cells, check whether the full state word fits again and drop the swap if so. Verify at a
-  true 390px viewport (no overflow). **Effort: XS.**
+- **Food list rows → clean two-row item on mobile ([#3]).** On the macros page the food/entry list
+  (`EntryList`/`EntryRow`, `.entry-grid`) is a single 6-column row — `FOOD name | KCAL | P | F | C |
+  caret` — kept as one row on mobile too (mobile `.entry-grid` is just narrower:
+  `minmax(0,1fr) 48px 32px 32px 32px 20px`, `src/app/globals.css` ~L341-343). That leaves ~190px for
+  the name on a 390px screen, so names truncate hard ("Chocolate stra…", "2 Alaska cod fi…"). Want:
+  each entry lays out as a **two-row item** on mobile — the full food name (with its MEAS/EST/SRV badge
+  and qty) on line 1, wrapping without an ellipsis; the KCAL/P/F/C numbers on line 2. Everything fits,
+  nothing truncates.
+  - **Not pure CSS.** The name span carries *inline* `whiteSpace:nowrap; overflow:hidden;
+    textOverflow:ellipsis` (`EntryRow.tsx` L58), and inline styles can't be overridden by `@media` —
+    so the truncation lives in the component, not the stylesheet. Move those onto a class (e.g.
+    `.entry-name`) so the mobile rule can allow the name to wrap.
+  - **Reflow the grid.** Give mobile `.entry-grid` a two-row `grid-template-areas` layout (name block
+    spanning row 1, the four numbers + caret on row 2) instead of the 6-across columns; assign each
+    `EntryRow` cell to its area via a class.
+  - **Header row.** `EntryList`'s `FOOD/KCAL/P/F/C` header also uses `.entry-grid` (L23-29) and won't
+    line up over the new two-row items — hide it or simplify it on mobile.
+  - Files: `src/app/globals.css`, `src/components/macros/EntryRow.tsx`, `src/components/macros/EntryList.tsx`.
+    Verify at a true 390px viewport (full names visible, no overflow, numbers still aligned). **Effort: S.**
 - **DayRollup hero corridor legibility.** When the day is "in range" (unspecified), the value fill
   is solid cyan and the corridor band is also cyan-tinted, so they blend and the "honest corridor"
   reads less crisply than it should — and it's the single most important element. Proposed: make the
