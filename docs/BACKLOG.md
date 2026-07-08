@@ -134,42 +134,37 @@ the top of each section.
 
 ## PWA — installable to home screen ([#4])
 
-**Goal:** installable on iOS (add to home screen) and Android, running standalone with no browser
-chrome. The shell is already a fixed-frame layout (nav rail + terminal topbar + single scrolling
-content slot, `src/components/shell/AppShell.tsx`), so a `display: standalone` window is a natural
-fit — no chrome is expected to be there anyway.
+**Decision: standalone-only, no service worker.** Offline was explicitly ruled out (single-user private
+data tool — caching auth-gated personal data on-disk buys little and risks stale reads; the fork's PWA
+guide confirms install prompts work without offline). So no SW, no `@serwist`/webpack detour. The shell
+is already a fixed-frame layout, so `display: standalone` is a natural fit.
 
-**Current state.** Next `16.2.10` (the modified fork), App Router. Root layout
-(`src/app/layout.tsx`) exports only `title`/`description` — no `viewport`, `themeColor`, `appleWebApp`,
-or `manifest`. Icons exist as Next file-based metadata: `src/app/icon.svg` (512 teal mark on
-`#0f151a`) + `src/app/apple-icon.png` (auto apple-touch-icon). There is **no** `public/` dir, **no**
-manifest, **no** service worker, and **no** raster PNG icon set. `next.config.ts` is empty; no PWA deps
-(`next-pwa` / `@serwist/next` / workbox).
+- [x] **Manifest** — `src/app/manifest.ts` (Next metadata route → served at `/manifest.webmanifest`):
+  name/short_name, `start_url: "/"`, `display: standalone`, `background_color`/`theme_color` `#0a0d0f`
+  (the dark `--color-bg`), icons array.
+- [x] **Icons** — `scripts/build-icons.mjs` (sharp) rasterizes `src/app/icon.svg` →
+  `public/icons/icon-{192,512}.png` (purpose `any`) + `icon-maskable-512.png` (full-bleed bg, mark in
+  the safe zone). `apple-icon.png` still covers the iOS apple-touch-icon; re-run the script if the SVG
+  changes.
+- [x] **iOS/viewport meta** — `layout.tsx` now exports `viewport` (`themeColor #0a0d0f`,
+  `viewportFit: "cover"`, `colorScheme`) and `metadata.appleWebApp` (`capable`, title `justmy`,
+  `statusBarStyle: "black"` — opaque bar above the app, so no notch underlap / safe-area work). The
+  `manifest.ts` file convention injects the `<link rel="manifest">` automatically.
+- [x] **Auth-proxy reachability** — no `proxy.ts` change needed: the matcher already whitelists
+  `webmanifest` and `png`, so `/manifest.webmanifest` and `/icons/*.png` are served unauthenticated
+  (verified by testing the matcher regex). The earlier `.json` gotcha doesn't bite because Next serves
+  the manifest as `.webmanifest`. `start_url: "/"` stays auth-gated (correct — launching the app lands
+  on the Clerk-gated switcher).
 
-**Scope.**
-1. **Manifest** — add `src/app/manifest.ts` (Next metadata route): `name` / `short_name`, `start_url`,
-   `display: "standalone"`, `background_color` + `theme_color` `#0f151a`, and an `icons` array.
-2. **Icons** — generate raster PNGs from `icon.svg` (min 192×192 and 512×512, plus a maskable 512 for
-   Android). `apple-icon.png` already covers the apple-touch-icon.
-3. **iOS meta** — add `appleWebApp` (`capable`, status-bar style, title) and a `viewport` export with
-   `themeColor` + `viewport-fit=cover` via the layout's metadata/viewport exports.
-4. **Service worker** — *optional for install.* iOS add-to-home-screen works from manifest + apple meta
-   alone; a SW is only needed for offline/reliable caching. If we do add one, vet `@serwist/next`
-   against the 16.2.10 fork first (or hand-roll a minimal SW).
+**Verified here:** `tsc` clean; `next build` compiles + typechecks the PWA additions successfully
+(build only stops later on `DATABASE_URL`, the pre-existing env need); `manifest()` output shape and
+icon dimensions checked; icons eyeballed. **Not verifiable in this env:** the on-device iOS install —
+needs Curtis's iPhone against the live deploy (add to home screen → confirm full-screen standalone,
+black status bar, correct icon/splash).
 
-**Gotcha (must-do).** The Clerk auth proxy matcher (`src/proxy.ts` ~L21) whitelists `.webmanifest` but
-**not** `.json` (the `js(?!on)` term excludes `.js` and leaves `.json` gated). The manifest, any SW,
-and the icons **must be reachable unauthenticated** or the browser can't fetch the manifest / show the
-install prompt. Serve the manifest at a `.webmanifest` path, or add the manifest/SW/icon routes to the
-proxy's public exclusions.
-
-**Before coding.** `npm install`, then read the fork's own docs under `node_modules/next/dist/docs/`
-to confirm the `manifest` / `viewport` / `appleWebApp` API shapes — per AGENTS.md this Next has
-breaking changes vs stock, so don't assume the stock metadata signatures.
-
-**Open question (Curtis):** do we want true **offline** support, or just installable/standalone? That's
-the fork in the road — standalone-only is **S** (manifest + icons + meta, no SW); offline adds a
-service worker and bumps it to **M**.
+**Deferred (only if a concrete need appears):** a service worker for **offline** and/or **web push**
+(iOS push requires an installed PWA + SW). Both are purely additive later — none of the above blocks
+them.
 
 ## Pending publish / follow-ups
 
