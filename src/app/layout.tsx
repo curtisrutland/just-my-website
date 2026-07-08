@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { IBM_Plex_Sans, JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import "./globals.css";
@@ -12,6 +12,19 @@ const mono = JetBrains_Mono({ subsets: ["latin"], weight: ["400", "500", "600", 
 export const metadata: Metadata = {
   title: "justmy.website",
   description: "A private, single-user personal-data platform.",
+  applicationName: "justmy.website",
+  // Standalone install on iOS: capable + a home-screen title; the opaque black status bar sits
+  // above the app (no notch underlap, so no safe-area work needed for the fixed shell chrome).
+  appleWebApp: { capable: true, title: "justmy", statusBarStyle: "black" },
+};
+
+// The manifest link is injected automatically by the `manifest.ts` file convention.
+export const viewport: Viewport = {
+  themeColor: "#0a0d0f",
+  colorScheme: "dark light",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
