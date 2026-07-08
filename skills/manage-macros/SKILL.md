@@ -4,7 +4,9 @@ description: >-
   Log and manage Curtis's food intake in justmy.website (the macro tracker). Use whenever Curtis
   says what he ate or drank ("had a couple handfuls of almonds and a big chicken thigh"), asks how
   his day is going against target, wants to correct or remove something he logged, or tells you a
-  day was training or rest. This is the only write path into the tracker.
+  day was training or rest. Also when he shows you a **nutrition label** to pin a branded ingredient's
+  macros, or logs a recurring multi-part food (a smoothie) whose parts should come from pinned values
+  rather than re-estimation. This is the only write path into the tracker.
 ---
 
 # manage-macros
@@ -43,9 +45,12 @@ Dates are always `YYYY-MM-DD` in Curtis's local timezone.
 ## The core loop: logging food
 
 1. **Parse** what Curtis said into distinct items.
-2. **Get numbers.** For a recognizable food, prefer real data: `m.search_usda("chicken thigh cooked")`
-   → pick an `fdcId` → `m.resolve_usda(fdcId)` (caches it, returns per-100g macros) → scale by the
-   amount. Otherwise estimate from your own knowledge.
+2. **Get numbers.** Prefer a pinned value over a fresh estimate, in this order:
+   (a) a **registry ingredient** — `m.search_ingredient("ripple", category="plant-milk")` for a
+   branded/label food Curtis has pinned (see *Ingredient registry* below);
+   (b) **USDA** — `m.search_usda("chicken thigh cooked")` → pick an `fdcId` → `m.resolve_usda(fdcId)`
+   (caches it, returns per-100g macros) → scale by the amount;
+   (c) otherwise **estimate** from your own knowledge.
 3. **Log** each item with a concise **`name`** and absolute macros (quantity already applied). The
    call returns the created entry — check its `id` to confirm the write inline (no need to re-read):
 
@@ -95,6 +100,84 @@ field names — the same on write and read**: `calories`, `proteinContent`, `fat
 `carbohydrateContent`, `fiberContent`, `sugarContent`, `sodiumContent`, `saturatedFatContent`.
 The name you log with is the name you read back. Provide what you know; leave the rest out
 (unknown ≠ zero).
+
+## Ingredient registry — pin branded/label foods
+
+Some foods recur constantly (a daily smoothie's parts: a plant-milk, a whey, a skyr, a banana). If you
+re-estimate their macros from memory every time, the *same product* drifts day to day. The registry
+fixes that: pin each product's **per-100g** macros **once**, then log by referencing the pinned row, so
+a number only moves when a *weight* moves. Registry foods live in the same catalog as USDA foods —
+`source` records how the numbers were obtained and how far to trust them:
+
+- `scanned` — from a real nutrition label Curtis showed you. Highest trust.
+- `proxy` — a deliberate stand-in (e.g. Greek-yogurt numbers for skyr until you get the real label).
+  **Visibly a guess.** Upgrade it later.
+- `estimated` — your own knowledge, no label. Lowest trust.
+- `usda` — resolved from FoodData Central (via `resolve_usda`); carries an `fdcId`.
+
+### Register from a label (per-100g, keep the printed label)
+Labels print **per serving**; the registry stores **per 100g**. Convert: `per100g = printed × 100 /
+servingGrams`. Pass the printed serving + printed macros **verbatim** as `label_basis` so the per-100g
+value stays auditable back to the scan. Every non-usda ingredient needs a `category` (the match key)
+and at least `calories`/`proteinContent`/`fatContent`/`carbohydrateContent` per 100g.
+
+```python
+res = m.register_ingredient(
+    "Ripple Unsweetened", "plant-milk", source="scanned", brand="Ripple",
+    # per 100g (label said 8g protein / 4.5g fat per 240 mL cup → ×100/240):
+    calories=52, proteinContent=3.3, fatContent=1.9, carbohydrateContent=0,
+    serving_label="1 cup", serving_grams=240,
+    label_basis={"servingLabel": "1 cup", "servingGrams": 240,   # AS PRINTED (per serving)
+                 "calories": 125, "proteinContent": 8, "fatContent": 4.5, "carbohydrateContent": 0},
+    tags=["low-carb", "liquid"],
+)
+```
+
+### Dedupe is automatic — confirm before making a twin
+`register_ingredient` searches the brand+category cohort first. If it finds likely matches it does
+**not** insert — it hands them back for you to judge, so you don't end up with "Ripple" and "Ripple
+Unsweetened" as accidental twins a month apart:
+
+```python
+if res["created"] is None:
+    for c in res["duplicate_candidates"]:
+        print(c["id"], c["name"], c["proteinContent"])   # ask Curtis: update one of these, or genuinely new?
+    # → to UPDATE an existing row: m.update_ingredient(<id>, ...)
+    # → if it's truly a new variant (different per-100g): re-call with confirm=True
+    res = m.register_ingredient("Ripple Unsweetened", "plant-milk", source="scanned", brand="Ripple",
+                                confirm=True, calories=52, proteinContent=3.3, fatContent=1.9, carbohydrateContent=0)
+ingredient = res["created"]
+```
+
+### Find, resolve, and upgrade
+```python
+hits = m.search_ingredient("skyr", category="yogurt")["items"]   # CONFIRM which row — never auto-pick
+row  = m.resolve_ingredient(hits[0]["id"])                        # full row; cached for the session
+# When the real skyr label finally appears, upgrade the proxy IN PLACE (same id → past logs untouched):
+m.update_ingredient(row["id"], source="scanned", proteinContent=11, fatContent=0.2,
+                    label_basis={"servingLabel": "1 container", "servingGrams": 150, "proteinContent": 17})
+```
+`search_ingredient` returns candidates and **never auto-selects** — confirming which row is what keeps a
+sweetened-vs-unsweetened mix-up out. `update_ingredient` errors on any unrecognised field (no silent
+no-op), same discipline as `correct_entry`.
+
+### Log from the registry — estimation-free
+Reference the pinned row by `food_id` and pass the **weighed grams**, with **no macros** — the API scales
+the ingredient's per-100g by the grams and snapshots the result onto the entry. The estimation step is
+gone; the numbers trace to a pinned row:
+
+```python
+milk  = m.search_ingredient("ripple", category="plant-milk")["items"][0]   # confirm it
+whey  = m.search_ingredient("whey",   category="protein-powder")["items"][0]
+m.log_entries([
+    {"consumed_on": m.today(), "name": "Ripple (smoothie)", "food_id": milk["id"], "quantity_grams": 240, "confidence": "measured"},
+    {"consumed_on": m.today(), "name": "whey (smoothie)",   "food_id": whey["id"], "quantity_grams": 32,  "confidence": "measured"},
+])
+# no macros passed → each entry's macros are snapshotted from its food's per-100g × grams, at log time.
+```
+
+Because macros are snapshotted at log time, later fixing an ingredient (or upgrading a proxy to scanned)
+**never rewrites past days** — it only affects logs made after the fix. That's the intended behavior.
 
 ## Day kind (which target applies)
 

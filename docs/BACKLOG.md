@@ -166,6 +166,49 @@ black status bar, correct icon/splash).
 (iOS push requires an installed PWA + SW). Both are purely additive later — none of the above blocks
 them.
 
+## Ingredient registry (extend macros `/foods` — NOT a new module)
+
+Full scoping brief: **`docs/ingredient-registry-brief.md`** (drafted, awaiting Curtis's review of the
+five open decisions). Summary + correction of an earlier mis-scope below.
+
+**Why:** logging a smoothie re-derives per-gram macros from Claude's memory every time, so the *same
+product* drifts day-to-day (a near-identical smoothie logged 47g protein one day, 34g the next — pure
+Claude-side estimation churn on branded/label items: Ripple, Sports Research whey, Icelandic skyr).
+Fix reuse at the **ingredient** level (atoms recur across variations), not the recipe level (too many
+variations to enumerate). Resolve each product once, reuse everywhere — same pattern as `resolve_usda`.
+
+**Scoping correction:** this is **not** a new module and does **not** start from `MODULE-RUNBOOK.md`
+(an earlier backlog note wrongly framed it that way). The macros `/api/macros/foods` catalog already
+stores per-100g foods with `name`/`source`/`fdcId`/`servingLabel`/`servingGrams` + macros, and entries
+already link a food via `foodId`. The brief's recommendation is to **extend `/foods` additively**, not
+fork a parallel `/ingredients` table (which would desync from the existing entry-linkage). Work:
+  - **Additive food fields:** `brand`, `category` (required enum, small closed list, `other` escape
+    hatch), `tags` (freeform — deliberately *not* a controlled vocabulary yet), `labelBasis` (printed
+    serving + macros stored verbatim so the /100g is auditable) — plus **expanding the existing
+    `source` enum** to `usda|scanned|proxy|estimated` so provenance/trust is first-class (no separate
+    `confidence` field — that word is already the entry-level enum).
+  - **Skill methods** mirroring `MacrosClient`: `search_ingredient` (fuzzy + category/brand filter,
+    never auto-picks), `resolve_ingredient` (cache-on-resolve), `register_ingredient` (**mandatory
+    dedupe-on-write** — surfaces likely dup rows so Claude picks update-vs-new), `update_ingredient`
+    (upgrade a proxy→scanned in place, same id; errors on unknown field like `correct_entry`).
+  - **manage-macros integration:** log-from-registry, preferring **link-via-`foodId`** with
+    snapshot-at-log-time preserved (correcting a food later must not rewrite past days).
+  - **No UI for v1** — skill-first.
+
+**Open decisions — RESOLVED (Curtis, 2026-07-08; see brief):** extend `/foods` (not a new table);
+category enum = brief's list + `egg|legume|beverage|cheese`; linkage via `foodId` (option 1, already
+in `snapshotMacros()`); collapse provenance into the expanded `source` enum (`custom`→`estimated` on
+migrate); skyr proxy→scanned is a later validation step, not a build gate. Related: the "USDA branded
+foods" deferred note below is the same per-serving↔per-100g tension — `labelBasis` captures the printed
+per-serving values, /100g is computed from them. **Status: BUILT + verified locally on branch
+`ingredient-registry`** — migration `0004` (new food fields + `custom`→`estimated`, applied to Neon),
+expanded `source`/new `foodCategory` Zod enums, `listFoods` category/brand filters, `search`/`register`
+(dedupe)/`resolve` (session cache)/`update` (loud) methods on `manage-macros`, SKILL.md registry section,
+OpenAPI regenerated. 48/48 tests green; 14/14 end-to-end skill checks green against local. **Committed +
+pushed; PR [#7](https://github.com/curtisrutland/just-my-website/pull/7) open against `main`. Pending:**
+review/merge → deploy → skill re-upload to claude.ai (`skills/dist/manage-macros.zip`). (No local poke —
+claude.ai's sandbox can't reach a localhost URL, so the real validation is post-deploy against prod.)
+
 ## Pending publish / follow-ups
 
 - [~] **`manage-shopping` skill** — built (`skills/manage-shopping/` — SKILL.md + stdlib Python

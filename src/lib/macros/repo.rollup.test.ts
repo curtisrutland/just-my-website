@@ -75,7 +75,7 @@ describe("day rollup", () => {
 
 describe("entry macro snapshotting", () => {
   it("derives absolute macros from the food's per-100g values × quantity", async () => {
-    const food = await createFood({ name: "test whey (per-100g)", source: "custom", calories: 100, proteinContent: 20 });
+    const food = await createFood({ name: "test whey (per-100g)", source: "estimated", category: "protein-powder", calories: 100, proteinContent: 20 });
     createdFoodIds.push(food.id);
     const entry = await createEntry({ consumedOn: DAY, foodId: food.id, quantityGrams: 250, confidence: "logged_serving" });
     // 250g at 100 kcal/100g -> 250 kcal; 20g protein/100g -> 50g.

@@ -148,8 +148,18 @@ const macrosSpec = {
   },
   paths: {
     "/api/macros/foods": {
-      get: { summary: "List foods", parameters: [...pageParams, { name: "q", in: "query", schema: { type: "string" } }], responses: { ...okList("FoodCreate"), ...errorResponses } },
-      post: { summary: "Create a food", requestBody: jsonBody("FoodCreate"), responses: { ...created("Created food"), ...errorResponses } },
+      get: {
+        summary: "Search foods / ingredients",
+        description: "Fuzzy name match (q), optionally narrowed by category and/or brand. The brand+category pair is the dedupe cohort used before registering a new ingredient.",
+        parameters: [
+          ...pageParams,
+          { name: "q", in: "query", schema: { type: "string" } },
+          { name: "category", in: "query", schema: { type: "string" } },
+          { name: "brand", in: "query", schema: { type: "string" } },
+        ],
+        responses: { ...okList("FoodCreate"), ...errorResponses },
+      },
+      post: { summary: "Create a food / register an ingredient", requestBody: jsonBody("FoodCreate"), responses: { ...created("Created food"), ...errorResponses } },
     },
     "/api/macros/foods/{id}": {
       get: { summary: "Get a food", parameters: [pathParam("id")], responses: { ...ok("Food"), ...errorResponses } },

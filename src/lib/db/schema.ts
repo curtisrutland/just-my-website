@@ -56,20 +56,32 @@ const nutritionColumns = () => ({
 });
 
 /**
- * `macro_food` — the food catalog. A convenience for future logging, seeded from USDA
- * (cached on first resolve) plus custom foods. NOT the source of truth for what was eaten.
- * Storage basis is always per-100g; `servingLabel`/`servingGrams` are input sugar only.
+ * `macro_food` — the food catalog / ingredient registry. Seeded from USDA (cached on first
+ * resolve) plus branded/label-scanned and estimated foods. NOT the source of truth for what
+ * was eaten (that's `macro_entry`, which snapshots from here). Storage basis is always
+ * per-100g; `servingLabel`/`servingGrams` are input sugar only. See docs/ingredient-registry-brief.md.
  */
 export const macroFood = pgTable(
   "macro_food",
   {
     ...auditColumns(),
     name: text("name").notNull(),
-    // 'usda' (resolved from FoodData Central and cached) or 'custom' (Curtis-defined).
-    // Stored as text; the allowed values are enforced by the Zod schema (the sole validator).
+    // PROVENANCE / trust, one axis: 'usda' (resolved from FoodData Central) | 'scanned' (from a
+    // real label) | 'proxy' (a deliberate stand-in, e.g. Greek yogurt for skyr — visibly a guess)
+    // | 'estimated' (Claude's memory, no label). Stored as text; allowed values enforced by Zod.
     source: text("source").notNull(),
     // USDA FoodData Central id when source='usda', for dedupe and re-resolution.
     fdcId: integer("fdc_id"),
+    // Brand — groups product variants ("Ripple" over sweetened/unsweetened) and drives dedupe.
+    brand: text("brand"),
+    // Category — narrows matching so "yogurt" doesn't collide across brands. A small closed
+    // vocabulary enforced by Zod; REQUIRED on new writes but nullable in the DB for legacy rows.
+    category: text("category"),
+    // Freeform tags for Curtis's own later querying — deliberately NOT a controlled vocabulary.
+    tags: text("tags").array(),
+    // The printed label, stored verbatim for audit: { servingLabel, servingGrams, calories,
+    // proteinContent, ... } AS PRINTED. Lets every per-100g value trace back to its source scan.
+    labelBasis: jsonb("label_basis"),
     // Optional household serving so Curtis can log in human units; the repo converts to grams.
     // INPUT SUGAR ONLY — never changes the per-100g storage basis.
     servingLabel: text("serving_label"),
@@ -79,6 +91,8 @@ export const macroFood = pgTable(
   },
   (t) => [
     index("macro_food_name_idx").on(t.name),
+    // Narrows dedupe/search scans to a brand+category cohort.
+    index("macro_food_category_brand_idx").on(t.category, t.brand),
     // Unique among live rows only, so a soft-deleted USDA food can be re-cached.
     uniqueIndex("macro_food_fdc_id_key")
       .on(t.fdcId)

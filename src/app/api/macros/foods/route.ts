@@ -10,8 +10,11 @@ export async function GET(request: NextRequest) {
   const auth = requireBearer(request);
   if (!auth.ok) return auth.response;
   const { limit, offset } = parsePagination(request.nextUrl.searchParams);
-  const q = request.nextUrl.searchParams.get("q") ?? undefined;
-  const { items, count } = await listFoods({ limit, offset, q });
+  const params = request.nextUrl.searchParams;
+  const q = params.get("q") ?? undefined;
+  const category = params.get("category") ?? undefined;
+  const brand = params.get("brand") ?? undefined;
+  const { items, count } = await listFoods({ limit, offset, q, category, brand });
   return ok(paginated(items, count, limit, offset));
 }
 

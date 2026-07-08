@@ -10,15 +10,15 @@ import {
 
 describe("nutrition numeric contract", () => {
   it("rejects unit-strings for macros", () => {
-    const r = foodCreateSchema.safeParse({ name: "whey", source: "custom", calories: "22 g" });
+    const r = foodCreateSchema.safeParse({ name: "whey", source: "scanned", category: "protein-powder", calories: "22 g" });
     expect(r.success).toBe(false);
   });
   it("accepts bare numbers for macros", () => {
-    const r = foodCreateSchema.safeParse({ name: "whey", source: "custom", calories: 380, proteinContent: 24 });
+    const r = foodCreateSchema.safeParse({ name: "whey", source: "scanned", category: "protein-powder", calories: 380, proteinContent: 24 });
     expect(r.success).toBe(true);
   });
   it("rejects negative macros", () => {
-    const r = foodCreateSchema.safeParse({ name: "whey", source: "custom", calories: -1 });
+    const r = foodCreateSchema.safeParse({ name: "whey", source: "scanned", category: "protein-powder", calories: -1 });
     expect(r.success).toBe(false);
   });
 });
@@ -28,9 +28,47 @@ describe("food source / fdcId invariant", () => {
     expect(foodCreateSchema.safeParse({ name: "chicken", source: "usda" }).success).toBe(false);
     expect(foodCreateSchema.safeParse({ name: "chicken", source: "usda", fdcId: 172854 }).success).toBe(true);
   });
-  it("custom must not carry an fdcId", () => {
-    expect(foodCreateSchema.safeParse({ name: "bar", source: "custom", fdcId: 1 }).success).toBe(false);
-    expect(foodCreateSchema.safeParse({ name: "bar", source: "custom" }).success).toBe(true);
+  it("a non-usda food must not carry an fdcId", () => {
+    expect(foodCreateSchema.safeParse({ name: "bar", source: "estimated", category: "other", fdcId: 1 }).success).toBe(false);
+    expect(foodCreateSchema.safeParse({ name: "bar", source: "estimated", category: "other" }).success).toBe(true);
+  });
+});
+
+describe("food provenance + category (ingredient registry)", () => {
+  it("retires 'custom' from the source enum", () => {
+    expect(foodCreateSchema.safeParse({ name: "bar", source: "custom", category: "other" }).success).toBe(false);
+  });
+  it("accepts the expanded provenance values", () => {
+    for (const source of ["scanned", "proxy", "estimated"] as const) {
+      expect(foodCreateSchema.safeParse({ name: "skyr", source, category: "yogurt" }).success).toBe(true);
+    }
+  });
+  it("requires a category for non-usda foods", () => {
+    expect(foodCreateSchema.safeParse({ name: "ripple", source: "scanned" }).success).toBe(false);
+    expect(foodCreateSchema.safeParse({ name: "ripple", source: "scanned", category: "plant-milk" }).success).toBe(true);
+  });
+  it("does not require a category for usda foods", () => {
+    expect(foodCreateSchema.safeParse({ name: "chicken", source: "usda", fdcId: 172854 }).success).toBe(true);
+  });
+  it("rejects an unknown category", () => {
+    expect(foodCreateSchema.safeParse({ name: "x", source: "estimated", category: "smoothie" }).success).toBe(false);
+  });
+  it("accepts new whole-food categories added on review", () => {
+    for (const category of ["egg", "legume", "beverage", "cheese"] as const) {
+      expect(foodCreateSchema.safeParse({ name: "x", source: "estimated", category }).success).toBe(true);
+    }
+  });
+  it("accepts brand, tags, and a verbatim labelBasis", () => {
+    const r = foodCreateSchema.safeParse({
+      name: "Ripple Unsweetened",
+      source: "scanned",
+      category: "plant-milk",
+      brand: "Ripple",
+      tags: ["low-fat", "liquid"],
+      proteinContent: 8,
+      labelBasis: { servingLabel: "1 cup", servingGrams: 240, calories: 100, proteinContent: 8 },
+    });
+    expect(r.success).toBe(true);
   });
 });
 
@@ -72,11 +110,11 @@ describe("entry", () => {
 describe("strictness & normalization", () => {
   it("rejects unknown keys", () => {
     expect(
-      foodCreateSchema.safeParse({ name: "whey", source: "custom", bogus: true }).success
+      foodCreateSchema.safeParse({ name: "whey", source: "estimated", category: "protein-powder", bogus: true }).success
     ).toBe(false);
   });
   it("trims names", () => {
-    const r = foodCreateSchema.parse({ name: "  unflavored whey  ", source: "custom" });
+    const r = foodCreateSchema.parse({ name: "  unflavored whey  ", source: "estimated", category: "protein-powder" });
     expect(r.name).toBe("unflavored whey");
   });
 });
