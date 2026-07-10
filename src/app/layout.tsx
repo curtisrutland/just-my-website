@@ -19,6 +19,11 @@ export const metadata: Metadata = {
   // `startupImage` is the launch splash (iOS ignores the manifest for this) — the generated
   // per-device set that keeps a cold start from flashing blank. See scripts/build-icons.mjs.
   appleWebApp: { capable: true, title: "justmy", statusBarStyle: "black", startupImage: appleSplashScreens },
+  // Next 16 emits only the standardized `mobile-web-app-capable` for `appleWebApp.capable`, but iOS
+  // only *applies* apple-touch-startup-image (the splash) when the legacy `apple-mobile-web-app-capable`
+  // meta is present. Without it the app still launches standalone (via the manifest) yet cold-starts
+  // to a blank screen — the images are ignored. Emit the legacy meta explicitly so the splash applies.
+  other: { "apple-mobile-web-app-capable": "yes" },
 };
 
 // The manifest link is injected automatically by the `manifest.ts` file convention.
