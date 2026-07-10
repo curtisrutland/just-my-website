@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { IBM_Plex_Sans, JetBrains_Mono, Space_Grotesk } from "next/font/google";
+import { appleSplashScreens } from "./apple-splash";
 import "./globals.css";
 
 // Font tokens: each `variable` name matches the var referenced by @theme in globals.css, so
@@ -15,7 +16,9 @@ export const metadata: Metadata = {
   applicationName: "justmy.website",
   // Standalone install on iOS: capable + a home-screen title; the opaque black status bar sits
   // above the app (no notch underlap, so no safe-area work needed for the fixed shell chrome).
-  appleWebApp: { capable: true, title: "justmy", statusBarStyle: "black" },
+  // `startupImage` is the launch splash (iOS ignores the manifest for this) — the generated
+  // per-device set that keeps a cold start from flashing blank. See scripts/build-icons.mjs.
+  appleWebApp: { capable: true, title: "justmy", statusBarStyle: "black", startupImage: appleSplashScreens },
 };
 
 // The manifest link is injected automatically by the `manifest.ts` file convention.

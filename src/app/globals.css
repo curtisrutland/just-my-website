@@ -78,6 +78,62 @@
   animation: caret-blink 1.1s step-end infinite;
 }
 
+/* ============================================================================
+ * Loading feedback — route-transition skeletons (loading.tsx) and the nav-rail
+ * pending affordance. Navigation between modules fetches live data server-side;
+ * these give an immediate "working…" signal so a transition never looks dead.
+ * ==========================================================================*/
+/* Shimmer block used to compose per-module content skeletons. Sits on the raised
+ * surface and breathes so it reads as pending, not as final content. */
+@keyframes skeleton-pulse {
+  50% {
+    opacity: 0.4;
+  }
+}
+.skeleton {
+  background: var(--color-surface-raised);
+  border-radius: var(--radius);
+  animation: skeleton-pulse 1.3s ease-in-out infinite;
+}
+/* Marker on the *active* nav item while its route's data loads (AppShell `loading`
+ * state, rendered by each loading.tsx) — the clicked module keeps pulsing through
+ * the skeleton phase. */
+@keyframes nav-pending-pulse {
+  50% {
+    opacity: 0.2;
+  }
+}
+.nav-pending {
+  animation: nav-pending-pulse 0.85s ease-in-out infinite;
+}
+/* useLinkStatus dot: fixed-size, opacity-toggled so it reserves its space and never
+ * shifts layout (per Next's useLinkStatus guidance). Fades in only if the click's
+ * pending phase actually lasts — instant/prefetched transitions never flash it. */
+.rail-hint {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  margin-left: auto;
+  border-radius: 9999px;
+  background: var(--color-accent);
+  opacity: 0;
+  visibility: hidden;
+}
+.rail-hint.is-pending {
+  visibility: visible;
+  animation-name: rail-hint-in, nav-pending-pulse;
+  animation-duration: 160ms, 0.85s;
+  animation-delay: 90ms, 90ms;
+  animation-timing-function: ease, ease-in-out;
+  animation-iteration-count: 1, infinite;
+  animation-fill-mode: forwards, none;
+}
+@keyframes rail-hint-in {
+  to {
+    opacity: 0.9;
+  }
+}
+
 /* Shopping — check-off feedback (ShoppingBoard.tsx): the checkmark pops in, and a checked row's
  * grace-timer bar drains left-to-right over the linger window before the row moves. */
 @keyframes shopping-checkpop {

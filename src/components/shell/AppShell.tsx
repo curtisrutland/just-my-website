@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { ThemeToggle } from "./ThemeToggle";
+import { NavPendingDot } from "./NavPendingDot";
 import { todayISO } from "@/lib/date";
 
 /**
@@ -14,12 +15,16 @@ export function AppShell({
   activeModule,
   headerRight,
   navFooter,
+  loading,
   children,
 }: {
   routeSegment: string;
   activeModule?: "macros" | "weight" | "shopping";
   headerRight?: ReactNode;
   navFooter?: ReactNode;
+  /** Rendered by a module's `loading.tsx`: pulses the active nav marker so the clicked module
+   *  reads as "loading" through the skeleton phase. */
+  loading?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -33,9 +38,9 @@ export function AppShell({
           {/* Link straight to today's dated view — /macros is a force-dynamic redirect stub, so
               linking it would force a hard navigation (redirect hop, no prefetch). The dated URL is
               a real, prefetchable page → soft client-side transition. */}
-          <NavItem label="macros" href={`/macros/${todayISO()}`} active={activeModule === "macros"} />
-          <NavItem label="weight" href="/weight" active={activeModule === "weight"} />
-          <NavItem label="shopping" href="/shopping" active={activeModule === "shopping"} />
+          <NavItem label="macros" href={`/macros/${todayISO()}`} active={activeModule === "macros"} loading={loading} />
+          <NavItem label="weight" href="/weight" active={activeModule === "weight"} loading={loading} />
+          <NavItem label="shopping" href="/shopping" active={activeModule === "shopping"} loading={loading} />
           <RecipesNavLink />
           <GithubNavLink />
         </nav>
@@ -66,7 +71,20 @@ export function AppShell({
   );
 }
 
-function NavItem({ label, href, active, soon }: { label: string; href?: string; active?: boolean; soon?: boolean }) {
+function NavItem({
+  label,
+  href,
+  active,
+  soon,
+  loading,
+}: {
+  label: string;
+  href?: string;
+  active?: boolean;
+  soon?: boolean;
+  /** When this is the active item and the route is mid-load, its marker pulses. */
+  loading?: boolean;
+}) {
   const style: React.CSSProperties = {
     position: "relative",
     display: "flex",
@@ -86,7 +104,12 @@ function NavItem({ label, href, active, soon }: { label: string; href?: string; 
       {active && (
         <span style={{ position: "absolute", left: 0, top: 6, bottom: 6, width: 2, background: "var(--color-accent)", borderRadius: 2 }} />
       )}
-      <span style={{ color: active ? "var(--color-accent)" : "var(--color-text-muted)", width: 10 }}>{active ? "▸" : "▹"}</span>
+      <span
+        className={active && loading ? "nav-pending" : undefined}
+        style={{ color: active ? "var(--color-accent)" : "var(--color-text-muted)", width: 10 }}
+      >
+        {active ? "▸" : "▹"}
+      </span>
       <span>{label}</span>
       {soon && (
         <span
@@ -102,6 +125,9 @@ function NavItem({ label, href, active, soon }: { label: string; href?: string; 
           SOON
         </span>
       )}
+      {/* Click affordance for the pre-skeleton window; sits at the far right so it never
+          nudges the label. Only meaningful inside a real <Link>. */}
+      {href && !soon && <NavPendingDot />}
     </>
   );
   return href ? (
