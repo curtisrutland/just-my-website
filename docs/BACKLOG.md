@@ -161,6 +161,14 @@ is already a fixed-frame layout, so `display: standalone` is a natural fit.
 icon dimensions checked; icons eyeballed. **On-device iOS install: tested + valid** (Curtis confirmed
 add-to-home-screen → full-screen standalone, status bar, icon on the live deploy). **PWA done.**
 
+**No in-app data-refresh affordance (Curtis, 2026-07-10).** In the standalone PWA there's no browser
+chrome, so the only way to pull fresh server data is to navigate away from a page and back (which
+re-runs the server-component fetch). Because data is written by Claude out-of-band (the skills), the
+web view can sit stale with no way to re-pull from within the app. Want an explicit refresh
+affordance — pull-to-refresh on the content area and/or a refresh control in the terminal header —
+wired to `router.refresh()` (re-fetches server components in place, no full reload). Shared-shell
+concern → applies to all three modules. **Effort: S.**
+
 **Deferred (only if a concrete need appears):** a service worker for **offline** and/or **web push**
 (iOS push requires an installed PWA + SW). Both are purely additive later — none of the above blocks
 them.
