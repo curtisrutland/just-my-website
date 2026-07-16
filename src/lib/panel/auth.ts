@@ -1,7 +1,7 @@
 import { auth as clerkAuth } from "@clerk/nextjs/server";
 import { unauthorized } from "@/lib/http/errors";
 import type { PanelScope } from "./scopes";
-import { findLiveTokenByRaw } from "./tokens";
+import { type DeviceTokenIdentity, findLiveTokenByRaw, findLiveTokenByRawCached } from "./tokens";
 
 /**
  * Panel auth (panel-contract §3). Every `/api/panel/**` route calls this. Two credential paths,
@@ -31,14 +31,17 @@ export type PanelAuthOk =
 
 export type PanelAuthResult = PanelAuthOk | { ok: false; response: Response };
 
-export async function requirePanelAuth(
+type TokenLookup = (raw: string) => Promise<DeviceTokenIdentity | null>;
+
+async function panelAuthWith(
   request: Request,
-  scope: PanelScope
+  scope: PanelScope,
+  lookup: TokenLookup
 ): Promise<PanelAuthResult> {
   const bearer = extractBearer(request);
 
   if (bearer) {
-    const identity = await findLiveTokenByRaw(bearer);
+    const identity = await lookup(bearer);
     if (!identity) {
       return { ok: false, response: unauthorized("Invalid or revoked device token") };
     }
@@ -56,4 +59,17 @@ export async function requirePanelAuth(
     ok: false,
     response: unauthorized("Panel routes require a device token or an authenticated session"),
   };
+}
+
+/** Standard panel auth: DIRECT Neon token lookup → immediate revocation. Use everywhere EXCEPT the version poll. */
+export function requirePanelAuth(request: Request, scope: PanelScope): Promise<PanelAuthResult> {
+  return panelAuthWith(request, scope, findLiveTokenByRaw);
+}
+
+/**
+ * Version-poll auth: KV-CACHED token lookup so the hot path stays off Neon (contract §4.1). Use ONLY
+ * for `GET /api/panel/version`. Revocation lags by the cache TTL here (see `findLiveTokenByRawCached`).
+ */
+export function requirePanelAuthCached(request: Request, scope: PanelScope): Promise<PanelAuthResult> {
+  return panelAuthWith(request, scope, findLiveTokenByRawCached);
 }

@@ -11,6 +11,7 @@ import {
   type MacroFood,
   type MacroTargetProfile,
 } from "@/lib/db/schema";
+import { bump } from "@/lib/panel/version";
 import type {
   DayTagCreate,
   DayTagPatch,
@@ -28,6 +29,11 @@ import type {
  * Macro module — repository. The ONLY place macro tables are touched (CONVENTIONS §1). Both
  * read surfaces (server component, API route) call these; writes arrive already validated by
  * schema.ts. Reads exclude soft-deleted rows by default (`deletedAt IS NULL`).
+ *
+ * Mutations that change what the panel's health screen shows — entries, day tags, target profiles
+ * — call `bump("health")` AFTER they commit so the panel's version poll notices (panel-contract
+ * §4.2). Food-catalog writes do NOT bump (entries snapshot nutrition at log time, so editing a food
+ * doesn't change today's totals). Fire-and-forget; never fails a write. New write paths MUST bump.
  */
 
 const NUTRITION_KEYS = [
@@ -179,6 +185,7 @@ export async function createEntry(input: EntryCreate): Promise<MacroEntry> {
       ...macros,
     })
     .returning();
+  await bump("health");
   return row;
 }
 
@@ -210,6 +217,7 @@ export async function createEntries(inputs: EntryCreate[]): Promise<EntryView[]>
     .leftJoin(macroFood, eq(macroEntry.foodId, macroFood.id))
     .where(inArray(macroEntry.id, ids))) as EntryView[];
   const byId = new Map(rows.map((r) => [r.id, r]));
+  await bump("health");
   return ids.map((id) => byId.get(id)!);
 }
 
@@ -246,6 +254,7 @@ export async function patchEntry(id: string, patch: EntryPatch): Promise<MacroEn
     .set(patch)
     .where(and(eq(macroEntry.id, id), live(macroEntry.deletedAt)))
     .returning();
+  if (row) await bump("health");
   return row ?? null;
 }
 
@@ -255,11 +264,13 @@ export async function softDeleteEntry(id: string): Promise<boolean> {
     .set({ deletedAt: new Date() })
     .where(and(eq(macroEntry.id, id), live(macroEntry.deletedAt)))
     .returning({ id: macroEntry.id });
+  if (row) await bump("health");
   return !!row;
 }
 
 export async function hardDeleteEntry(id: string): Promise<boolean> {
   const [row] = await db.delete(macroEntry).where(eq(macroEntry.id, id)).returning({ id: macroEntry.id });
+  if (row) await bump("health");
   return !!row;
 }
 
@@ -268,15 +279,14 @@ export async function hardDeleteEntry(id: string): Promise<boolean> {
 /** Upsert a day's kind. One live tag per day: if a live tag exists we update it, else insert. */
 export async function setDayTag(input: DayTagCreate): Promise<MacroDayTag> {
   const existing = await getLiveDayTag(input.day);
-  if (existing) {
-    const [row] = await db
-      .update(macroDayTag)
-      .set({ kind: input.kind })
-      .where(eq(macroDayTag.id, existing.id))
-      .returning();
-    return row;
-  }
-  const [row] = await db.insert(macroDayTag).values(input).returning();
+  const [row] = existing
+    ? await db
+        .update(macroDayTag)
+        .set({ kind: input.kind })
+        .where(eq(macroDayTag.id, existing.id))
+        .returning()
+    : await db.insert(macroDayTag).values(input).returning();
+  await bump("health");
   return row;
 }
 
@@ -294,6 +304,7 @@ export async function patchDayTag(day: string, patch: DayTagPatch): Promise<Macr
   if (!existing) return null;
   if (Object.keys(patch).length === 0) return existing;
   const [row] = await db.update(macroDayTag).set(patch).where(eq(macroDayTag.id, existing.id)).returning();
+  if (row) await bump("health");
   return row ?? null;
 }
 
@@ -303,11 +314,13 @@ export async function softDeleteDayTag(day: string): Promise<boolean> {
     .set({ deletedAt: new Date() })
     .where(and(eq(macroDayTag.day, day), live(macroDayTag.deletedAt)))
     .returning({ id: macroDayTag.id });
+  if (row) await bump("health");
   return !!row;
 }
 
 export async function hardDeleteDayTag(id: string): Promise<boolean> {
   const [row] = await db.delete(macroDayTag).where(eq(macroDayTag.id, id)).returning({ id: macroDayTag.id });
+  if (row) await bump("health");
   return !!row;
 }
 
@@ -324,6 +337,7 @@ export async function dayKindsBetween(from: string, to: string): Promise<Record<
 
 export async function createTargetProfile(input: TargetProfileCreate): Promise<MacroTargetProfile> {
   const [row] = await db.insert(macroTargetProfile).values(input).returning();
+  await bump("health"); // a target change moves "remaining" on the health screen
   return row;
 }
 
@@ -357,6 +371,7 @@ export async function patchTargetProfile(id: string, patch: TargetProfilePatch):
     .set(patch)
     .where(and(eq(macroTargetProfile.id, id), live(macroTargetProfile.deletedAt)))
     .returning();
+  if (row) await bump("health");
   return row ?? null;
 }
 
@@ -366,6 +381,7 @@ export async function softDeleteTargetProfile(id: string): Promise<boolean> {
     .set({ deletedAt: new Date() })
     .where(and(eq(macroTargetProfile.id, id), live(macroTargetProfile.deletedAt)))
     .returning({ id: macroTargetProfile.id });
+  if (row) await bump("health");
   return !!row;
 }
 
@@ -374,6 +390,7 @@ export async function hardDeleteTargetProfile(id: string): Promise<boolean> {
     .delete(macroTargetProfile)
     .where(eq(macroTargetProfile.id, id))
     .returning({ id: macroTargetProfile.id });
+  if (row) await bump("health");
   return !!row;
 }
 

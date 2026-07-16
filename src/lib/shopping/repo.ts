@@ -1,6 +1,7 @@
 import { and, count, desc, eq, gte, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { shoppingItem, type ShoppingItem } from "@/lib/db/schema";
+import { bump } from "@/lib/panel/version";
 import { groupByCategory } from "./group";
 import type { ShoppingCreate, ShoppingPatch } from "./schema";
 import type { ShoppingItemView, ShoppingList, ShoppingStatus } from "./types";
@@ -9,6 +10,9 @@ import type { ShoppingItemView, ShoppingList, ShoppingStatus } from "./types";
  * Shopping module — repository. The only place `shopping_item` is touched. Reads exclude
  * soft-deleted. Grouping (category → item) and the two-section split are derived here; the table
  * stays a single flat list.
+ *
+ * Every mutation calls `bump("shopping")` AFTER it commits so the panel's version poll notices
+ * (panel-contract §4.2). Fire-and-forget; never fails a write. New write paths MUST bump too.
  */
 
 const live = isNull(shoppingItem.deletedAt);
@@ -33,6 +37,7 @@ export async function addItem(input: ShoppingCreate): Promise<ShoppingItem> {
     .insert(shoppingItem)
     .values({ category: input.category, text: input.text })
     .returning();
+  await bump("shopping");
   return row;
 }
 
@@ -80,6 +85,7 @@ export async function patchItem(id: string, patch: ShoppingPatch): Promise<Shopp
     .set(set)
     .where(and(eq(shoppingItem.id, id), live))
     .returning();
+  if (row) await bump("shopping");
   return row ?? null;
 }
 
@@ -89,6 +95,7 @@ export async function softDeleteItem(id: string): Promise<boolean> {
     .set({ deletedAt: new Date() })
     .where(and(eq(shoppingItem.id, id), live))
     .returning({ id: shoppingItem.id });
+  if (row) await bump("shopping");
   return !!row;
 }
 
@@ -97,6 +104,7 @@ export async function hardDeleteItem(id: string): Promise<boolean> {
     .delete(shoppingItem)
     .where(eq(shoppingItem.id, id))
     .returning({ id: shoppingItem.id });
+  if (row) await bump("shopping");
   return !!row;
 }
 
