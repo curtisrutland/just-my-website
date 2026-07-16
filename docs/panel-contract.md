@@ -90,6 +90,17 @@ Scopes for the kitchen panel:
 Clerk path exists so the panel UI can be developed and debugged in a normal
 desktop browser without provisioning a token. Same routes, same responses.
 
+The device token reaches the server two ways: `Authorization: Bearer` (skill/service
+callers, the recipes sender) OR a `panel_token` **httpOnly cookie**. The cookie is the
+**Pi kiosk** path — set once via `GET /api/panel/session?token=<device token>`, which
+validates the token (must hold `panel:read`), drops the httpOnly cookie, and redirects
+to `/panel/health`. Thereafter every request (page render + client poll + writes)
+carries the cookie automatically, so the wall panel never shows a login. The `/panel`
+**pages** self-authenticate the same two ways (cookie or Clerk session) in the layout;
+they are excluded from the Clerk force-gate (`src/proxy.ts`). The setup URL carries the
+token as a query param — fine for a one-time private setup (it IS the credential, and it
+lands in an httpOnly cookie), but treat that URL as a secret.
+
 ### 3.2 Service token — send-to-panel
 
 justmy.recipes calling justmy.website is server-to-server. It uses a **separate**

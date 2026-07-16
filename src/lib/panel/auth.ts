@@ -7,22 +7,30 @@ import { type DeviceTokenIdentity, findLiveTokenByRaw, findLiveTokenByRawCached 
  * Panel auth (panel-contract §3). Every `/api/panel/**` route calls this. Two credential paths,
  * Bearer first:
  *
- *  1. Bearer PRESENT  → must resolve to a live device token that holds `scope`, else 401. A
- *     present-but-bad token is a hard 401 — we do NOT silently fall back to a session cookie.
- *  2. Bearer ABSENT   → accept a Clerk session (the owner, in a browser — the no-hardware dev/debug
- *     path). A session grants EVERY scope. This requires clerkMiddleware to run on `/api/panel/**`
- *     (see `src/proxy.ts`); without it `clerkAuth()` throws rather than returning null.
- *  3. Neither         → 401.
+ *  1. Device token PRESENT → must resolve to a live device token that holds `scope`, else 401. A
+ *     present-but-bad token is a hard 401 — we do NOT silently fall back to a session. The token
+ *     arrives as `Authorization: Bearer` (skill/service callers, the recipes sender) OR the
+ *     `panel_token` cookie (the Pi kiosk — set once via `GET /api/panel/session`; the browser sends
+ *     it automatically on the panel's client fetches).
+ *  2. No token → accept a Clerk session (the owner, in a browser — dev/debug). A session grants
+ *     EVERY scope. Requires clerkMiddleware to run on `/api/panel/**` (see `src/proxy.ts`).
+ *  3. Neither → 401.
  *
  * This is the one sanctioned exception to "API is token-only, always" (AGENTS.md), scoped to the
- * panel subtree and justified by making the UI buildable without provisioning a device token.
+ * panel subtree and justified by the no-hardware dev path + the kiosk cookie.
  */
 
-function extractBearer(request: Request): string | null {
+function extractToken(request: Request): string | null {
   const header = request.headers.get("authorization");
-  if (!header) return null;
-  const match = /^Bearer\s+(.+)$/i.exec(header.trim());
-  return match ? match[1].trim() : null;
+  const m = header && /^Bearer\s+(.+)$/i.exec(header.trim());
+  if (m) return m[1].trim();
+  // The Pi kiosk: the device token in an httpOnly cookie (sent automatically on same-origin fetches).
+  const cookie = request.headers.get("cookie");
+  if (cookie) {
+    const cm = cookie.match(/(?:^|;\s*)panel_token=([^;]+)/);
+    if (cm) return decodeURIComponent(cm[1]);
+  }
+  return null;
 }
 
 export type PanelAuthOk =
@@ -38,10 +46,10 @@ async function panelAuthWith(
   scope: PanelScope,
   lookup: TokenLookup
 ): Promise<PanelAuthResult> {
-  const bearer = extractBearer(request);
+  const token = extractToken(request);
 
-  if (bearer) {
-    const identity = await lookup(bearer);
+  if (token) {
+    const identity = await lookup(token);
     if (!identity) {
       return { ok: false, response: unauthorized("Invalid or revoked device token") };
     }
