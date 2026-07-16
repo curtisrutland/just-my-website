@@ -228,6 +228,31 @@ export const shoppingItem = pgTable(
   ]
 );
 
+/**
+ * `device_tokens` — panel & service credentials (panel-contract §3). DISTINCT, by design, from the
+ * skill API's static env tokens (`JMW_API_KEY`/`JMW_AGENT_TOKEN`): those keep guarding `/api/**`;
+ * these — hashed, scoped, individually revocable — guard `/api/panel/**` only (two token systems,
+ * see AGENTS.md). The raw token is shown once at creation and NEVER stored; only its sha256 hash is.
+ * `revoked_at IS NOT NULL` ⇒ inactive (401), independent of the soft-delete `deleted_at`.
+ */
+export const deviceToken = pgTable(
+  "device_tokens",
+  {
+    ...auditColumns(),
+    // 'kitchen-panel' (panel:read + panel:write:shopping|daytype) | 'justmy-recipes' (panel:write:recipe).
+    name: text("name").notNull(),
+    // sha256(raw token) as hex. Looked up directly; the raw token never touches the database.
+    tokenHash: text("token_hash").notNull(),
+    // Granted scopes, e.g. {panel:read,panel:write:shopping}. Allowed values enforced by PANEL_SCOPES.
+    scopes: text("scopes").array().notNull(),
+    // Best-effort "last used" stamp. NEVER written on the version-poll path (would defeat autosuspend).
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
+    // null = active. Set to revoke a device without deleting its audit row.
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  },
+  (t) => [uniqueIndex("device_tokens_token_hash_idx").on(t.tokenHash)]
+);
+
 export type MacroFood = typeof macroFood.$inferSelect;
 export type NewMacroFood = typeof macroFood.$inferInsert;
 export type MacroEntry = typeof macroEntry.$inferSelect;
@@ -240,3 +265,5 @@ export type WeightEntry = typeof weightEntry.$inferSelect;
 export type NewWeightEntry = typeof weightEntry.$inferInsert;
 export type ShoppingItem = typeof shoppingItem.$inferSelect;
 export type NewShoppingItem = typeof shoppingItem.$inferInsert;
+export type DeviceToken = typeof deviceToken.$inferSelect;
+export type NewDeviceToken = typeof deviceToken.$inferInsert;

@@ -36,6 +36,13 @@
       "when": 1783520560606,
       "tag": "0004_white_magma",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1784212243432,
+      "tag": "0005_natural_zaladane",
+      "breakpoints": true
     }
   ]
 }
