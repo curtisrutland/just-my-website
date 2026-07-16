@@ -63,6 +63,69 @@ the top of each section.
       shares the same Neon DB where the migration was applied. Authenticated page render is Curtis's
       to confirm in-browser (auth-gated; can't be checked headless).
 
+## Panel module (kitchen wall panel) — scoped, not started
+
+New module: a wall-mounted Pi 3 / 7" touchscreen (720×1280 portrait, kiosk Chromium) at
+`/panel`, read-mostly, three tabs (Health / Shopping / Recipe), built for five. Full spec:
+`docs/panel-contract.md` (binding — wins on conflict), `docs/panel-design-brief.md` (design,
+**done**), `docs/panel-code-brief.md` (implementation how/order). New module ⇒ owes an OpenAPI
+fragment + docs/README/ARCHITECTURE wiring per `docs/MODULE-RUNBOOK.md` — nothing auto-wires it.
+
+**Build order** (code brief §1; 1–5 strictly ordered, desk work only until step 8):
+- [ ] 1. `device_tokens` table + panel auth guard (Bearer-first, Clerk-session fallback)
+- [ ] 2. `panel_state` table
+- [ ] 3. KV wiring + `/api/panel/version` + bump calls on every existing write path
+- [ ] 4. `GET /api/panel/health` · `/shopping` · `/recipe`
+- [ ] 5. `POST /api/panel/recipe` + validation + JSON-LD normalizer (+ raggedness unit tests)
+- [ ] 6. `/panel` UI — three routes + tab bar (server-rendered; verify at 720×1280 desktop)
+- [ ] 7. Two write actions wired (shopping check-off, day-type)
+- [ ] 8. Pi: OS Lite, X11 + WM, kiosk Chromium, systemd restart, static IP, screen-blank
+- [ ] 9. justmy.recipes "Send to Panel" button (server-side, service token never in browser)
+
+**Decisions locked (2026-07-16, discussion with Curtis):**
+- **Version bump seam** → new `src/lib/panel/` module owns `version.ts` exporting a
+  fire-and-forget `bump(section)`; the `macros`/`weight`/`shopping` repos import it and call it
+  *after* the DB write commits. A missed bump = stale-until-next-change, never a failed write.
+  ⚠ **Sanctioned exception to the self-contained-module rule** — document it in `AGENTS.md` at
+  build time (reacting to writes elsewhere is the panel's whole purpose).
+- **KV** → **Upstash Redis via the Vercel Marketplace** (Vercel KV is sunset). Curtis provisions
+  the one Marketplace auth handshake; Claude drives `vercel integration` + `vercel env pull`.
+  Reads ~29K/mo, writes ~1–2K/mo — comfortably free-tier.
+- **Auth** → **coexist**, not a token-table migration. Env tokens (`JMW_API_KEY`/`JMW_AGENT_TOKEN`)
+  keep guarding `/api/**` untouched; new hashed/scoped/revocable `device_tokens` guards
+  `/api/panel/**`. ⚠ **Two documented `AGENTS.md` exceptions** to write at build time: (a) two
+  token systems by design; (b) `/api/panel/**` accepts a Clerk session — a deliberate, scoped
+  bend of "API is token-only, always," justified by the no-hardware dev path (Curtis OK'd both).
+- **Weight `trend`** → window **30 days** (matches the as-designed screen); `trend` enum derives
+  from the signed `trendPerWeek` with **deadband = display precision** (rounds to `0.0 lb/wk` ⇒
+  `flat`). Whole weight block maps from `getRollup({ windowDays: 30 })` — no new math.
+- **Contract v1.1** → `toWaypoint` **dropped** (weight tracks trends, not goals — would've been
+  net-new); added `trendPerWeek`, `series`, `windowDays`, `range`. Reconciled in
+  `docs/panel-contract.md`; the frozen `~/Downloads` bundle is intentionally left stale.
+- **Design delivered + validated (Claude Design "Wall Panel")** — reviewed against contract v1.1;
+  every rendered field maps, nothing rendered that the contract can't supply, so **no further
+  contract changes**. Two-phase recipe solved as Overview ↔ Step-through + a bottom ingredients
+  drawer; shopping grouped-by-category with a collapsed "GOT IT" (uncheckable) section; tab bar
+  `flex:1` (5-ready). Panel type scale + colors captured in contract §11.
+- **Fonts** → design uses 3 Google families (Space Grotesk / IBM Plex Sans / JetBrains Mono).
+  **Self-host all three via `next/font`; drop the Google `<link>`** (Pi 3 has no font cache /
+  flaky overnight net). Branded families kept, brief §2 honored. (Contract §11.2.)
+- **Over-target color** → floor-vs-ceiling model (Curtis): **amber appears only when a ceiling
+  (kcal/fat/carb) is exceeded** (red panic retired). Protein is a **floor** — **neutral while
+  short (no nag), success-green when met**; protein never shows amber. Full table in contract §11.4.
+- **Unspecified day-type target** → resolve to the **lower-calorie profile, wholesale** (not a
+  per-field min). Conservative for the driving ceilings; moot while flat. (Contract §5.1.)
+
+**Verified before building (code brief §0):**
+- **Neon compute is a non-problem today** — 5.7 / 100 CU-hrs this billing window (~6%), compute
+  Idle/autosuspending correctly. §4.1 (KV-backed version endpoint) is still mandatory: a naive
+  60s DB-poll would keep `.25 CU` awake ~16h/day ≈ **120 CU-hrs/mo, over the whole allowance** on
+  its own. So: do it right, no schedule pressure.
+- **Central write seam exists** — every module's `repo.ts` is the sole table-touch point and both
+  surfaces (token API + Clerk actions) funnel through it, so ~15 named write functions are the
+  bump insertion points (no shared write helper; bump goes per-function via `bump()`).
+- **No KV/Redis provisioned yet** (step 3 setup, not a blocker).
+
 ## Bugs — fixed
 
 - [x] **"today" used UTC in production.** Fixed: `todayISO()` computes the date in Curtis's timezone
