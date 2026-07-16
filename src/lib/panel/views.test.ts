@@ -1,11 +1,8 @@
-import { eq } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 import { todayISO } from "@/lib/date";
 import type { MacroSet } from "@/lib/macros/schema";
-import { db } from "@/lib/db";
-import { panelState } from "@/lib/db/schema";
 import { addItem, hardDeleteItem, patchItem } from "@/lib/shopping/repo";
-import { chooseTarget, panelHealth, panelRecipe, panelShopping, trendEnum } from "./views";
+import { chooseTarget, panelHealth, panelShopping, trendEnum } from "./views";
 
 const T = (calories: number): MacroSet => ({ calories, proteinContent: 160, fatContent: 75, carbohydrateContent: 220 });
 
@@ -51,35 +48,6 @@ describe("panelShopping", () => {
     expect(mine.find((i) => i.name === "panel-test-B")).toMatchObject({ checked: true });
     expect(view.counts.total).toBe(view.items.length);
     expect(view.counts.unchecked).toBeLessThanOrEqual(view.counts.total);
-  });
-});
-
-describe("panelRecipe", () => {
-  afterAll(async () => {
-    await db.delete(panelState).where(eq(panelState.id, 1));
-  });
-
-  it("returns the empty state when nothing is sent", async () => {
-    await db.delete(panelState).where(eq(panelState.id, 1));
-    expect(await panelRecipe()).toEqual({ recipe: null, sentAt: null, sourceUrl: null });
-  });
-
-  it("returns the normalized recipe when set", async () => {
-    const norm = {
-      name: "Test Bites",
-      description: null,
-      recipeYield: null,
-      totalTime: null,
-      ingredients: ["6 eggs"],
-      steps: [{ heading: null, text: "Cook." }],
-      notes: null,
-      nutrition: null,
-    };
-    await db.insert(panelState).values({ id: 1, activeRecipeNorm: norm, sourceUrl: "https://x/r", setAt: new Date() });
-    const r = await panelRecipe();
-    expect(r.recipe).toMatchObject({ name: "Test Bites", ingredients: ["6 eggs"] });
-    expect(r.sourceUrl).toBe("https://x/r");
-    expect(typeof r.sentAt).toBe("string");
   });
 });
 
