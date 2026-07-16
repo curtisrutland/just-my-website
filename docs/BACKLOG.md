@@ -88,9 +88,15 @@ fragment + docs/README/ARCHITECTURE wiring per `docs/MODULE-RUNBOOK.md` — noth
   *after* the DB write commits. A missed bump = stale-until-next-change, never a failed write.
   ⚠ **Sanctioned exception to the self-contained-module rule** — document it in `AGENTS.md` at
   build time (reacting to writes elsewhere is the panel's whole purpose).
-- **KV** → **Upstash Redis via the Vercel Marketplace** (Vercel KV is sunset). Curtis provisions
-  the one Marketplace auth handshake; Claude drives `vercel integration` + `vercel env pull`.
-  Reads ~29K/mo, writes ~1–2K/mo — comfortably free-tier.
+- **KV** → **Upstash Redis via the Vercel Marketplace** (Vercel KV is sunset). Provisioned as
+  `upstash/upstash-kv`; env is the **`KV_*`** family (not `UPSTASH_*`), so the client is wired
+  explicitly, not `Redis.fromEnv()`. Reads ~29K/mo, writes ~1–2K/mo — comfortably free-tier.
+- **Version-poll auth caching (decided during step 3):** §3 (device tokens live in Neon) vs §4.1
+  (version endpoint must not touch Neon) conflict, because auth needs the token. Resolution: the
+  version endpoint uses a **KV-cached** token lookup (`requirePanelAuthCached`, 24h TTL); every
+  other route keeps the **direct Neon** check (immediate revocation). So the hot path is Neon-free
+  in steady state (one Neon read per 24h on cold cache), and revocation lag is confined to the
+  three-integer version read. A future revoke path should also DEL `panel:tok:<hash>`.
 - **Auth** → **coexist**, not a token-table migration. Env tokens (`JMW_API_KEY`/`JMW_AGENT_TOKEN`)
   keep guarding `/api/**` untouched; new hashed/scoped/revocable `device_tokens` guards
   `/api/panel/**`. ⚠ **Two documented `AGENTS.md` exceptions** to write at build time: (a) two
