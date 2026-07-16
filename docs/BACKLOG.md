@@ -63,24 +63,32 @@ the top of each section.
       shares the same Neon DB where the migration was applied. Authenticated page render is Curtis's
       to confirm in-browser (auth-gated; can't be checked headless).
 
-## Panel module (kitchen wall panel) — scoped, not started
+## Panel module (kitchen wall panel) — backend + UI live; Pi + recipes-sender remain
 
 New module: a wall-mounted Pi 3 / 7" touchscreen (720×1280 portrait, kiosk Chromium) at
 `/panel`, read-mostly, three tabs (Health / Shopping / Recipe), built for five. Full spec:
 `docs/panel-contract.md` (binding — wins on conflict), `docs/panel-design-brief.md` (design,
-**done**), `docs/panel-code-brief.md` (implementation how/order). New module ⇒ owes an OpenAPI
-fragment + docs/README/ARCHITECTURE wiring per `docs/MODULE-RUNBOOK.md` — nothing auto-wires it.
+**done**), `docs/panel-code-brief.md` (implementation how/order). Panel-specific note: it's a
+distinct surface (device-token-scoped API + kiosk UI), **not** a skill-API module — so it does NOT
+get a skill OpenAPI fragment or Python client; the one external consumer (justmy.recipes) gets a
+bespoke brief instead.
 
 **Build order** (code brief §1; 1–5 strictly ordered, desk work only until step 8):
-- [ ] 1. `device_tokens` table + panel auth guard (Bearer-first, Clerk-session fallback)
-- [ ] 2. `panel_state` table
-- [ ] 3. KV wiring + `/api/panel/version` + bump calls on every existing write path
-- [ ] 4. `GET /api/panel/health` · `/shopping` · `/recipe`
-- [ ] 5. `POST /api/panel/recipe` + validation + JSON-LD normalizer (+ raggedness unit tests)
-- [ ] 6. `/panel` UI — three routes + tab bar (server-rendered; verify at 720×1280 desktop)
-- [ ] 7. Two write actions wired (shopping check-off, day-type)
-- [ ] 8. Pi: OS Lite, X11 + WM, kiosk Chromium, systemd restart, static IP, screen-blank
+- [x] 1. `device_tokens` table + panel auth guard (Bearer-first, Clerk-session fallback)
+- [x] 2. `panel_state` table
+- [x] 3. KV wiring + `/api/panel/version` + bump calls on every existing write path
+- [x] 4. `GET /api/panel/health` · `/shopping` · `/recipe`
+- [x] 5. `POST /api/panel/recipe` + validation + JSON-LD normalizer (+ raggedness unit tests)
+- [x] 6. `/panel` UI — three routes + tab bar (server-rendered; reviewed at 720×1280, approved)
+- [x] 7. Two write actions wired (shopping check-off, day-type)
+- [ ] 8. Pi: OS Lite, X11 + WM, kiosk Chromium, systemd restart, static IP, screen-blank — **plus
+      the device-token cookie auth for `/panel` (page currently Clerk-gated; token path deferred here)**
 - [ ] 9. justmy.recipes "Send to Panel" button (server-side, service token never in browser)
+
+**Status:** steps 1–7 built on `feat/panel-module`, 86 tests green, reviewed + approved. Health
+card display refined post-review: cards count up "X of Y" (consumed of goal), protein floor
+neutral→green, amber only on a ceiling over (contract §11.4). PR + prod deploy in progress so the
+send-to-panel endpoint is live for the step-9 recipes-sender brief.
 
 **Decisions locked (2026-07-16, discussion with Curtis):**
 - **Version bump seam** → new `src/lib/panel/` module owns `version.ts` exporting a

@@ -32,6 +32,7 @@ Three feature modules are live today:
 | **macros** | Food-intake log + calorie/macro targets | An estimate is never dressed up as a measured fact. Every entry carries a `confidence` and (for estimates) a `note` explaining the guess. |
 | **weight** | One body-weight measurement per day | A single day's number is noise; the **7-day rolling average is the truth.** The trend leads, the raw weigh-in is subordinate. |
 | **shopping** | A single flat list of items, one category level deep | Restraint: a plain working utility, not a dashboard. No quantities (the words carry it), no normalization, no history beyond a 7-day "recently bought". Its web UI is a **full editor** (add/check/edit/delete), not just review. |
+| **panel** | Device/service tokens + the panel's one active recipe; a KV-backed version stamp per section | Does less on purpose. A glanceable kitchen appliance, not an app — read-mostly, no text entry, anything better on a phone stays there. A distinct surface (device-token-scoped API + kiosk UI), not a skill module. See `docs/panel-contract.md`. |
 
 Those two "honesty" principles aren't decoration — they're the reason the data model
 looks the way it does (snapshotted macros, a derived-not-stored rolling average). Keep
