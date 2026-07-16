@@ -17,9 +17,13 @@ const isPublicRoute = createRouteMatcher(["/sign-in(.*)", "/sign-up(.*)", "/prev
  * touches; the rest of the token API stays fully excluded (CONVENTIONS §1/§2).
  */
 const isPanelApi = createRouteMatcher(["/api/panel(.*)"]);
+// The panel PAGES self-authenticate too (device-token cookie OR Clerk session, panel-contract §3) —
+// the layout does the check + redirect. clerkMiddleware still runs (so `auth()` can read the owner's
+// session), but we never force-gate, or the Pi's cookie-only request would be Clerk-bounced.
+const isPanelUi = createRouteMatcher(["/panel(.*)"]);
 
 export default clerkMiddleware(async (auth, req) => {
-  if (isPanelApi(req)) return; // middleware runs (session becomes readable); no protect()
+  if (isPanelApi(req) || isPanelUi(req)) return; // middleware runs (session readable); no protect()
   if (!isPublicRoute(req)) {
     await auth.protect();
   }

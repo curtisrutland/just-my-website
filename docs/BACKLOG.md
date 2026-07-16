@@ -81,14 +81,16 @@ bespoke brief instead.
 - [x] 5. `POST /api/panel/recipe` + validation + JSON-LD normalizer (+ raggedness unit tests)
 - [x] 6. `/panel` UI — three routes + tab bar (server-rendered; reviewed at 720×1280, approved)
 - [x] 7. Two write actions wired (shopping check-off, day-type)
-- [ ] 8. Pi: OS Lite, X11 + WM, kiosk Chromium, systemd restart, static IP, screen-blank — **plus
-      the device-token cookie auth for `/panel` (page currently Clerk-gated; token path deferred here)**
-- [ ] 9. justmy.recipes "Send to Panel" button (server-side, service token never in browser)
+- [ ] 8. Pi: OS Lite, X11 + WM, kiosk Chromium, systemd restart, static IP, screen-blank —
+      **hardware/OS only; the code piece (device-token cookie auth for `/panel`) is DONE** (the
+      `panel_token` cookie + `GET /api/panel/session`; kiosk URL = the session URL once).
+- [x] 9. justmy.recipes "Send to Panel" button — built on the JMR side from `docs/panel-recipes-sender-brief.md`, tested successfully against production.
 
-**Status:** steps 1–7 built on `feat/panel-module`, 86 tests green, reviewed + approved. Health
-card display refined post-review: cards count up "X of Y" (consumed of goal), protein floor
-neutral→green, amber only on a ceiling over (contract §11.4). PR + prod deploy in progress so the
-send-to-panel endpoint is live for the step-9 recipes-sender brief.
+**Status:** steps 1–7 + 9 done and **deployed to production** (PR #10). Send-to-panel verified live;
+JMR sender built + tested. The `/panel` page now accepts the Pi's `panel_token` cookie OR a Clerk
+session (contract §3.1), so the only thing left in step 8 is the physical Pi/kiosk. Health card
+display refined post-review: cards count up "X of Y", protein floor neutral→green, amber only on a
+ceiling over (contract §11.4).
 
 **Decisions locked (2026-07-16, discussion with Curtis):**
 - **Version bump seam** → new `src/lib/panel/` module owns `version.ts` exporting a

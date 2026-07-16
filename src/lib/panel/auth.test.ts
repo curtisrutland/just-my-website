@@ -12,6 +12,7 @@ import { createDeviceToken, findLiveTokenByRaw, hashToken } from "./tokens";
 const TEST_NAMES = ["test-panel", "test-recipes", "test-revoked", "test-noscope"];
 
 const bearer = (raw: string) => new Request("https://x/api/panel/x", { headers: { authorization: `Bearer ${raw}` } });
+const cookied = (raw: string) => new Request("https://x/api/panel/x", { headers: { cookie: `panel_token=${raw}` } });
 
 afterAll(async () => {
   await db.delete(deviceToken).where(inArray(deviceToken.name, TEST_NAMES));
@@ -39,6 +40,20 @@ describe("requirePanelAuth — device token path", () => {
     const { raw, id } = await createDeviceToken({ name: "test-panel", scopes: ["panel:read", "panel:write:shopping"] });
     const res = await requirePanelAuth(bearer(raw), "panel:write:shopping");
     expect(res).toMatchObject({ ok: true, via: "token", tokenId: id });
+  });
+
+  it("accepts a device token via the panel_token cookie (the Pi kiosk path)", async () => {
+    const { raw, id } = await createDeviceToken({ name: "test-panel", scopes: ["panel:read"] });
+    const res = await requirePanelAuth(cookied(raw), "panel:read");
+    expect(res).toMatchObject({ ok: true, via: "token", tokenId: id });
+  });
+
+  it("prefers the Authorization header over the cookie", async () => {
+    const { raw } = await createDeviceToken({ name: "test-panel", scopes: ["panel:read"] });
+    const req = new Request("https://x/api/panel/x", {
+      headers: { authorization: `Bearer ${raw}`, cookie: "panel_token=jmw_bogus" },
+    });
+    expect((await requirePanelAuth(req, "panel:read")).ok).toBe(true);
   });
 
   it("rejects a token that lacks the required scope (401)", async () => {
