@@ -500,4 +500,8 @@ The instrument colors macros by **attention in the direction that matters** — 
   neutral while filling and flips to success at 100%.
 - **`--p-over` red is retired from everyday macro states** — over-a-ceiling is amber, not a red
   panic. Reserve red for genuinely exceptional use.
-- This is a UI concern. The API returns signed numbers; floor/ceiling and color live in the viewer.
+- **Macro cards show CONSUMED, not remaining** — "X of Yg" (consumed as the number, the goal as the
+  subtitle), **no `+`/`−` signs**; color carries the state. A protein floor exceeded reads as a green
+  "168 of 160g", never "−8". (The kcal HERO stays "REMAINING" — the walk-up "how much can I still
+  eat" number.)
+- This is a UI concern. The API returns signed numbers; floor/ceiling, count-up, and color live in the viewer.

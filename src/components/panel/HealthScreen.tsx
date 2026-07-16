@@ -5,12 +5,18 @@ import { SectionHeader } from "./SectionHeader";
 const fmt = (n: number) => Math.round(n).toLocaleString("en-US");
 const TZ = process.env.JMW_TZ || "America/Chicago";
 
-/** Macro color = "attention in the direction that matters" (contract §11.4). Ceilings go amber over
- *  the line; the protein floor is emphasis-accent while short and success-green once met. Amber is
- *  the ONLY attention color and only a ceiling can be over; protein never shows amber. */
-function macroColor(kind: "floor" | "ceiling", consumed: number, target: number, remaining: number, emphasis: boolean): string {
-  if (kind === "floor") return consumed >= target ? "var(--p-success)" : emphasis ? "var(--p-accent)" : "var(--p-text)";
-  return remaining < 0 ? "var(--p-warn)" : emphasis ? "var(--p-accent)" : "var(--p-text)";
+/** Macro color = "attention in the direction that matters" (contract §11.4). Number + bar share a
+ *  state color: the protein FLOOR is NEUTRAL while short (no nag) and success-green once reached; a
+ *  CEILING is neutral under the line and amber once over. Amber is the only attention color, and only
+ *  a ceiling can be over — protein never shows amber. (Protein's "clear second" emphasis is size, not
+ *  color.) */
+function macroColors(kind: "floor" | "ceiling", consumed: number, target: number, remaining: number): { num: string; bar: string } {
+  if (kind === "floor") {
+    const met = consumed >= target;
+    return { num: met ? "var(--p-success)" : "var(--p-text)", bar: met ? "var(--p-success)" : "var(--p-muted)" };
+  }
+  const over = remaining < 0;
+  return { num: over ? "var(--p-warn)" : "var(--p-text)", bar: over ? "var(--p-warn)" : "var(--p-muted)" };
 }
 
 function MacroCard({
@@ -28,7 +34,7 @@ function MacroCard({
   remaining: number;
   emphasis?: boolean;
 }) {
-  const color = macroColor(kind, consumed, target, remaining, emphasis);
+  const { num, bar } = macroColors(kind, consumed, target, remaining);
   const pct = target > 0 ? Math.max(0, Math.min(100, (consumed / target) * 100)) : 0;
   return (
     <div style={{ padding: "20px 18px", border: `1px solid ${emphasis ? "rgba(58,208,214,0.35)" : "var(--p-border)"}`, borderRadius: 8, background: "var(--p-surf)" }}>
@@ -36,8 +42,8 @@ function MacroCard({
         {label}
       </div>
       <div style={{ display: "flex", alignItems: "baseline", gap: 5 }}>
-        <span className="p-mono" style={{ fontWeight: 600, fontSize: emphasis ? 48 : 38, lineHeight: 1, letterSpacing: "-0.01em", color }}>
-          {fmt(remaining)}
+        <span className="p-mono" style={{ fontWeight: 600, fontSize: emphasis ? 48 : 38, lineHeight: 1, letterSpacing: "-0.01em", color: num }}>
+          {fmt(consumed)}
         </span>
         <span className="p-mono" style={{ fontSize: 15, color: "var(--p-muted)" }}>g</span>
       </div>
@@ -45,7 +51,7 @@ function MacroCard({
         of {fmt(target)}g
       </div>
       <div style={{ height: 5, borderRadius: 3, background: "var(--p-border)", marginTop: 14, overflow: "hidden" }}>
-        <div style={{ height: "100%", width: `${pct}%`, background: color }} />
+        <div style={{ height: "100%", width: `${pct}%`, background: bar }} />
       </div>
     </div>
   );
