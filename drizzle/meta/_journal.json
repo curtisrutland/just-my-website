@@ -43,6 +43,13 @@
       "when": 1784212243432,
       "tag": "0005_natural_zaladane",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1784212933487,
+      "tag": "0006_yellow_surge",
+      "breakpoints": true
     }
   ]
 }
