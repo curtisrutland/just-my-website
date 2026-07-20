@@ -50,6 +50,13 @@
       "when": 1784212933487,
       "tag": "0006_yellow_surge",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1784582801542,
+      "tag": "0007_skinny_silvermane",
+      "breakpoints": true
     }
   ]
 }

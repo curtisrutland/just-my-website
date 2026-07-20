@@ -276,6 +276,126 @@ export const panelState = pgTable("panel_state", {
     .$onUpdate(() => new Date()),
 });
 
+/**
+ * `lifting_session` — one row per Hevy workout (lifting module, the first INGESTION module). The
+ * facts originate in Hevy and arrive over the webhook + API pull; `hevyId` is the natural key.
+ * `rawPayload` keeps the verbatim workout JSON so skipped fields can be re-derived later. This row
+ * is STABLE across re-pulls (upserted by `hevyId`, never deleted by a re-pull) — which is why the
+ * annotation note (below) can hold a plain FK to it. See docs/lifting-model.md.
+ */
+export const liftingSession = pgTable(
+  "lifting_session",
+  {
+    ...auditColumns(),
+    // The Hevy workout id + natural key. Partial-unique among live rows (upsert, never duplicate).
+    hevyId: text("hevy_id").notNull(),
+    title: text("title"),
+    // Session start — the journal sort key. Duration is derived (endedAt − startedAt), never stored.
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+    // Hevy's own workout-level note — DISTINCT from our `session_notes` annotation (that's ours).
+    description: text("description"),
+    // Hevy's `updated_at`; lets a re-pull skip the child rebuild when it hasn't advanced.
+    hevyUpdatedAt: timestamp("hevy_updated_at", { withTimezone: true }),
+    // The verbatim Hevy workout JSON, stored losslessly.
+    rawPayload: jsonb("raw_payload").notNull(),
+  },
+  (t) => [
+    index("lifting_session_started_at_idx").on(t.startedAt),
+    uniqueIndex("lifting_session_hevy_id_key")
+      .on(t.hevyId)
+      .where(sql`${t.deletedAt} is null`),
+  ]
+);
+
+/**
+ * `lifting_exercise` — one row per exercise instance within a session. A NORMALIZED PROJECTION of
+ * `rawPayload`, rebuilt wholesale on re-pull (delete+reinsert inside the upsert batch) — so it
+ * carries NO soft-delete of its own: `id` + `createdAt` only. Cascades from the session.
+ */
+export const liftingExercise = pgTable(
+  "lifting_exercise",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => liftingSession.id, { onDelete: "cascade" }),
+    // Order within the session.
+    index: integer("index").notNull(),
+    // Hevy's STABLE exercise id — what threads a lift across sessions (progression & PRs). Nullable
+    // only defensively; the API supplies it on every exercise.
+    exerciseTemplateId: text("exercise_template_id"),
+    title: text("title").notNull(),
+    notes: text("notes"),
+    // Hevy's superset grouping id (co-performed exercises).
+    supersetGroup: integer("superset_group"),
+  },
+  (t) => [
+    index("lifting_exercise_session_id_index_idx").on(t.sessionId, t.index),
+    index("lifting_exercise_template_id_idx").on(t.exerciseTemplateId),
+  ]
+);
+
+/**
+ * `lifting_set` — one row per set. Same rebuilt-projection rules as `lifting_exercise` (no
+ * soft-delete). `sessionId` is denormalized so per-session volume is a single-table scan. Only
+ * `set_type = 'normal'` counts as a working set for volume/e1RM/PRs. Any of weight/reps/rpe/
+ * distance/duration may be null (a timed cardio set carries only `duration_seconds`).
+ */
+export const liftingSet = pgTable(
+  "lifting_set",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    exerciseId: uuid("exercise_id")
+      .notNull()
+      .references(() => liftingExercise.id, { onDelete: "cascade" }),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => liftingSession.id, { onDelete: "cascade" }),
+    index: integer("index").notNull(),
+    // 'normal' | 'warmup' | 'failure' | 'dropset' (Hevy `type`). Enforced by Zod, not a DB enum.
+    setType: text("set_type").notNull(),
+    weightKg: real("weight_kg"),
+    reps: integer("reps"),
+    rpe: real("rpe"),
+    distanceMeters: real("distance_meters"),
+    durationSeconds: integer("duration_seconds"),
+  },
+  (t) => [index("lifting_set_exercise_id_idx").on(t.exerciseId)]
+);
+
+/**
+ * `lifting_session_note` — the annotation layer: the ONLY table this module writes to from a
+ * surface, and untouched by a re-pull. Full audit columns (this is OUR data — soft-delete +
+ * updatedAt). 1:1 with a session (partial-unique on `session_id`). `session_notes`/`quality` are
+ * Curtis's; `interpretation`/`focus` are Claude's; `interpretedAt` drives the un-interpreted queue.
+ * Ownership is a CONVENTION (CONVENTIONS §1), not a DB constraint.
+ */
+export const liftingSessionNote = pgTable(
+  "lifting_session_note",
+  {
+    ...auditColumns(),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => liftingSession.id, { onDelete: "cascade" }),
+    sessionNotes: text("session_notes"),
+    interpretation: text("interpretation"),
+    // Set whenever `interpretation` is written; its presence is the `interpreted` flag.
+    interpretedAt: timestamp("interpreted_at", { withTimezone: true }),
+    // A `liftingFocus` value; allowed values enforced by Zod.
+    focus: text("focus"),
+    // Curtis's subjective 1..5 score; enforced by Zod.
+    quality: integer("quality"),
+  },
+  (t) => [
+    uniqueIndex("lifting_session_note_session_id_key")
+      .on(t.sessionId)
+      .where(sql`${t.deletedAt} is null`),
+  ]
+);
+
 export type MacroFood = typeof macroFood.$inferSelect;
 export type NewMacroFood = typeof macroFood.$inferInsert;
 export type MacroEntry = typeof macroEntry.$inferSelect;
@@ -292,3 +412,11 @@ export type DeviceToken = typeof deviceToken.$inferSelect;
 export type NewDeviceToken = typeof deviceToken.$inferInsert;
 export type PanelState = typeof panelState.$inferSelect;
 export type NewPanelState = typeof panelState.$inferInsert;
+export type LiftingSession = typeof liftingSession.$inferSelect;
+export type NewLiftingSession = typeof liftingSession.$inferInsert;
+export type LiftingExercise = typeof liftingExercise.$inferSelect;
+export type NewLiftingExercise = typeof liftingExercise.$inferInsert;
+export type LiftingSet = typeof liftingSet.$inferSelect;
+export type NewLiftingSet = typeof liftingSet.$inferInsert;
+export type LiftingSessionNote = typeof liftingSessionNote.$inferSelect;
+export type NewLiftingSessionNote = typeof liftingSessionNote.$inferInsert;
