@@ -18,12 +18,14 @@ The backend is now live and Curtis's full Hevy history (13 sessions) is loaded. 
 the real data surfaced things a first reading of "lifting journal" would get wrong. Design for
 **these**, not for a powerlifting max sheet:
 
-1. **General strength training — not a heavy-barbell max sheet, not bodybuilding, not rehab.** The
-   real sessions mix dumbbell, cable, some barbell, and **bodyweight movements** (Bird Dog, Glute
-   Bridge, Lateral Lunge, planks), often **10-rep sets** at moderate loads. Titles like "Session B -
-   Injury Adjusted" are just Curtis's own session labels, not the module's identity. The hero is NOT
-   a barbell single — it's a dense, quiet list of varied, moderate-load movements. Make *that* feel
-   considered.
+1. **The identity is general strength & fitness — the goal is to get _better_.** Not bodybuilding
+   (not chasing size), not a heavy-barbell max sheet, and not *just* rehab — though some movements do
+   come from Curtis's PT, that's part of the practice, not its purpose. It's a real, varied training
+   habit: dumbbell, cable, some barbell, and **bodyweight work** (Bird Dog, Glute Bridge, Lateral
+   Lunge, planks), often **10-rep sets** at moderate loads. Titles like "Session B - Injury Adjusted"
+   are just his own session labels. The hero is NOT a barbell single — it's a dense, quiet list of
+   varied movements, and the emotional throughline is **progress**: is he getting better? PRs and the
+   e1RM trend are how that shows; the interpretation is where it's read. Make *that* feel considered.
 2. **Display every weight as a whole number of POUNDS — always. This is not a preference, it's the
    rule.** Curtis logs and thinks in `lb`; kg is only Hevy's internal storage and is usually a noisy
    float (a set reads `weightKg: 18.143717`, which is exactly 40 lb). He will **never** want to see a
