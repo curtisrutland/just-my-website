@@ -18,16 +18,21 @@ The backend is now live and Curtis's full Hevy history (13 sessions) is loaded. 
 the real data surfaced things a first reading of "lifting journal" would get wrong. Design for
 **these**, not for a powerlifting max sheet:
 
-1. **It's rehab / accessory work, not heavy barbell.** The real sessions are dumbbell, cable, and
-   **bodyweight mobility** (Bird Dog, Glute Bridge, Lateral Lunge, planks), mostly **10-rep sets**.
-   Titles are "Session A - Injury", "Session B - Injury Adjusted". The hero is NOT a barbell single
-   — it's a dense, quiet list of light accessory movements. Make *that* feel considered.
-2. **Weights are stored as noisy kg floats — Curtis logs in `lb`.** A set reads `weightKg:
-   18.143717` (that's 40 lb). The clean numbers are the **pound** originals (an exercise note even
-   says "15lbs kettle bell"). So: **default the display to `lb`**, offer a `kg` toggle, and **round
-   for display either way** (`18.143717` kg → `40` lb, or `18.1` kg). Never render a raw float.
-   *(This flips the old brief's "kg with an optional lb toggle" — lb is the natural default here.
-   Curtis: flip it if you disagree.)*
+1. **General strength training — not a heavy-barbell max sheet, not bodybuilding, not rehab.** The
+   real sessions mix dumbbell, cable, some barbell, and **bodyweight movements** (Bird Dog, Glute
+   Bridge, Lateral Lunge, planks), often **10-rep sets** at moderate loads. Titles like "Session B -
+   Injury Adjusted" are just Curtis's own session labels, not the module's identity. The hero is NOT
+   a barbell single — it's a dense, quiet list of varied, moderate-load movements. Make *that* feel
+   considered.
+2. **Display every weight as a whole number of POUNDS — always. This is not a preference, it's the
+   rule.** Curtis logs and thinks in `lb`; kg is only Hevy's internal storage and is usually a noisy
+   float (a set reads `weightKg: 18.143717`, which is exactly 40 lb). He will **never** want to see a
+   decimal or a kg value. Convert every weight-derived number — set weight, top-set, e1RM, tonnage,
+   PR values — to the **nearest whole pound** (`Math.round(kg * 2.2046226)`; this recovers the exact
+   weight he logged, since every entry originates as whole lb, and snaps any conversion noise to the
+   real weight he'd have lifted). A `kg` toggle is **optional and low priority**; if you include it,
+   round it too. There is no scenario where a raw float or a bare kg value reaches the screen.
+   *(The repo owns this rule in `src/lib/lifting/units.ts` — `kgToLb()`.)*
 3. **RPE is 100% empty** (0 of 249 sets). **Drop the RPE column entirely.** Don't design a slot for
    data that never comes. (If it ever appears, it can return — but not now.)
 4. **Many exercises have NO e1RM** (bodyweight/mobility/cardio — Bird Dog, Elliptical, planks). The
@@ -62,8 +67,8 @@ Two zones, side by side on desktop (stacked on narrow):
 
 - **The facts (left) — Hevy's truth, cold and exact.** The exercise → set table. Each exercise is a
   quiet mono subheading (like the `DAY ROLLUP` / column-header treatment); under it, set rows. The
-  columns that actually carry data: **set #**, **weight** (mono/tabular, rounded, in the active unit
-  — `lb` default), **reps**. **No RPE column.** For a **bodyweight** exercise show reps alone (weight
+  columns that actually carry data: **set #**, **weight** (mono/tabular, **whole `lb`** — never a
+  decimal), **reps**. **No RPE column.** For a **bodyweight** exercise show reps alone (weight
   blank/`—`, never `0`); for a **timed/cardio** set show **duration** (`mm:ss`) or **distance** in
   place of weight×reps. Mark **PR** sets with a single `--color-accent` glyph (decisive — this is
   where the accent earns emphasis). Show a per-exercise **e1RM** in mono **only when it exists**;
@@ -88,8 +93,8 @@ Two zones, side by side on desktop (stacked on narrow):
 ## Screen 2 — `LiftingJournal` (the list surface)
 Session cards, **newest first**. Each card, scannable in one pass:
 - Date + workout **title** (e.g. "Session B - Injury Adjusted"); a compact mono stat line
-  (**tonnage**, **top e1RM**, **duration**). Real magnitudes vary widely — tonnage ~2,000–5,000 (kg),
-  top e1RM anywhere from ~12 to 130+ (kg), duration 30–100 min — so size these columns for range.
+  (**tonnage**, **top e1RM**, **duration**), all in whole `lb`. Real magnitudes vary widely — tonnage
+  ~4,700–11,300 lb, top e1RM ~25–290 lb, duration 30–100 min — so size these columns for range.
 - The **`focus`** chip and the **`quality`** pips **when set** — currently they're all empty, so the
   card's resting state has neither; design that bare state to still look complete.
 - A **one-line interpretation snippet** (truncated) when present — otherwise a quiet **"needs read"**
@@ -108,7 +113,8 @@ Session cards, **newest first**. Each card, scannable in one pass:
 ## Interactions & behavior
 - **Edit `session_notes` / set `quality`** → inline, optimistic, server-action save (no modal).
 - **`interpretation` and `focus` are read-only in the web** — they're Claude's, via the skill.
-- **`lb` / `kg` unit toggle** in the detail header (and applied consistently in cards). `lb` default.
+- **Weights render as whole pounds everywhere** (cards + detail). A `kg` toggle is optional and low
+  priority; if present it must round too. Never show a float or a bare kg value.
 - **No add-a-workout affordance anywhere** — sessions only arrive from Hevy. A quiet, understated
   header-level "catch up from Hevy" action may exist, but it's a *pull*, not a create.
 - **Theme toggle / terminal header / nav rail** — inherited from `AppShell`, unchanged. Header route
@@ -125,8 +131,10 @@ register: the left side clinical, the right side reflective — one screen, two 
 
 ## The response contract (what your components receive)
 
-Bind to these exact field names (from `src/lib/lifting/types.ts`; instants are ISO strings, weights
-are canonical **kg** numbers you round/convert for display).
+Bind to these exact field names (from `src/lib/lifting/types.ts`; instants are ISO strings). **Every
+weight-bearing field below (`weightKg`, `topE1rmKg`, `e1rmKg`, `tonnageKg`, PR `value`) is canonical
+kg — convert it to whole pounds for display via the whole-lb rule above.** They keep the `*Kg`
+suffix in the contract, but nothing kg reaches the screen.
 
 - **`GET /api/lifting/sessions`** → `{ items: SessionSummary[], limit, offset, count }`
 - **`GET /api/lifting/sessions/{id}`** → `SessionDetail`
@@ -160,7 +168,8 @@ SessionDetail = SessionSummary & {
 ```
 
 Notes: `description` is often `""` (treat empty as absent). `rpe` is always null today. `supersetGroup`
-is null today (would group co-performed exercises). `weightKg` is a precise float — round for display.
+is null today (would group co-performed exercises). `weightKg` is a precise float — never render it
+raw; convert to whole `lb`.
 
 ---
 
@@ -208,10 +217,12 @@ Note the raw float `weightKg` you must round, and the "needs read" annotation):
       "sets": [ { "index": 0, "setType": "normal", "weightKg": null, "reps": 10, "pr": false },
                 { "index": 1, "setType": "normal", "weightKg": null, "reps": 10, "pr": false } ] },
     { "index": 3, "title": "Cable Core Pallof Press", "notes": "", "e1rmKg": 24.2, "e1rmUnreliable": false,
+      // render: weight 40 lb, e1RM 53 lb  (weightKg 18.143717 → 40; e1rmKg 24.2 → 53)
       "sets": [ { "index": 0, "setType": "normal", "weightKg": 18.143717, "reps": 10, "pr": true },
                 { "index": 1, "setType": "normal", "weightKg": 18.143717, "reps": 10, "pr": false },
                 { "index": 2, "setType": "normal", "weightKg": 18.143717, "reps": 10, "pr": false } ] },
     { "index": 5, "title": "Bicep Curl (Dumbbell)", "notes": "", "e1rmKg": 27.2, "e1rmUnreliable": false,
+      // render: weight 45 lb, e1RM 60 lb  (weightKg 20.41168 → 45; e1rmKg 27.2 → 60)
       "sets": [ { "index": 0, "setType": "normal", "weightKg": 20.41168, "reps": 10, "pr": true },
                 { "index": 1, "setType": "normal", "weightKg": 20.41168, "reps": 8,  "pr": false } ] }
   ]
@@ -228,11 +239,11 @@ render this row shape too:
 
 For the **interpreted** state (none exist yet — Claude writes these later via the skill), render the
 right panel with illustrative values like:
-`quality: 3, focus: "pull", interpretation: "A quiet rehab session — light cable and dumbbell work,
-clean 10s throughout. The Pallof press edged a small PR, so the injured side is tolerating anti-
-rotation load again. Hold here; don't chase weight until the mobility block moves cleanly."`
+`quality: 3, focus: "pull", interpretation: "A quiet accessory session — light cable and dumbbell
+work, clean 10s throughout. The Pallof press edged a small PR, so anti-rotation strength is trending
+up. Hold the loads here; let form stay crisp before adding weight."`
 
-Dark-mode-first. Numbers `--font-mono` tabular, rounded, in the active unit (`lb` default). PR marks
+Dark-mode-first. Numbers `--font-mono` tabular, **whole pounds** (never a decimal or kg). PR marks
 use `--color-accent`; the "needs read" marker is muted (information, not alarm).
 
 ## Out of scope
