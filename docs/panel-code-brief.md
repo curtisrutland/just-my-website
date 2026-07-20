@@ -316,15 +316,47 @@ As-built config on the Pi:
   `Restart=always`, `PAMName=login` on `/dev/tty1`, and crucially
   **`Conflicts=getty@tty1.service`** so the login console is evicted from the VT and
   cage can take DRM master (the missing piece that had silently blocked Xorg).
-- Overnight sleep unchanged from the plan: root cron runs `panel-sleep` (stop `kiosk`
-  + backlight `bl_power` off) at 23:00 and `panel-wake` at 07:00. Stopping the service
-  truly halts the version poll — no browser, no requests — so Neon can autosuspend.
+- **Overnight sleep is backlight dimming, NOT a service stop** (the plan was overbuilt).
+  Stopping `kiosk` overnight was meant to let Neon autosuspend — but the version poll is
+  *already* KV-only (contract §4.1: `requirePanelAuthCached` + the three KV version keys
+  never hit Neon), and nothing writes at 3am, so Neon is asleep overnight regardless.
+  Stopping the service would save only cheap KV reads while costing a slow cold-relaunch
+  each morning (cage → Chromium → session URL → flash). Instead, Chromium stays running
+  and root cron just dims the panel: `panel-sleep`/`panel-wake` write
+  `/sys/class/backlight/*/brightness` — `2` at 23:00, `31` at 07:00 (`max_brightness` is
+  31 on the Touch Display 2). Morning wake is instant because the page was rendered the
+  whole time. (`brightness` is writable by the `video` group via a Pi udev rule, so it
+  needs no root; `bl_power` — a true hard-off — is root-only, which is why the dim route
+  is `brightness`, not `bl_power`. Use `bl_power 1`/`0` instead if you want full black.)
 
-**Cursor:** under Wayland there is no `unclutter`, and the visible arrow is Chromium's
-own CSS-driven cursor. Hidden app-side in `src/app/panel/panel.css` with a
-`@media (hover: none) and (pointer: coarse)` rule (`cursor: none` scoped to touch
-devices) — correct per contract §1 ("Touch only. No mouse, no hover"), and it leaves
-the desktop dev/debug cursor intact. Requires no mouse attached to the wall panel.
+**Cursor (a cage wart worth knowing):** a pointer arrow renders dead-centre and never
+moves. It is **not** the page's cursor — it's cage/wlroots' own *compositor* cursor,
+one layer below the web page. cage hides the cursor for touchscreen-only seats, but the
+DSI Touch Display 2 *also* enumerates as a pointer device, so cage can't distinguish it
+from a mouse and parks a cursor at screen centre permanently (cage issues #83/#235/#422).
+Two dead ends before the fix:
+- **CSS is the wrong layer.** `cursor: none` only governs the page's cursor; it can't
+  reach the compositor's. An earlier `panel.css` rule attempting this was reverted — it
+  did nothing here (and on this hardware the panel can even report `pointer: fine`,
+  because the touchscreen enumerates as a pointer, so a touch-scoped media query may not
+  match at all).
+- **cage ignored `XCURSOR_THEME`.** Pointing it at a blank theme via the service
+  environment didn't take; cage loaded Adwaita regardless.
+
+**Fix — on the Pi** (device filesystem state, not in this repo; recorded here so it's
+reproducible): overwrite the arrow in the theme cage actually loads, **Adwaita**, with a
+transparent Xcursor.
+1. Generate a 1×1 transparent Xcursor. `xcursorgen` is gone from Trixie's repos, so emit
+   the ~68-byte Xcursor binary directly with a short `python3` script (file header + one
+   TOC entry + a 1×1 fully-transparent ARGB image tagged nominal size 24).
+2. `sudo cp --remove-destination` that file over BOTH
+   `/usr/share/icons/Adwaita/cursors/left_ptr` and `.../default` (wlroots may request
+   either name; `--remove-destination` replaces them even when they're symlinks).
+3. `sudo systemctl restart kiosk`.
+
+Undo: `sudo apt install --reinstall adwaita-icon-theme`. (A `/usr/share/icons/blank`
+theme + a `kiosk.service.d/cursor.conf` drop-in setting `XCURSOR_THEME=blank` were left
+in place as harmless scaffolding, but the Adwaita overwrite is what actually works.)
 
 ---
 
