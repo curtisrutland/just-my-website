@@ -36,20 +36,6 @@
   font-family: var(--p-font-body);
 }
 
-/*
- * Touch-only surface (contract §1: "Touch only. No keyboard, no mouse, no hover."). On a real touch
- * device — the Pi kiosk — hide the pointer entirely; under Wayland/cage there is no `unclutter`, and
- * the arrow you'd otherwise see is Chromium's own CSS-driven cursor. Scoped to touch so the desktop
- * dev/debug path (the Clerk session) keeps a usable cursor. `!important` overrides the `cursor:
- * pointer` on tap targets below.
- */
-@media (hover: none) and (pointer: coarse) {
-  [data-panel],
-  [data-panel] * {
-    cursor: none !important;
-  }
-}
-
 /* Full-screen device frame: fixed 720×1280 column, content scrolls, tab bar pinned. */
 .p-frame {
   position: relative;
