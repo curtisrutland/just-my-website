@@ -285,6 +285,47 @@ Pi 3 tuning — do **not** do these yet:
 at current RAM-crisis pricing that's ~$65 for the 2GB, which is the right variant
 for a kiosk workload, not the $110 4GB.
 
+### 7.1 As-built (2026-07-20) — Wayland/cage, not X11
+
+Step 8 is **done**; the panel is live on the wall. Reality differed from the plan
+above in three ways worth recording, because the next person (or the next panel)
+will hit the same forks:
+
+- **The OS shipped as Raspberry Pi OS Lite based on Debian 13 (Trixie), not Bookworm.**
+  Trixie is Wayland-native, which *inverts* the plan's "X11 is better-trodden on Pi 3"
+  bet (that was a Bookworm-era assumption). The X11 path failed silently — `xinit` ran
+  but Xorg never started, never even wrote `/var/log/Xorg.0.log`, while `getty@tty1`
+  held the VT. Rather than fight X on a Wayland-first OS, we pivoted to **`cage`** (a
+  wlroots kiosk compositor: one fullscreen window, nothing else). This is the modern
+  right answer for a Pi kiosk and it came up first try. The brief's own §7 said measure
+  and adapt — this is that.
+- **The Chromium package on Trixie is `chromium`, not `chromium-browser`.** The binary
+  and the `apt install` target are both `chromium`. `matchbox-window-manager`,
+  `unclutter`, `xserver-xorg`, `xinit` are no longer used (they were the X11 stack).
+- **Token delivery (the §7 open decision): the session-cookie URL, re-hit every boot.**
+  `kiosk.sh` points Chromium at `GET /api/panel/session?token=<device token>`, which
+  validates the token, drops the 1-year httpOnly `panel_token` cookie, and 302s to
+  `/panel/health`. Re-hitting it every boot is self-healing (survives cookie expiry or
+  an SD reflash). The token lives in `kiosk.sh` on the SD card — sanctioned for a
+  private device (contract §3.1).
+
+As-built config on the Pi:
+- `chromium --ozone-platform=wayland --kiosk …` (kiosk/disable-only flags per §7),
+  launched by `cage -- /usr/local/bin/kiosk.sh`.
+- `systemd` unit `kiosk.service`: `ExecStart=/usr/bin/cage -- /usr/local/bin/kiosk.sh`,
+  `Restart=always`, `PAMName=login` on `/dev/tty1`, and crucially
+  **`Conflicts=getty@tty1.service`** so the login console is evicted from the VT and
+  cage can take DRM master (the missing piece that had silently blocked Xorg).
+- Overnight sleep unchanged from the plan: root cron runs `panel-sleep` (stop `kiosk`
+  + backlight `bl_power` off) at 23:00 and `panel-wake` at 07:00. Stopping the service
+  truly halts the version poll — no browser, no requests — so Neon can autosuspend.
+
+**Cursor:** under Wayland there is no `unclutter`, and the visible arrow is Chromium's
+own CSS-driven cursor. Hidden app-side in `src/app/panel/panel.css` with a
+`@media (hover: none) and (pointer: coarse)` rule (`cursor: none` scoped to touch
+devices) — correct per contract §1 ("Touch only. No mouse, no hover"), and it leaves
+the desktop dev/debug cursor intact. Requires no mouse attached to the wall panel.
+
 ---
 
 ## 8. justmy.recipes: the Send to Panel button (step 9)
