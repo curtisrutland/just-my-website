@@ -4,15 +4,18 @@ A private, single-user personal-data platform. Two users, ever: **Curtis** (huma
 **Claude** (machine, via a Python skill over a token API). Everything sits behind auth —
 there are no public pages and no anonymous reads.
 
-Three modules are live: a **macro / food-intake tracker**, a **daily weight tracker**, and a
-**shopping list**. In the macro tracker, Curtis tells Claude what he ate in vague terms ("a couple
-handfuls of almonds, a big chicken thigh") and Claude logs it — the whole design is built around one
-principle: **be honest about fuzziness.** An estimate is never presented with the authority of
-a measured fact. The weight tracker applies the same honesty from the other side: a 7-day
-rolling average leads and any single morning's number stays subordinate — the trend is the
-truth, not the noise. The shopping list is the plain-utility counterpoint: one grouping level
+Four modules are live: a **macro / food-intake tracker**, a **daily weight tracker**, a
+**shopping list**, and a **lifting journal**. In the macro tracker, Curtis tells Claude what he ate in
+vague terms ("a couple handfuls of almonds, a big chicken thigh") and Claude logs it — the whole
+design is built around one principle: **be honest about fuzziness.** An estimate is never presented
+with the authority of a measured fact. The weight tracker applies the same honesty from the other
+side: a 7-day rolling average leads and any single morning's number stays subordinate — the trend is
+the truth, not the noise. The shopping list is the plain-utility counterpoint: one grouping level
 (category → item), no quantities or normalization, tuned for adding and checking off — and unlike
-the others its web UI is a full editor, not just a review surface.
+the others its web UI is a full editor, not just a review surface. The lifting journal is the first
+**ingestion** module: workouts flow in from **Hevy** (read-only facts), and the module owns a thin
+annotation layer on top — the signature is *the numbers are Hevy's; the meaning is ours*, so it reads
+and interprets training rather than logging it.
 
 ## Stack
 
@@ -52,8 +55,9 @@ src/app/(app)/{module}/**  # Clerk-gated UI (thin)
 ```
 
 Tables live in `src/lib/db/schema.ts`, namespaced by module (`macro_food`, `macro_entry`,
-`macro_day_tag`, `macro_target_profile`, `weight_entry`, `shopping_item`). Each module's OpenAPI fragment is
-**generated** from its Zod schemas (`openapi/macros.json`, `openapi/weight.json`), never
+`macro_day_tag`, `macro_target_profile`, `weight_entry`, `shopping_item`, `lifting_session`,
+`lifting_exercise`, `lifting_set`, `lifting_session_note`). Each module's OpenAPI fragment is
+**generated** from its Zod schemas (`openapi/macros.json`, `openapi/weight.json`, `openapi/lifting.json`), never
 hand-written.
 
 ## Getting started
@@ -104,6 +108,7 @@ the Neon and Clerk Marketplace integrations. The rest:
 | [`docs/CONVENTIONS.md`](docs/CONVENTIONS.md) | The platform kernel — auth, error envelope, pagination, write-path discipline, nutrition numeric contract |
 | [`docs/macro-model.md`](docs/macro-model.md) | The macro module's data model (closed spec) |
 | [`docs/weight-model.md`](docs/weight-model.md) | The weight module's data model + trend/rollup math |
+| [`docs/lifting-model.md`](docs/lifting-model.md) | The lifting module's data model — Hevy ingestion + the annotation layer, derived e1RM/tonnage/PRs |
 | [`docs/UI-CONTRACT.md`](docs/UI-CONTRACT.md) | Design tokens, component inventory, layout slots |
 | [`docs/HANDOFF-CODE.md`](docs/HANDOFF-CODE.md) | Build brief for the macro module and skill |
 | [`docs/HANDOFF-DESIGN.md`](docs/HANDOFF-DESIGN.md) | Brief for the visual/structural design reference |
@@ -112,10 +117,13 @@ the Neon and Clerk Marketplace integrations. The rest:
 
 ## Status
 
-Live in production at [justmy.website](https://justmy.website). Two modules are deployed —
-**macros** and **weight** — each with its schema, repo, token API routes, Clerk-gated UI,
-generated OpenAPI fragment, and a Python skill (`manage-macros`, `manage-weight`). Auth
-currently runs on the Clerk **dev** instance (the production-instance switch is backlogged).
+Live in production at [justmy.website](https://justmy.website). **macros**, **weight**, and
+**shopping** are deployed — each with its schema, repo, token API routes, Clerk-gated UI,
+generated OpenAPI fragment, and a Python skill (`manage-macros`, `manage-weight`,
+`manage-shopping`). **lifting** — the fourth module and first Hevy-ingestion module — is fully
+built (schema, repo, token API, UI, OpenAPI fragment, `manage-lifting` skill) and pending its
+first deploy; its Hevy webhook needs `HEVY_WEBHOOK_TOKEN` set on Vercel + registered with Hevy.
+Auth currently runs on the Clerk **dev** instance (the production-instance switch is backlogged).
 Outstanding work and deferred decisions are tracked in [`docs/BACKLOG.md`](docs/BACKLOG.md).
 
 ## Related

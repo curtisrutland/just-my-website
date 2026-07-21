@@ -11,6 +11,7 @@ import {
   targetProfileCreateSchema,
   targetProfilePatchSchema,
 } from "../src/lib/macros/schema";
+import { liftingAnnotationPatchSchema } from "../src/lib/lifting/schema";
 import { shoppingCreateSchema, shoppingPatchSchema } from "../src/lib/shopping/schema";
 import { weightCreateSchema, weightPatchSchema } from "../src/lib/weight/schema";
 
@@ -316,10 +317,197 @@ const shoppingSpec = {
   },
 };
 
+const liftingFocuses = ["push", "pull", "legs", "upper", "lower", "full", "accessory", "other"];
+
+const liftingSpec = {
+  openapi: "3.0.3",
+  info: {
+    title: "justmy.website — lifting",
+    version: "0.1.0",
+    description:
+      "Token API for the lifting module (the first ingestion module). Facts are ingested from Hevy and read-only; the only write is the annotation. Weights are canonical kg (display in whole lb). Generated from Zod schemas + the read types; do not hand-edit.",
+  },
+  security: [{ bearerAuth: [] }],
+  components: {
+    securitySchemes: {
+      ...securitySchemes,
+      webhookSecret: { type: "http", scheme: "bearer", description: "HEVY_WEBHOOK_TOKEN — Hevy's configured Authorization header; NOT a JMW token (documented carve-out)" },
+    },
+    schemas: {
+      // The only surface write.
+      LiftingAnnotationPatch: js(liftingAnnotationPatchSchema),
+      // Read shapes (from src/lib/lifting/types.ts). Instants are ISO strings; weights canonical kg.
+      PrFlag: {
+        type: "object",
+        required: ["lift", "templateId", "kind", "value"],
+        properties: {
+          lift: { type: "string" },
+          templateId: { type: "string", nullable: true },
+          kind: { type: "string", enum: ["weight", "e1rm"] },
+          value: { type: "number", description: "kg (display in whole lb)" },
+        },
+      },
+      SessionDerived: {
+        type: "object",
+        required: ["tonnageKg", "workingSets", "totalReps", "exerciseCount", "topE1rmKg", "durationMin", "prs"],
+        properties: {
+          tonnageKg: { type: "number" },
+          workingSets: { type: "integer" },
+          totalReps: { type: "integer" },
+          exerciseCount: { type: "integer" },
+          topE1rmKg: { type: "number", nullable: true },
+          durationMin: { type: "integer", nullable: true },
+          prs: { type: "array", items: { $ref: "#/components/schemas/PrFlag" } },
+        },
+      },
+      SessionAnnotation: {
+        type: "object",
+        required: ["sessionNotes", "quality", "focus", "interpretation", "interpreted"],
+        properties: {
+          sessionNotes: { type: "string", nullable: true },
+          quality: { type: "integer", nullable: true, minimum: 1, maximum: 5 },
+          focus: { type: "string", nullable: true, enum: liftingFocuses },
+          interpretation: { type: "string", nullable: true },
+          interpreted: { type: "boolean", description: "interpretedAt is set" },
+        },
+      },
+      SetView: {
+        type: "object",
+        required: ["index", "setType", "weightKg", "reps", "rpe", "distanceMeters", "durationSeconds", "pr"],
+        properties: {
+          index: { type: "integer" },
+          setType: { type: "string", enum: ["normal", "warmup", "failure", "dropset"] },
+          weightKg: { type: "number", nullable: true },
+          reps: { type: "integer", nullable: true },
+          rpe: { type: "number", nullable: true, description: "unused in practice (always null)" },
+          distanceMeters: { type: "number", nullable: true },
+          durationSeconds: { type: "integer", nullable: true },
+          pr: { type: "boolean", description: "this set achieved a PR (weight or e1RM) for its lift" },
+        },
+      },
+      ExerciseView: {
+        type: "object",
+        required: ["index", "title", "exerciseTemplateId", "notes", "supersetGroup", "e1rmKg", "e1rmUnreliable", "sets"],
+        properties: {
+          index: { type: "integer" },
+          title: { type: "string" },
+          exerciseTemplateId: { type: "string", nullable: true, description: "Hevy's stable lift id — threads a lift across sessions" },
+          notes: { type: "string", nullable: true },
+          supersetGroup: { type: "integer", nullable: true },
+          e1rmKg: { type: "number", nullable: true, description: "best Epley e1RM over working sets" },
+          e1rmUnreliable: { type: "boolean", description: "best set is >12 reps — estimate degrades" },
+          sets: { type: "array", items: { $ref: "#/components/schemas/SetView" } },
+        },
+      },
+      SessionSummary: {
+        type: "object",
+        required: ["id", "hevyId", "title", "startedAt", "endedAt", "description", "derived", "annotation"],
+        properties: {
+          id: { type: "string", format: "uuid" },
+          hevyId: { type: "string" },
+          title: { type: "string", nullable: true },
+          startedAt: { type: "string", format: "date-time" },
+          endedAt: { type: "string", format: "date-time", nullable: true },
+          description: { type: "string", nullable: true, description: "Hevy's own workout note (distinct from sessionNotes)" },
+          derived: { $ref: "#/components/schemas/SessionDerived" },
+          annotation: { $ref: "#/components/schemas/SessionAnnotation" },
+        },
+      },
+      SessionDetail: {
+        allOf: [
+          { $ref: "#/components/schemas/SessionSummary" },
+          { type: "object", required: ["exercises"], properties: { exercises: { type: "array", items: { $ref: "#/components/schemas/ExerciseView" } } } },
+        ],
+      },
+      LiftProgression: {
+        type: "object",
+        required: ["templateId", "title", "points"],
+        properties: {
+          templateId: { type: "string" },
+          title: { type: "string", nullable: true },
+          points: {
+            type: "array",
+            items: {
+              type: "object",
+              required: ["sessionId", "startedAt", "e1rmKg", "topSetKg"],
+              properties: {
+                sessionId: { type: "string", format: "uuid" },
+                startedAt: { type: "string", format: "date-time" },
+                e1rmKg: { type: "number", nullable: true },
+                topSetKg: { type: "number", nullable: true },
+              },
+            },
+          },
+        },
+      },
+      Error: errorSchema,
+    },
+  },
+  paths: {
+    "/api/lifting/sessions": {
+      get: {
+        summary: "List sessions (the journal)",
+        description: "Paginated session summaries, newest first. Filter by interpreted state, focus, and a startedAt range.",
+        parameters: [
+          ...pageParams,
+          { name: "interpreted", in: "query", schema: { type: "boolean" }, description: "true = has a Claude read; false = the un-interpreted queue" },
+          { name: "focus", in: "query", schema: { type: "string", enum: liftingFocuses } },
+          { name: "from", in: "query", schema: { type: "string" }, description: "inclusive lower bound on startedAt (ISO date or datetime)" },
+          { name: "to", in: "query", schema: { type: "string" }, description: "inclusive upper bound on startedAt (ISO date or datetime)" },
+        ],
+        responses: { ...okList("SessionSummary"), ...errorResponses },
+      },
+    },
+    "/api/lifting/sessions/{id}": {
+      get: {
+        summary: "Get a full session (exercises + sets + derived + annotation)",
+        parameters: [pathParam("id")],
+        responses: { "200": { description: "Session detail", content: { "application/json": { schema: { $ref: "#/components/schemas/SessionDetail" } } } }, ...errorResponses },
+      },
+      patch: {
+        summary: "Write the annotation (the only session write)",
+        description: "session_notes/quality are Curtis's; interpretation/focus are Claude's. Returns the full session (get-after-write).",
+        parameters: [pathParam("id")],
+        requestBody: jsonBody("LiftingAnnotationPatch"),
+        responses: { "200": { description: "Updated session", content: { "application/json": { schema: { $ref: "#/components/schemas/SessionDetail" } } } }, ...errorResponses },
+      },
+      delete: { summary: "Soft/hard delete a session (hard requires the primary key; cascades to children + note)", parameters: [pathParam("id"), hardParam], responses: { ...noContent, ...errorResponses } },
+    },
+    "/api/lifting/lifts/{templateId}": {
+      get: {
+        summary: "Progression series for one lift identity (best e1RM + top-set per session)",
+        parameters: [pathParam("templateId")],
+        responses: { "200": { description: "Progression", content: { "application/json": { schema: { $ref: "#/components/schemas/LiftProgression" } } } }, ...errorResponses },
+      },
+    },
+    "/api/lifting/pull": {
+      post: {
+        summary: "Catch-up pull from Hevy (recover a missed webhook / initial backfill)",
+        description: "Pages GET /v1/workouts and ingests missing/updated workouts, idempotently.",
+        parameters: [{ name: "pages", in: "query", schema: { type: "integer", default: 1, minimum: 1, maximum: 1000 }, description: "How many Hevy pages to sweep (backfill passes a large number)" }],
+        responses: { ...ok("Pull summary: { scanned, ingested, pages }"), ...errorResponses },
+      },
+    },
+    "/api/lifting/webhook": {
+      post: {
+        summary: "Hevy webhook trigger (dedicated secret, not a JMW token)",
+        description: "THE documented kernel carve-out: authenticates with HEVY_WEBHOOK_TOKEN. Write-only, never a read. The body { workoutId } is a trigger; the full workout is pulled server-side.",
+        security: [{ webhookSecret: [] }],
+        requestBody: { required: true, content: { "application/json": { schema: { type: "object", required: ["workoutId"], properties: { workoutId: { type: "string" } } } } } },
+        responses: {
+          "200": { description: "Ingested { ok, sessionId, hevyId }" },
+          "401": { description: "Invalid webhook token", content: { "application/json": { schema: ERR } } },
+        },
+      },
+    },
+  },
+};
+
 const fragments = [
   ["macros", macrosSpec],
   ["weight", weightSpec],
   ["shopping", shoppingSpec],
+  ["lifting", liftingSpec],
 ] as const;
 
 mkdirSync("openapi", { recursive: true });
