@@ -8,6 +8,9 @@ const mono = "var(--font-mono)";
 export function JournalCard({ s }: { s: SessionSummary }) {
   const a = s.annotation;
   const snip = a.interpretation ? truncate(a.interpretation, 104) : null;
+  // A "PR" is a lift hitting a new best — count distinct lifts, not weight/e1RM flags separately
+  // (a lift that beats both is one PR, and matches the single ◆ set mark in the detail).
+  const prCount = new Set(s.derived.prs.map((p) => p.templateId ?? p.lift)).size;
   const stats = [
     { value: fmtVolume(s.derived.tonnageKg, "lb"), label: "lb vol" },
     { value: fmtWeight(s.derived.topE1rmKg, "lb") ?? "—", label: "top e1RM" },
@@ -28,9 +31,9 @@ export function JournalCard({ s }: { s: SessionSummary }) {
           <div style={{ fontFamily: mono, fontSize: 10.5, color: "var(--color-text-muted)", marginTop: 6, letterSpacing: "0.04em" }}>{dateLine(s.startedAt)}</div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flex: "none" }}>
-          {s.derived.prs.length > 0 && (
+          {prCount > 0 && (
             <span style={{ whiteSpace: "nowrap", fontFamily: mono, fontSize: 9.5, letterSpacing: "0.06em", padding: "3px 7px", borderRadius: 3, border: "1px solid var(--color-accent)", color: "var(--color-accent)" }}>
-              ◆ {s.derived.prs.length} PR{s.derived.prs.length > 1 ? "s" : ""}
+              ◆ {prCount} PR{prCount > 1 ? "s" : ""}
             </span>
           )}
           {!a.interpreted && (
