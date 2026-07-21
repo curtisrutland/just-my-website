@@ -54,7 +54,7 @@ lf.interpret(session_id,
     interpretation="A quiet accessory day — light dumbbell and cable work, clean 10s throughout. "
                    "The pallof press edged a small PR, so anti-rotation strength is trending up. "
                    "Hold the loads here; let form stay crisp before adding weight.",
-    focus="upper")   # one of: push pull legs upper lower full accessory other
+    focus="upper")   # one of: push pull upper lower full accessory other
 ```
 
 `interpret` writes **only** your fields (`interpretation`, `focus`) — latest-wins, overwrite freely

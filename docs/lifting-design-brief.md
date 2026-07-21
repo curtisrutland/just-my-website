@@ -82,7 +82,7 @@ Two zones, side by side on desktop (stacked on narrow):
   - **`session_notes`** — Curtis's editable textarea (the web write path). Placeholder like
     "`how did it feel?`". Quiet, roomy. Inline optimistic save (no modal).
   - **`quality`** — a 1–5 selector Curtis sets (pips or a small segmented control). Subjective, his.
-  - **`focus`** — a single tag from a fixed set (`push · pull · legs · upper · lower · full ·
+  - **`focus`** — a single tag from a fixed set (`push · pull · upper · lower · full ·
     accessory · other`), Claude-set, shown as a quiet chip (read-only in web).
   - **Claude's `interpretation`** — rendered as **prose, read-only** in the web (Claude writes it via
     the skill). Give it editorial warmth — comfortable measure, `--font-body`, a subtle left rule or
@@ -151,7 +151,7 @@ SessionSummary = {
   },
   annotation: {
     sessionNotes: string|null, quality: 1..5|null,
-    focus: "push"|"pull"|"legs"|"upper"|"lower"|"full"|"accessory"|"other"|null,
+    focus: "push"|"pull"|"upper"|"lower"|"full"|"accessory"|"other"|null,
     interpretation: string|null, interpreted: boolean
   }
 }

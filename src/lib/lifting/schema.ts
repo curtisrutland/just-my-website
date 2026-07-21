@@ -20,7 +20,7 @@ import * as z from "zod";
  * `focus` — a single coarse tag Claude sets so sessions are filterable. NOT a body-part taxonomy;
  * deliberately small. `other` is the escape hatch so a write is never blocked on modeling.
  */
-export const liftingFocus = z.enum(["push", "pull", "legs", "upper", "lower", "full", "accessory", "other"]);
+export const liftingFocus = z.enum(["push", "pull", "upper", "lower", "full", "accessory", "other"]);
 export type LiftingFocus = z.infer<typeof liftingFocus>;
 
 // --- Ingestion: the Hevy workout payload (subset we model; extra keys ignored, raw kept) ---

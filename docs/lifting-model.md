@@ -149,7 +149,7 @@ Full audit columns (this is *our* data — it gets `updatedAt` and soft-delete).
 - `interpretedAt` (timestamptz, nullable) — set whenever `interpretation` is written. **Drives the
   `interpreted:false` queue** — the list of sessions Claude hasn't read yet.
 - `focus` (text, nullable) — **Claude-owned** tag from a small set:
-  `'push' | 'pull' | 'legs' | 'upper' | 'lower' | 'full' | 'accessory' | 'other'`. Makes sessions
+  `'push' | 'pull' | 'upper' | 'lower' | 'full' | 'accessory' | 'other'`. Makes sessions
   filterable. (Enforced by Zod, not a DB enum.)
 - `quality` (integer, nullable) — **Curtis-owned**, `1..5`. A *subjective* score Curtis sets (unlike
   Hevy's objective numbers) — chartable across a block.
@@ -304,7 +304,7 @@ export const hevyWorkoutSchema = z.object({
 
 // ---- Annotation: the ONLY surface write. Every field optional (PATCH), .strict() ----
 export const liftingFocus = z.enum([
-  "push", "pull", "legs", "upper", "lower", "full", "accessory", "other",
+  "push", "pull", "upper", "lower", "full", "accessory", "other",
 ]);
 
 export const liftingAnnotationPatchSchema = z

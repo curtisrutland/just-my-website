@@ -78,7 +78,9 @@ describe("liftingAnnotationPatchSchema", () => {
     expect(liftingAnnotationPatchSchema.safeParse({ quality: 6 }).success).toBe(false);
     expect(liftingAnnotationPatchSchema.safeParse({ quality: 3 }).success).toBe(true);
     expect(liftingAnnotationPatchSchema.safeParse({ focus: "push" }).success).toBe(true);
+    expect(liftingAnnotationPatchSchema.safeParse({ focus: "lower" }).success).toBe(true);
     expect(liftingAnnotationPatchSchema.safeParse({ focus: "cardio" }).success).toBe(false);
+    expect(liftingAnnotationPatchSchema.safeParse({ focus: "legs" }).success).toBe(false); // dropped from the vocab
   });
   it("allows explicit nulls (clearing a field)", () => {
     expect(liftingAnnotationPatchSchema.safeParse({ interpretation: null, focus: null }).success).toBe(true);

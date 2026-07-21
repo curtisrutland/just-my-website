@@ -317,7 +317,7 @@ const shoppingSpec = {
   },
 };
 
-const liftingFocuses = ["push", "pull", "legs", "upper", "lower", "full", "accessory", "other"];
+const liftingFocuses = ["push", "pull", "upper", "lower", "full", "accessory", "other"];
 
 const liftingSpec = {
   openapi: "3.0.3",

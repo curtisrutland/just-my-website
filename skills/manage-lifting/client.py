@@ -25,7 +25,7 @@ BASE_URL = (os.environ.get("JMW_BASE_URL") or "__JMW_BASE_URL__").rstrip("/")
 TOKEN = os.environ.get("JMW_AGENT_TOKEN") or "__JMW_AGENT_TOKEN__"
 
 # The closed focus vocabulary (Zod-enforced server-side; validated here too for a loud early error).
-FOCUSES = ("push", "pull", "legs", "upper", "lower", "full", "accessory", "other")
+FOCUSES = ("push", "pull", "upper", "lower", "full", "accessory", "other")
 
 
 def kg_to_lb(kg: Optional[float]) -> Optional[int]:
