@@ -352,6 +352,29 @@
   }
 }
 
+/* Lifting — journal card hover + the session-detail two-column reflow (facts | meaning).
+ * The columns sit side by side on desktop and stack on mobile, where the meaning column's
+ * left divider becomes a top divider. Geometry that inline styles can't express lives here. */
+.lift-card {
+  transition: border-color 0.12s;
+}
+.lift-card:hover {
+  border-color: var(--color-text-muted);
+}
+.lift-detail-grid {
+  display: grid;
+  grid-template-columns: 1.08fr 0.92fr;
+}
+@media (max-width: 768px) {
+  .lift-detail-grid {
+    grid-template-columns: 1fr;
+  }
+  .lift-meaning {
+    border-left: none !important;
+    border-top: 1px solid var(--color-border);
+  }
+}
+
 /* ============================================================================
  * Module content grids — responsive. Desktop base + <=768px reflow. On mobile
  * the fixed-column tables would exceed the viewport (horizontal scroll), so the

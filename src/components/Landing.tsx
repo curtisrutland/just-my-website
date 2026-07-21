@@ -35,6 +35,14 @@ const MODULES: Module[] = [
   },
   {
     glyph: "▸",
+    name: "lifting",
+    badge: "LIVE",
+    href: "/lifting",
+    active: true,
+    desc: "A training journal over Hevy: the numbers are Hevy's, the meaning is ours. Sets and reps read-only; the read on where the block is going is Claude's.",
+  },
+  {
+    glyph: "▸",
     name: "shopping",
     badge: "LIVE",
     href: "/shopping",
