@@ -13,6 +13,10 @@ describe("epley", () => {
     expect(epley(100, null)).toBeNull();
     expect(epley(100, 0)).toBeNull();
   });
+  it("is null for a 0 (unloaded/bodyweight) weight — no 1RM to estimate, never a spurious 0", () => {
+    expect(epley(0, 10)).toBeNull();
+    expect(exerciseE1rm([set("normal", 0, 10)]).e1rmKg).toBeNull();
+  });
 });
 
 describe("exerciseE1rm", () => {

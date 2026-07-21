@@ -25,7 +25,7 @@ BASE_URL = (os.environ.get("JMW_BASE_URL") or "__JMW_BASE_URL__").rstrip("/")
 TOKEN = os.environ.get("JMW_AGENT_TOKEN") or "__JMW_AGENT_TOKEN__"
 
 # The closed focus vocabulary (Zod-enforced server-side; validated here too for a loud early error).
-FOCUSES = ("push", "pull", "legs", "upper", "lower", "full", "accessory", "other")
+FOCUSES = ("push", "pull", "upper", "lower", "full", "accessory", "other")
 
 
 def kg_to_lb(kg: Optional[float]) -> Optional[int]:
@@ -102,8 +102,11 @@ class LiftingClient:
         return self._request("GET", f"/sessions/{session_id}")
 
     def get_lift(self, template_id: str) -> dict:
-        """Progression for one lift identity (`exerciseTemplateId`): best e1RM + top-set per session,
-        oldest → newest. Use to ground trajectory claims in the interpretation."""
+        """Progression for one lift identity (`exerciseTemplateId`), oldest → newest. Returns the
+        object DIRECTLY (not an `items`-wrapped list like the list_* calls):
+            {"templateId", "title", "points": [{"sessionId", "startedAt", "e1rmKg", "topSetKg"}]}
+        Read `["points"]`. Weights are kg; `e1rmKg` is null for bodyweight lifts. Use to ground
+        trajectory claims in the interpretation."""
         return self._request("GET", f"/lifts/{template_id}")
 
     # -- writes (the annotation — Claude's fields only) -------------------------

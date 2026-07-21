@@ -43,4 +43,4 @@ export function fmtDuration(sec: number): string {
 }
 
 /** The set of focus values in canonical order, for the journal filter chips. */
-export const FOCUSES = ["push", "pull", "legs", "upper", "lower", "full", "accessory", "other"] as const;
+export const FOCUSES = ["push", "pull", "upper", "lower", "full", "accessory", "other"] as const;

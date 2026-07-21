@@ -160,6 +160,12 @@ function ExerciseBlock({ ex, unit, series }: { ex: ExerciseView; unit: Unit; ser
       {ex.e1rmUnreliable && (
         <div style={{ fontFamily: mono, fontSize: 9.5, color: "var(--color-text-muted)", padding: "0 20px 4px", fontStyle: "italic" }}>e1RM parenthesized — best set is high-rep, estimate degrades</div>
       )}
+      {ex.notes && (
+        <div style={{ display: "flex", gap: 7, padding: "0 20px 6px", alignItems: "baseline" }}>
+          <span style={{ fontFamily: mono, fontSize: 8.5, letterSpacing: "0.1em", color: "var(--color-text-muted)", flex: "none" }}>NOTE</span>
+          <span style={{ fontFamily: "var(--font-body)", fontSize: 12.5, color: "var(--color-text-muted)" }}>{ex.notes}</span>
+        </div>
+      )}
 
       <div style={{ padding: "2px 20px 12px" }}>
         {ex.sets.map((set, i) => (
@@ -173,9 +179,11 @@ function ExerciseBlock({ ex, unit, series }: { ex: ExerciseView; unit: Unit; ser
 }
 
 function SetRow({ set, n, unit }: { set: SetView; n: number; unit: Unit }) {
-  const w = fmtWeight(set.weightKg, unit);
-  const isCardio = set.weightKg == null && set.reps == null;
-  const isBodyweight = set.weightKg == null && set.reps != null;
+  // Treat a 0 (or null) load as no weight — a bodyweight/unloaded move, not a real "0 lb" set.
+  const loaded = set.weightKg != null && set.weightKg > 0;
+  const w = loaded ? fmtWeight(set.weightKg, unit) : null;
+  const isCardio = !loaded && set.reps == null;
+  const isBodyweight = !loaded && set.reps != null;
 
   let value: React.ReactNode;
   if (w != null) {

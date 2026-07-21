@@ -20,7 +20,9 @@ export type SetLike = { setType: string; weightKg: number | null; reps: number |
 
 /** Epley estimated 1RM: `weight × (1 + reps/30)`. Null unless both weight and a positive rep count exist. */
 export function epley(weightKg: number | null, reps: number | null): number | null {
-  if (weightKg == null || reps == null || reps <= 0) return null;
+  // weightKg <= 0 is a bodyweight/unloaded movement logged as 0 — there's no 1RM to estimate, so
+  // null (not 0), which keeps a 0-weight set from rendering an e1RM of "0 lb" that reads as real.
+  if (weightKg == null || weightKg <= 0 || reps == null || reps <= 0) return null;
   return weightKg * (1 + reps / 30);
 }
 
