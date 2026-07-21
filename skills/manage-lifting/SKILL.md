@@ -83,6 +83,13 @@ Hevy's*. Every e1RM / tonnage / top-set in your prose must come from `derived` o
 but the source number is Hevy's. A prose figure that doesn't trace to the computed value is an
 integrity leak, even when directionally right.
 
+**Cite `topSetKg` vs `e1rmKg` deliberately.** `get_lift()["points"]` carries both. When you cite a
+number, pick the one that carries the claim: cite **`topSetKg`** for "what he actually lifted" (the
+heaviest working load), and **`e1rmKg`** for strength *trajectory* across sessions (it normalizes
+rep-count differences). On a session of straight same-rep sets the two move together and either reads
+fine; when rep ranges vary across sessions, trust `e1rmKg` for the trend and don't read a lower top
+set as a regression.
+
 **Whole-lb rounding can hide small progress.** `kg_to_lb` gives whole pounds, so a real e1RM creep
 under ~1 kg can round to the same lb and read as "flat." For trajectory, compare the underlying
 `e1rmKg` across `get_lift()["points"]`; you may note a sub-pound gain in words ("up a touch, under a
@@ -105,10 +112,12 @@ pound") — just never print raw kg or a decimal in the prose.
 - **PRs.** `derived.prs` lists PR *flags* — a lift that beats both its top weight and its best e1RM
   produces two entries (`kind: "weight"` and `"e1rm"`). Count **distinct lifts** for "how many PRs".
   In the sets, `pr: true` marks the set that achieved it.
-- **Not everything is a barbell.** `weightKg` is **null** for bodyweight moves (read `reps`); a
-  **timed/cardio** set has only `durationSeconds` (or `distanceMeters`), no weight/reps. `e1rmKg` is
-  null for those exercises. `rpe` is always null. `e1rmUnreliable: true` means the best set was
-  high-rep (>12) — treat that e1RM as soft.
+- **Not everything is a barbell.** `weightKg` is **null** for a true bodyweight move (read `reps`),
+  and may be **`0`** for a movement logged with no added load (a weighted hyperextension done
+  bodyweight) — read `0` as bodyweight, not a real zero. `epley()` returns null in both cases, so
+  `e1rmKg` is null and no spurious "0 lb" appears. A **timed/cardio** set has only `durationSeconds`
+  (or `distanceMeters`), no weight/reps (`e1rmKg` null there too). `rpe` is always null.
+  `e1rmUnreliable: true` means the best set was high-rep (>12) — treat that e1RM as soft.
 - Instants (`startedAt`) are ISO strings; `focus`/`interpretation` are null until you write them.
 
 ## Catch up from Hevy
