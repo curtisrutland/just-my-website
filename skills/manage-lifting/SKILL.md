@@ -61,18 +61,32 @@ lf.interpret(session_id,
 on re-analysis. It raises on an unknown `focus`. **Do NOT write `session_notes` or `quality`** — those
 are Curtis's (he sets them in the web); this client deliberately can't.
 
-## Honesty — read the notes, don't misread the numbers
+## Honesty — read the notes, quote the numbers
 
-`annotation.sessionNotes` is where Curtis records **context you can't see in the numbers**. Read it
-before you interpret, and let it override the raw reading:
+**Two note sources — read BOTH, cite them distinctly, never conflate:**
+- `annotation.sessionNotes` — **Curtis's** session-level context ("backed off RDLs, they felt like I
+  was loading my back"). May be null.
+- `exercises[].notes` — **Hevy's per-exercise notes**, read-only, ingested from the log ("Now with
+  dumbbells", "Load next time", "15lbs kettle bell"). Real signal — implement changes and intent —
+  and now visible to Curtis in the detail view. When you cite one, **name its source** ("per the Hevy
+  exercise note"); never attribute it vaguely to "the note" or fold it into Curtis's session notes.
 
-- A load that **dropped** is often not a regression — a **gym/machine change** (a different
-  pushdown cable is harder), a **form correction** (lighter weight done right), or a deliberate
-  deload. If the notes say so, say so — never call it a loss.
+Let the notes override the raw reading:
+- A load that **dropped** is often not a regression — a **gym/machine change** (a different pushdown
+  cable is harder), a **form correction** (lighter, done right), a **new implement** (kettlebell →
+  dumbbell), or a deliberate deload. If a note says so, say so — never call it a loss.
 - A **debut** movement shows no PR even at a high number (it's just setting its baseline).
 
-The point of this module is that you don't re-litigate these each time — the context lives in the
-notes and your prior reads. Ground trajectory claims with `get_lift(template_id)` (e1RM per session).
+**Quote Hevy's numbers — never a remembered figure.** The module's signature is *the numbers are
+Hevy's*. Every e1RM / tonnage / top-set in your prose must come from `derived` or
+`get_lift()["points"]`, not from memory or an eyeballed estimate — reason and write in lb (`kg_to_lb`),
+but the source number is Hevy's. A prose figure that doesn't trace to the computed value is an
+integrity leak, even when directionally right.
+
+**Whole-lb rounding can hide small progress.** `kg_to_lb` gives whole pounds, so a real e1RM creep
+under ~1 kg can round to the same lb and read as "flat." For trajectory, compare the underlying
+`e1rmKg` across `get_lift()["points"]`; you may note a sub-pound gain in words ("up a touch, under a
+pound") — just never print raw kg or a decimal in the prose.
 
 ## Reading the data (real shapes)
 
