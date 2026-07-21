@@ -62,6 +62,35 @@ the top of each section.
       against the domain (`/api/shopping/list` 200 with the two-section shape; 401 unauthed); prod
       shares the same Neon DB where the migration was applied. Authenticated page render is Curtis's
       to confirm in-browser (auth-gated; can't be checked headless).
+- [x] **Lifting module** — fourth module, and the **first ingestion module**, per
+      `docs/lifting-model.md` + `docs/lifting-design-brief.md`. `src/lib/lifting/` (schema + Hevy
+      ingestion Zod/normalize, repo with atomic `db.batch` upsert + derived e1RM/tonnage/PR-walk,
+      `derive.ts`/`units.ts`/`hevy.ts`, 24 tests), four tables + migration `0007` (applied to Neon),
+      `src/app/api/lifting/` (sessions · sessions/[id] · lifts/[templateId] · pull · webhook),
+      `src/app/(app)/lifting/` + `src/components/lifting/` (journal + the facts│meaning session
+      detail from Claude Design "Lifting Journal", **whole-lb** display, bodyweight/cardio/no-RPE
+      handling). Nav + landing flipped to LIVE; OpenAPI fragment registered (`openapi/lifting.json`);
+      README + ARCHITECTURE updated. Full Hevy history **backfilled (13 sessions) + interpreted**
+      (Claude Code one-off, with the gym-machine + pallof-form context baked into notes). Two
+      deliberate kernel bends: ingested-not-authored data, and a Hevy-webhook route with a dedicated
+      secret. Verified E2E against the live Hevy API + Neon; `tsc` + `next build` + 116 tests green;
+      `/preview/lifting` screenshotted. **Built on branch `feat/lifting-module-backend`; NOT yet
+      deployed.** Remaining: (a) `manage-lifting` skill; (b) push + merge + deploy; (c) set
+      `HEVY_WEBHOOK_TOKEN` on Vercel + register the webhook URL with Hevy (`.../api/lifting/webhook`,
+      header `Bearer <token>`).
+
+## Lifting — deferred (from `docs/lifting-model.md` Open/deferred)
+
+Explicitly out of scope for v1; each is additive later. **Reconciliation cron** (nightly
+`GET /v1/workouts` reconcile to catch missed webhooks + Hevy-side edits/deletes — `catchUp` already
+exists for it; webhook + manual `pull` cover v1). **Hevy-side deletions** not propagated (keep the
+last-pulled copy; Curtis soft-deletes by hand). **File/CSV importer** not built (the API returns full
+history, so backfill is an API pull; only needed for pre-Hevy imports, which need lb→kg / mi→m + tz
+dedup). **Brzycki e1RM / per-rep-range tables** (Epley chosen; formula isolated in `derive.ts`).
+**Weight-at-reps PRs** ("5RM PR"; v1 tracks max-weight + best-e1RM per lift). **Structured
+interpretation history** (latest-wins in v1; an append-only dated log was considered). **Cardio /
+bodyweight-aware derived stats** (`distanceMeters`/`durationSeconds` stored but volume/e1RM assume
+loaded sets). **Cross-module "training day" view** (lifting + weight + macros; not now).
 
 ## Panel module (kitchen wall panel) — backend + UI live; Pi + recipes-sender remain
 
@@ -209,7 +238,7 @@ ceiling over (contract §11.4).
 
 ## Future modules
 
-- _(none queued — macros, weight, and shopping are all live.)_
+- _(none queued — macros, weight, shopping, and lifting are all built/live.)_
 
 ## PWA — installable to home screen ([#4])
 

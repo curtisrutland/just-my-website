@@ -25,13 +25,14 @@ Everything sits behind authentication. There are **no public pages and no anonym
 reads** — this is not a product with a signup funnel, it is one person's data with a
 second, machine-shaped door into it.
 
-Three feature modules are live today:
+Four feature modules are live today:
 
 | Module | What it stores | The honesty principle it encodes |
 |---|---|---|
 | **macros** | Food-intake log + calorie/macro targets | An estimate is never dressed up as a measured fact. Every entry carries a `confidence` and (for estimates) a `note` explaining the guess. |
 | **weight** | One body-weight measurement per day | A single day's number is noise; the **7-day rolling average is the truth.** The trend leads, the raw weigh-in is subordinate. |
 | **shopping** | A single flat list of items, one category level deep | Restraint: a plain working utility, not a dashboard. No quantities (the words carry it), no normalization, no history beyond a 7-day "recently bought". Its web UI is a **full editor** (add/check/edit/delete), not just review. |
+| **lifting** | Hevy workouts (read-only facts) + a thin annotation layer | *The numbers are Hevy's; the meaning is ours.* The first **ingestion** module — sets/reps/weights are pulled from Hevy and immutable; what it owns is the annotation (session notes + quality are Curtis's; the interpretation + focus are Claude's). Derived e1RM/tonnage/PRs, never stored. Bends the kernel twice, deliberately: ingested-not-authored data, and a Hevy-webhook route with a dedicated secret. |
 | **panel** | Device/service tokens + the panel's one active recipe; a KV-backed version stamp per section | Does less on purpose. A glanceable kitchen appliance, not an app — read-mostly, no text entry, anything better on a phone stays there. A distinct surface (device-token-scoped API + kiosk UI), not a skill module. See `docs/panel-contract.md`. |
 
 Those two "honesty" principles aren't decoration — they're the reason the data model
