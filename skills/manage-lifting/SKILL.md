@@ -76,6 +76,18 @@ notes and your prior reads. Ground trajectory claims with `get_lift(template_id)
 
 ## Reading the data (real shapes)
 
+- **List reads are wrapped; single reads are NOT.** The list calls return a paginated wrapper —
+  `list_sessions` / `list_uninterpreted` → `{"items": [...], "limit", "offset", "count"}` (iterate
+  `["items"]`). The single-resource calls return the object **directly, with no `items`**:
+  - `get_session(id)` → the session dict itself (`["exercises"]`, `["derived"]`, `["annotation"]`, …).
+  - `get_lift(template_id)` → `{"templateId", "title", "points": [...]}`; each point is
+    `{"sessionId", "startedAt", "e1rmKg", "topSetKg"}` (kg; `e1rmKg` is null for bodyweight lifts).
+    Read `["points"]` — there is no `["items"]` here.
+
+  ```python
+  p = lf.get_lift(template_id)
+  [kg_to_lb(pt["e1rmKg"]) for pt in p["points"]]   # e1RM per session, oldest → newest (lb)
+  ```
 - **PRs.** `derived.prs` lists PR *flags* — a lift that beats both its top weight and its best e1RM
   produces two entries (`kind: "weight"` and `"e1rm"`). Count **distinct lifts** for "how many PRs".
   In the sets, `pr: true` marks the set that achieved it.
