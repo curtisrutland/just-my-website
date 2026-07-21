@@ -21,7 +21,7 @@ if (baseUrl.includes("localhost") || baseUrl.includes("127.0.0.1")) {
   console.warn(`   unset JMW_BASE_URL (or set it to ${DEFAULT_BASE_URL}) before building a zip to upload to claude.ai.`);
 }
 
-const SKILLS = ["manage-macros", "manage-weight", "manage-shopping"];
+const SKILLS = ["manage-macros", "manage-weight", "manage-shopping", "manage-lifting"];
 const distRoot = "skills/dist";
 rmSync(distRoot, { recursive: true, force: true });
 
