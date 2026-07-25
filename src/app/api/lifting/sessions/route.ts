@@ -50,6 +50,9 @@ export async function GET(request: NextRequest) {
     return errorResponse(400, "validation_error", "to must be an ISO date or datetime", { to: ["unparseable"] });
   }
 
-  const { items, count } = await listSessions({ limit, offset, interpreted, focus, from, to });
-  return ok(paginated(items, count, limit, offset));
+  // The envelope is the kernel's pagination shape (CONVENTIONS §4) plus one additive module key,
+  // `goal` — the current goal statement, one module-level fact rather than a per-item property. It
+  // rides here so the queue read already carries the frame the sessions are to be read against.
+  const { items, count, goal } = await listSessions({ limit, offset, interpreted, focus, from, to });
+  return ok({ ...paginated(items, count, limit, offset), goal });
 }

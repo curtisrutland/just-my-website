@@ -11,7 +11,7 @@ import {
   targetProfileCreateSchema,
   targetProfilePatchSchema,
 } from "../src/lib/macros/schema";
-import { liftingAnnotationPatchSchema } from "../src/lib/lifting/schema";
+import { liftingAnnotationPatchSchema, liftingGoalCreateSchema, liftingGoalPatchSchema } from "../src/lib/lifting/schema";
 import { shoppingCreateSchema, shoppingPatchSchema } from "../src/lib/shopping/schema";
 import { weightCreateSchema, weightPatchSchema } from "../src/lib/weight/schema";
 
@@ -334,8 +334,19 @@ const liftingSpec = {
       webhookSecret: { type: "http", scheme: "bearer", description: "HEVY_WEBHOOK_TOKEN — Hevy's configured Authorization header; NOT a JMW token (documented carve-out)" },
     },
     schemas: {
-      // The only surface write.
+      // The surface writes: the per-session annotation, and the module-level goal statement.
       LiftingAnnotationPatch: js(liftingAnnotationPatchSchema),
+      LiftingGoalCreate: js(liftingGoalCreateSchema),
+      LiftingGoalPatch: js(liftingGoalPatchSchema),
+      GoalView: {
+        type: "object",
+        required: ["id", "effectiveFrom", "statement"],
+        properties: {
+          id: { type: "string", format: "uuid" },
+          effectiveFrom: { type: "string", format: "date", description: "calendar date the goal takes effect; the goal in force on any date is the latest effectiveFrom on/before it" },
+          statement: { type: "string", description: "freeform prose — what the training is for. Deliberately unstructured." },
+        },
+      },
       // Read shapes (from src/lib/lifting/types.ts). Instants are ISO strings; weights canonical kg.
       PrFlag: {
         type: "object",
@@ -416,7 +427,14 @@ const liftingSpec = {
       SessionDetail: {
         allOf: [
           { $ref: "#/components/schemas/SessionSummary" },
-          { type: "object", required: ["exercises"], properties: { exercises: { type: "array", items: { $ref: "#/components/schemas/ExerciseView" } } } },
+          {
+            type: "object",
+            required: ["exercises", "goal"],
+            properties: {
+              exercises: { type: "array", items: { $ref: "#/components/schemas/ExerciseView" } },
+              goal: { allOf: [{ $ref: "#/components/schemas/GoalView" }], nullable: true, description: "the goal in force ON THIS SESSION'S DATE (not necessarily today's) — read it before interpreting" },
+            },
+          },
         ],
       },
       LiftProgression: {
@@ -455,7 +473,27 @@ const liftingSpec = {
           { name: "from", in: "query", schema: { type: "string" }, description: "inclusive lower bound on startedAt (ISO date or datetime)" },
           { name: "to", in: "query", schema: { type: "string" }, description: "inclusive upper bound on startedAt (ISO date or datetime)" },
         ],
-        responses: { ...okList("SessionSummary"), ...errorResponses },
+        responses: {
+          "200": {
+            description: "Paginated list, plus the current goal statement on the envelope",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["items", "limit", "offset", "count", "goal"],
+                  properties: {
+                    items: { type: "array", items: { $ref: "#/components/schemas/SessionSummary" } },
+                    limit: { type: "integer" },
+                    offset: { type: "integer" },
+                    count: { type: "integer" },
+                    goal: { allOf: [{ $ref: "#/components/schemas/GoalView" }], nullable: true, description: "the goal in force TODAY — the frame these sessions are read against" },
+                  },
+                },
+              },
+            },
+          },
+          ...errorResponses,
+        },
       },
     },
     "/api/lifting/sessions/{id}": {
@@ -479,6 +517,37 @@ const liftingSpec = {
         parameters: [pathParam("templateId")],
         responses: { "200": { description: "Progression", content: { "application/json": { schema: { $ref: "#/components/schemas/LiftProgression" } } } }, ...errorResponses },
       },
+    },
+    "/api/lifting/goal": {
+      get: {
+        summary: "The goal statement in force today (or on ?on=YYYY-MM-DD)",
+        description: "What the training is FOR right now — the frame every session read is judged against. The same goal rides along on the session reads themselves. Returns null if no goal has been set.",
+        parameters: [{ name: "on", in: "query", schema: { type: "string", format: "date" }, description: "resolve the goal in force on this calendar date (default today)" }],
+        responses: { "200": { description: "The current goal, or null", content: { "application/json": { schema: { allOf: [{ $ref: "#/components/schemas/GoalView" }], nullable: true } } } }, ...errorResponses },
+      },
+      post: {
+        summary: "Set the goal statement",
+        description: "One live goal per effectiveFrom date (default today), so this is an upsert on that date: restating today's goal rewords it; a new date supersedes without touching history. 200 + Location (set/replace, not fresh creation — CONVENTIONS §7).",
+        requestBody: jsonBody("LiftingGoalCreate"),
+        responses: { "200": { description: "The persisted goal", content: { "application/json": { schema: { $ref: "#/components/schemas/GoalView" } } } }, ...errorResponses },
+      },
+    },
+    "/api/lifting/goals": {
+      get: {
+        summary: "Goal history, newest first",
+        description: "Superseded goals are kept, so an old read stays legible against the goal that actually applied when it was written.",
+        parameters: [...pageParams],
+        responses: { ...okList("GoalView"), ...errorResponses },
+      },
+    },
+    "/api/lifting/goals/{id}": {
+      patch: {
+        summary: "Edit one dated goal in place (reword it, or correct when it started)",
+        parameters: [pathParam("id")],
+        requestBody: jsonBody("LiftingGoalPatch"),
+        responses: { "200": { description: "Updated goal", content: { "application/json": { schema: { $ref: "#/components/schemas/GoalView" } } } }, ...errorResponses },
+      },
+      delete: { summary: "Soft/hard delete a goal (hard requires the primary key)", parameters: [pathParam("id"), hardParam], responses: { ...noContent, ...errorResponses } },
     },
     "/api/lifting/pull": {
       post: {

@@ -79,6 +79,19 @@ the top of each section.
       `HEVY_WEBHOOK_TOKEN` on Vercel + register the webhook URL with Hevy (`.../api/lifting/webhook`,
       header `Bearer <token>`).
 
+- [x] **Lifting goal statement** — a module-level, dated **goal statement** (`lifting_goal`,
+      migration `0008`): freeform prose describing what the training is *for*, written by **both**
+      surfaces (a `GoalPanel` atop the journal with inline edit; `lf.set_goal()` in the skill). Dated
+      records like `macro_target_profile` — the goal in force on a date is the latest `effectiveFrom`
+      on/before it, one live goal per date (POST upserts), so superseding never erases what an older
+      block was aiming at. Surfaced to Claude **structurally, not just by instruction**: it rides on
+      the session-list envelope (today's) and on `GET /sessions/{id}` (the goal in force **on that
+      session's date**), plus a "read the goal first" rule at the top of `SKILL.md`. Routes: `goal`
+      (GET current / POST set), `goals` (GET history), `goals/[id]` (PATCH/DELETE). Anti-scope held:
+      prose only, `.strict()` — no horizon/target-lift/numeric fields, and **no progress tracking
+      against the goal** (this module doesn't score things). OpenAPI regenerated (8 lifting paths);
+      model doc, README, ARCHITECTURE updated; `tsc` clean, lifting tests 30 green (+5 new).
+
 ## Lifting — deferred (from `docs/lifting-model.md` Open/deferred)
 
 Explicitly out of scope for v1; each is additive later. **Reconciliation cron** (nightly
@@ -90,7 +103,9 @@ dedup). **Brzycki e1RM / per-rep-range tables** (Epley chosen; formula isolated 
 **Weight-at-reps PRs** ("5RM PR"; v1 tracks max-weight + best-e1RM per lift). **Structured
 interpretation history** (latest-wins in v1; an append-only dated log was considered). **Cardio /
 bodyweight-aware derived stats** (`distanceMeters`/`durationSeconds` stored but volume/e1RM assume
-loaded sets). **Cross-module "training day" view** (lifting + weight + macros; not now).
+loaded sets). **Cross-module "training day" view** (lifting + weight + macros; not now). **Goal history in the web**
+(the API serves `GET /api/lifting/goals`; the UI renders only the current goal). **Structured goals**
+(explicitly declined — no horizon/target-lift/numeric fields, no progress-against-goal tracking).
 
 ## Panel module (kitchen wall panel) — backend + UI live; Pi + recipes-sender remain
 

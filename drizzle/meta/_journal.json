@@ -57,6 +57,13 @@
       "when": 1784582801542,
       "tag": "0007_skinny_silvermane",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1784938490388,
+      "tag": "0008_bizarre_odin",
+      "breakpoints": true
     }
   ]
 }

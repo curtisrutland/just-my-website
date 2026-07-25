@@ -158,6 +158,48 @@ Full audit columns (this is *our* data — it gets `updatedAt` and soft-delete).
 > field through `schema.parse → repo`; the UI and skill simply respect the split by default (the web
 > renders `interpretation` read-only; the skill is the one that writes it).
 
+### `lifting_goal` — the goal statement (module-level, both surfaces write it)
+
+Full audit columns. **Not part of the annotation layer** — the annotation is *per session*; this is
+one fact about the training as a whole, sitting beside the sessions as the frame they're read
+against. Added after v1; see "Why a goal statement" below.
+
+- `effectiveFrom` (date, required) — the local calendar date the goal takes effect. **Partial-unique
+  on live rows**, so there is one live goal per date.
+- `statement` (text, required) — the goal itself, **freeform prose**. Deliberately unstructured.
+
+**Dated records, not a singleton.** The goal in force on any date is the latest `effectiveFrom`
+on/before it — the same pattern as `macro_target_profile`. Superseding a goal therefore never erases
+what the previous block was aiming at, which is the point: an interpretation written in June stays
+legible against the goal that actually applied in June, not against whatever the goal became in
+September. A goal dated in the *future* is not yet in force, so a planned block change can be
+post-dated.
+
+**One live goal per date → POST is an upsert.** Restating the goal the same day rewords it rather
+than stacking a second row (same shape as weight's one-weigh-in-per-day). Retiring a goal is a matter
+of setting a new one; DELETE exists for a goal written by mistake.
+
+#### The anti-scope (what a goal deliberately is NOT)
+
+- **No structured fields** — no horizon, target lifts, priority ordering, or numeric targets. A
+  taxonomy here is a schema to maintain and an invitation to creep. The value is Curtis saying it in
+  his own words and Claude reading it; `.strict()` on the Zod schema is what keeps a "just one more
+  field" out.
+- **No progress tracking against the goal.** No percentage, no bar, no "on track" badge. The module
+  already refuses to score things (`quality` is explicitly *"a subjective note, yours — not a score
+  to celebrate"*); a goal-completion meter would be exactly the thing this module doesn't do.
+- **Not per-session, and not linked to sessions.** The resolution is by date, so no join table and no
+  backfill when a goal changes.
+- **Not Claude's voice.** The goal is Curtis's statement of intent; the `interpretation` is Claude's
+  read. The skill captures what Curtis said; it does not author a goal for him.
+
+#### Why a goal statement
+
+The module's read of a session was structurally goal-blind: the same numbers mean opposite things
+under *"get the press moving"* versus *"hold pressing while the shoulder settles"*. A flat e1RM is a
+stall in one and the plan working in the other. So the goal is not decoration — it's the missing
+denominator for the interpretation, which is the module's whole product.
+
 ---
 
 ## Derived — computed in `repo`, never stored
@@ -259,6 +301,26 @@ idempotent. **This one endpoint serves two jobs:**
 - `src/app/api/lifting/sessions/[id]/route.ts` — `GET` full session (exercises + sets + derived +
   annotation), `PATCH` (**annotation only**), `DELETE` (soft; hard requires `JMW_API_KEY`).
 - `src/app/api/lifting/lifts/[templateId]/route.ts` — `GET` progression series for one lift.
+- `src/app/api/lifting/goal/route.ts` — `GET` the goal in force today (or `?on=YYYY-MM-DD`; `null` if
+  never set), `POST` set the goal (upsert on `effectiveFrom`, default today → `200` + `Location`).
+- `src/app/api/lifting/goals/route.ts` — `GET` paginated goal history, newest first.
+- `src/app/api/lifting/goals/[id]/route.ts` — `PATCH` reword/re-date one goal, `DELETE` (soft; hard
+  requires `JMW_API_KEY`).
+
+#### How the goal is surfaced (the point of the feature)
+
+A dedicated endpoint alone would rely on the agent remembering to call it. Instead the goal **rides
+along on the reads the agent already makes**, so an interpretation cannot be written goal-blind:
+
+- `GET /api/lifting/sessions` — the current goal on the **envelope**, as `goal`, beside the kernel's
+  `items`/`limit`/`offset`/`count`. One additive module key; the kernel keys are untouched and still
+  mean exactly what §4 says. It's on the envelope, not each item, because it's one module-level fact,
+  not a property of a session.
+- `GET /api/lifting/sessions/{id}` — `goal` on the session, resolved to **that session's date**, not
+  today's. An old session is judged against the goal that applied when it happened.
+
+Both can be `null` (no goal set yet). The skill carries the matching rule: read the goal before
+discussing or interpreting anything, and say so plainly when there isn't one.
 
 ### `get`-after-write, soft-delete, PATCH-default
 
@@ -269,8 +331,9 @@ persisted session. Soft-delete is the default removal; agent token barred from h
 
 ## Zod schemas (single source of truth)
 
-Two families: the **ingestion** schema (parse the Hevy payload into the normalized shape) and the
-**annotation** schema (the only surface write).
+Three families: the **ingestion** schema (parse the Hevy payload into the normalized shape), the
+**annotation** schema (the per-session surface write), and the **goal** schema (the module-level
+surface write).
 
 ```ts
 // ---- Ingestion: the Hevy workout payload (subset we model; extra keys ignored, raw kept) ----
@@ -316,7 +379,21 @@ export const liftingAnnotationPatchSchema = z
   })
   .partial()
   .strict(); // repo sets interpretedAt = now() whenever `interpretation` is present
+
+// ---- Goal: the module-level surface write. Prose only, .strict() ----
+const goalShape = {
+  statement: z.string().trim().min(1).max(4000),
+  effectiveFrom: z.iso.date().optional(), // repo defaults it to today in Curtis's timezone
+};
+
+export const liftingGoalCreateSchema = z.object(goalShape).strict();
+export const liftingGoalPatchSchema = z.object(goalShape).partial().strict();
 ```
+
+`statement` is **required and non-empty, never nullable** — a goal is *replaced*, not cleared. And
+`.strict()` is doing real work here: it's the mechanism that keeps the anti-scope honest, turning a
+well-meaning `{ horizon: "8 weeks" }` into a 400 instead of a silently-dropped field that quietly
+becomes a feature request.
 
 There is deliberately **no `liftingSessionCreateSchema`** — sessions are never authored, only ingested.
 
@@ -324,7 +401,7 @@ There is deliberately **no `liftingSessionCreateSchema`** — sessions are never
 
 ## Repo surface (`src/lib/lifting/repo.ts`)
 
-The only place the four tables are touched; reads exclude soft-deleted.
+The only place the five tables are touched; reads exclude soft-deleted.
 
 **Ingestion (transactional — upsert session, rebuild children, never touch the note):**
 - `upsertSessionFromHevy(normalized)` → upsert by `hevyId`; delete+reinsert exercises/sets; store
@@ -335,15 +412,23 @@ The only place the four tables are touched; reads exclude soft-deleted.
 
 **Reads (derive tonnage / e1RM / PRs on the way out):**
 - `listSessions({ limit, offset, interpreted?, focus?, from?, to? })` →
-  `{ items: SessionSummary[], count }` — summaries with derived headline stats + annotation +
-  PR flags + `interpreted` boolean.
-- `getSession(id)` → full session: exercises → sets, derived stats, PR flags, annotation.
+  `{ items: SessionSummary[], count, goal }` — summaries with derived headline stats + annotation +
+  PR flags + `interpreted` boolean, plus **today's goal** on the envelope.
+- `getSession(id)` → full session: exercises → sets, derived stats, PR flags, annotation, and the
+  **goal in force on that session's date**.
 - `getLiftProgression(templateId)` → per-session e1RM / top-set series for one lift.
 
 **Annotation + lifecycle:**
 - `patchAnnotation(sessionId, patch)` → upserts the `lifting_session_note` row; sets
   `interpretedAt = now()` iff `interpretation` was supplied. Returns annotation + session.
 - `softDeleteSession(id)` / `hardDeleteSession(id)` — hard gated to `JMW_API_KEY` at the route layer.
+
+**Goal statement:**
+- `getGoalOn(date = todayISO())` → the latest live goal with `effectiveFrom <= date`, or `null`. The
+  default is today **in Curtis's timezone** (`src/lib/date.ts` owns that), not the server's.
+- `listGoals({ limit, offset })` → the history, newest first.
+- `setGoal({ statement, effectiveFrom? })` → upsert on the date (default today); returns the goal.
+- `patchGoal(id, patch)` / `softDeleteGoal(id)` / `hardDeleteGoal(id)`.
 
 A thin `src/lib/lifting/hevy.ts` client wraps the two Hevy endpoints (`api-key` header) so the repo /
 routes never hand-roll fetches. Pure helpers (Epley e1RM, tonnage, PR walk) live in
@@ -356,6 +441,15 @@ routes never hand-roll fetches. Pure helpers (Epley e1RM, tonnage, PR walk) live
 Reuses `AppShell`, all tokens, mono/tabular numbers. Nav flips the `lifting` chip from `SOON` to
 **LIVE** (`AppShell.tsx`); landing row (`Landing.tsx`) to a live link. **The hero is not a chart** —
 it's the **session detail**, where the set table and the interpretation sit side by side.
+
+### `GoalPanel` — the frame, atop the journal
+The goal statement sits **above** the session cards on `/lifting`, not behind its own route: it is
+ambient because it's what the cards below are read against. Prose, one accent rule, an inline `edit`
+that turns it into a textarea and saves through the server action. No targets, no progress bar, no
+percentage — the module doesn't score things. With no goal set, a quiet italic invitation rather than
+an empty box. On the session detail it reappears once more, muted and read-only, directly above
+Claude's read, labelled **the goal at the time** — because that's the goal the read was written
+against.
 
 ### `LiftingJournal` — the list surface
 Session cards, newest first. Each card: date + title, a compact stat line (tonnage, top e1RM,
@@ -441,11 +535,12 @@ Per `CONVENTIONS §8` — the last two are the ones nothing auto-generates, so t
 
 - [ ] `src/lib/lifting/` — `schema.ts`, `repo.ts`, `types.ts`, `hevy.ts` (API client), `derive.ts`
       (e1RM / tonnage / PR helpers)
-- [ ] `lifting_session`, `lifting_exercise`, `lifting_set`, `lifting_session_note` tables in
-      `src/lib/db/schema.ts` + migration
+- [ ] `lifting_session`, `lifting_exercise`, `lifting_set`, `lifting_session_note`, `lifting_goal`
+      tables in `src/lib/db/schema.ts` + migration
 - [ ] `HEVY_API_KEY` + `HEVY_WEBHOOK_TOKEN` env wired (local `.env` + Vercel); register the webhook
       subscription with Hevy (URL + `Authorization: Bearer <HEVY_WEBHOOK_TOKEN>`)
-- [ ] API routes under `src/app/api/lifting/` (webhook, pull, sessions, sessions/[id], lifts/[id])
+- [ ] API routes under `src/app/api/lifting/` (webhook, pull, sessions, sessions/[id], lifts/[id],
+      goal, goals, goals/[id])
 - [ ] Run the one-time backfill: `POST /api/lifting/pull` over all pages (no CSV importer)
 - [ ] UI under `src/app/(app)/lifting/` + `src/components/lifting/`
 - [ ] Flip the `lifting` nav chip (`AppShell.tsx`) + landing card (`Landing.tsx`) to LIVE
@@ -454,7 +549,9 @@ Per `CONVENTIONS §8` — the last two are the ones nothing auto-generates, so t
       `openapi/lifting.json` appears
 - [ ] **Docs:** this file is the model; on ship update the README module list, the live-modules table
       in `docs/ARCHITECTURE.md` (add a `lifting` row; bump the count), and `docs/BACKLOG.md`
-- [ ] `manage-lifting` skill (after web + API) — list un-interpreted / read / interpret / pull
+- [ ] `manage-lifting` skill (after web + API) — list un-interpreted / read / interpret / pull, and
+      **read the goal before interpreting** (`get_goal` / `set_goal`; the goal also rides along on
+      every session read so a read can't be written goal-blind)
 
 ## Open / deferred (for the backlog)
 
@@ -476,3 +573,9 @@ Per `CONVENTIONS §8` — the last two are the ones nothing auto-generates, so t
   assume loaded barbell-style sets. Cardio-aware derived stats are out of scope for v1.
 - **Cross-module tie-in.** Lifting + weight + macros could someday share a "training day" view; not
   now.
+- **Goal history in the web.** The API serves `GET /api/lifting/goals` (full history), but the UI only
+  renders the *current* goal. A "past goals" view — or showing a superseded goal on an old session's
+  detail beyond the one muted line — can land if the history ever gets long enough to be interesting.
+- **Structured goals.** Explicitly declined (see the anti-scope): no horizon, target lifts, or numeric
+  targets, and no progress tracking against the goal. If a real need appears it should be argued for
+  on its own terms, not smuggled in as "one more field".

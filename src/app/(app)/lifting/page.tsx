@@ -2,9 +2,11 @@ import Link from "next/link";
 import { UserButton } from "@clerk/nextjs";
 import { AppShell } from "@/components/shell/AppShell";
 import { CatchUpButton } from "@/components/lifting/CatchUpButton";
+import { GoalPanel } from "@/components/lifting/GoalPanel";
 import { JournalCard } from "@/components/lifting/JournalCard";
 import { FOCUSES } from "@/components/lifting/format";
 import { listSessions } from "@/lib/lifting/repo";
+import { saveGoalAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -17,8 +19,9 @@ export default async function LiftingJournalPage({ searchParams }: { searchParam
   const activeFocus = FOCUSES.includes(sp.focus as (typeof FOCUSES)[number]) ? sp.focus! : null;
   const needsReadOnly = sp.needsread === "1";
 
-  // One read of the whole (small) history; filter + counts derived in-page.
-  const { items, count } = await listSessions({ limit: 100 });
+  // One read of the whole (small) history; filter + counts derived in-page. The current goal rides
+  // along on the same read — it's the frame the cards below are meant to be read against.
+  const { items, count, goal } = await listSessions({ limit: 100 });
   const needsReadCount = items.filter((s) => !s.annotation.interpreted).length;
   const present = new Set(items.map((s) => s.annotation.focus).filter(Boolean));
 
@@ -74,6 +77,8 @@ export default async function LiftingJournalPage({ searchParams }: { searchParam
           ))}
         </div>
       </div>
+
+      <GoalPanel goal={goal} save={saveGoalAction} />
 
       {/* cards */}
       {cards.length > 0 ? (

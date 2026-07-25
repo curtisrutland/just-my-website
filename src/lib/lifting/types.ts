@@ -66,6 +66,17 @@ export type ExerciseView = {
   sets: SetView[];
 };
 
+/**
+ * The goal statement as read — what the training is FOR. Prose only; the audit columns are dropped
+ * per the module's read contract, so `effectiveFrom` (a calendar date, 'YYYY-MM-DD') is the only
+ * time on it.
+ */
+export type GoalView = {
+  id: string;
+  effectiveFrom: string;
+  statement: string;
+};
+
 /** A session summary — the journal-card shape (no exercises). */
 export type SessionSummary = {
   id: string;
@@ -80,9 +91,17 @@ export type SessionSummary = {
   annotation: SessionAnnotation;
 };
 
-/** A full session — summary plus the exercise → set tree. The session-detail shape. */
+/**
+ * A full session — summary plus the exercise → set tree, plus the goal it should be read against.
+ *
+ * `goal` is the goal in force ON THIS SESSION'S DATE, not necessarily today's: a session from an old
+ * block is judged against the goal that actually applied when it happened, which is the whole reason
+ * goals are dated. It rides along on every full read so an interpretation can never be written
+ * goal-blind. Null when no goal was set by then.
+ */
 export type SessionDetail = SessionSummary & {
   exercises: ExerciseView[];
+  goal: GoalView | null;
 };
 
 /** One point in a lift's progression series. */

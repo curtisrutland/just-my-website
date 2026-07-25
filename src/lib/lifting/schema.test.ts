@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { hevyWorkoutSchema, liftingAnnotationPatchSchema, normalizeWorkout } from "./schema";
+import {
+  hevyWorkoutSchema,
+  liftingAnnotationPatchSchema,
+  liftingGoalCreateSchema,
+  liftingGoalPatchSchema,
+  normalizeWorkout,
+} from "./schema";
 
 const rawWorkout = {
   id: "hevy-123",
@@ -84,5 +90,34 @@ describe("liftingAnnotationPatchSchema", () => {
   });
   it("allows explicit nulls (clearing a field)", () => {
     expect(liftingAnnotationPatchSchema.safeParse({ interpretation: null, focus: null }).success).toBe(true);
+  });
+});
+
+describe("liftingGoalCreateSchema", () => {
+  it("requires a non-empty statement and trims it", () => {
+    expect(liftingGoalCreateSchema.parse({ statement: "  build the pull  " }).statement).toBe("build the pull");
+    expect(liftingGoalCreateSchema.safeParse({ statement: "   " }).success).toBe(false);
+    expect(liftingGoalCreateSchema.safeParse({}).success).toBe(false);
+  });
+  it("leaves effectiveFrom optional (the repo defaults it to today) but validates its shape", () => {
+    expect(liftingGoalCreateSchema.safeParse({ statement: "x" }).success).toBe(true);
+    expect(liftingGoalCreateSchema.safeParse({ statement: "x", effectiveFrom: "2026-07-25" }).success).toBe(true);
+    expect(liftingGoalCreateSchema.safeParse({ statement: "x", effectiveFrom: "07/25/2026" }).success).toBe(false);
+    expect(liftingGoalCreateSchema.safeParse({ statement: "x", effectiveFrom: "2026-07-25T00:00:00Z" }).success).toBe(false);
+  });
+  it("rejects unknown keys (strict) — no structured goal fields sneak in", () => {
+    expect(liftingGoalCreateSchema.safeParse({ statement: "x", horizon: "8 weeks" }).success).toBe(false);
+  });
+  it("rejects a null statement — a goal is replaced, never cleared", () => {
+    expect(liftingGoalCreateSchema.safeParse({ statement: null }).success).toBe(false);
+    expect(liftingGoalPatchSchema.safeParse({ statement: null }).success).toBe(false);
+  });
+});
+
+describe("liftingGoalPatchSchema", () => {
+  it("accepts a partial edit (reword, or re-date)", () => {
+    expect(liftingGoalPatchSchema.safeParse({ statement: "reworded" }).success).toBe(true);
+    expect(liftingGoalPatchSchema.safeParse({ effectiveFrom: "2026-06-01" }).success).toBe(true);
+    expect(liftingGoalPatchSchema.safeParse({}).success).toBe(true);
   });
 });

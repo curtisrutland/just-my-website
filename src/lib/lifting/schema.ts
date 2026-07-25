@@ -152,3 +152,28 @@ export const liftingAnnotationPatchSchema = z
   .strict();
 
 export type LiftingAnnotationPatch = z.infer<typeof liftingAnnotationPatchSchema>;
+
+// --- Goal statement: the module-level write (both surfaces) ---
+
+/**
+ * The goal statement — prose describing what the training is FOR right now. Deliberately
+ * UNSTRUCTURED: one required `statement`, no horizon/target-lift/priority fields. The value is in
+ * Curtis saying it in his own words and Claude reading it; a taxonomy here would be a schema to
+ * maintain and an invitation to scope creep (docs/lifting-model.md, "the anti-scope").
+ *
+ * `effectiveFrom` defaults to today at the repo boundary (not here — the schema stays pure, and the
+ * default is Curtis's timezone, which `todayISO()` owns). Setting it forward post-dates a planned
+ * block change; setting it back corrects when a goal actually started.
+ */
+const goalShape = {
+  statement: z.string().trim().min(1).max(4000),
+  effectiveFrom: z.iso.date().optional(),
+};
+
+export const liftingGoalCreateSchema = z.object(goalShape).strict();
+
+/** Edit an existing dated goal in place (fix the wording, or re-date it). */
+export const liftingGoalPatchSchema = z.object(goalShape).partial().strict();
+
+export type LiftingGoalCreate = z.infer<typeof liftingGoalCreateSchema>;
+export type LiftingGoalPatch = z.infer<typeof liftingGoalPatchSchema>;
