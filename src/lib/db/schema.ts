@@ -396,6 +396,32 @@ export const liftingSessionNote = pgTable(
   ]
 );
 
+/**
+ * `lifting_goal` — the module-level goal statement: prose describing what the training is FOR right
+ * now. Not part of the annotation layer (that's per-session); this sits beside the sessions and is
+ * the frame they're read against. Dated records, same pattern as `macro_target_profile`: the goal in
+ * force on any date is the latest `effectiveFrom` on/before it, so superseding a goal never erases
+ * what the previous block was aiming at — an old interpretation stays legible against the goal that
+ * actually applied when it was written. One live goal per date (partial-unique), so re-stating the
+ * goal the same day replaces rather than stacks. Written by BOTH surfaces (web + agent).
+ */
+export const liftingGoal = pgTable(
+  "lifting_goal",
+  {
+    ...auditColumns(),
+    // Local calendar date the goal takes effect. A future date post-dates a planned block change.
+    effectiveFrom: date("effective_from", { mode: "string" }).notNull(),
+    // The goal itself — freeform prose, deliberately unstructured (see docs/lifting-model.md).
+    statement: text("statement").notNull(),
+  },
+  (t) => [
+    index("lifting_goal_effective_from_idx").on(t.effectiveFrom),
+    uniqueIndex("lifting_goal_effective_from_key")
+      .on(t.effectiveFrom)
+      .where(sql`${t.deletedAt} is null`),
+  ]
+);
+
 export type MacroFood = typeof macroFood.$inferSelect;
 export type NewMacroFood = typeof macroFood.$inferInsert;
 export type MacroEntry = typeof macroEntry.$inferSelect;
@@ -420,3 +446,5 @@ export type LiftingSet = typeof liftingSet.$inferSelect;
 export type NewLiftingSet = typeof liftingSet.$inferInsert;
 export type LiftingSessionNote = typeof liftingSessionNote.$inferSelect;
 export type NewLiftingSessionNote = typeof liftingSessionNote.$inferInsert;
+export type LiftingGoal = typeof liftingGoal.$inferSelect;
+export type NewLiftingGoal = typeof liftingGoal.$inferInsert;

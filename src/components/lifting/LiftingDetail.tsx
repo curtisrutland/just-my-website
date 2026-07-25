@@ -101,8 +101,18 @@ export function LiftingDetail({ session, progression, saveNotes, setQuality }: P
           <div style={{ padding: 22, display: "flex", flexDirection: "column", gap: 26 }}>
             <NotesEditor initial={a.sessionNotes} save={saveNotes} />
             <QualitySelector initial={a.quality} setQuality={setQuality} />
-            {/* Claude's read — read-only */}
+            {/* Claude's read — read-only — framed by the goal that applied on this session's date */}
             <div style={{ borderTop: "1px solid var(--color-border)", paddingTop: 22 }}>
+              {session.goal && (
+                <div style={{ marginBottom: 18 }}>
+                  <div style={{ fontFamily: mono, fontSize: 9.5, letterSpacing: "0.1em", color: "var(--color-text-muted)", marginBottom: 7 }}>
+                    THE GOAL AT THE TIME
+                  </div>
+                  <p style={{ fontFamily: "var(--font-body)", fontSize: 13, lineHeight: 1.6, color: "var(--color-text-muted)", margin: 0, textWrap: "pretty" }}>
+                    {session.goal.statement}
+                  </p>
+                </div>
+              )}
               <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: "0.1em", color: "var(--color-text-muted)", marginBottom: 11 }}>THE READ <span style={{ opacity: 0.55 }}>· CLAUDE</span></div>
               {a.interpretation ? (
                 <div style={{ borderLeft: "2px solid var(--color-accent)", padding: "2px 0 2px 16px" }}>

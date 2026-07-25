@@ -1,8 +1,9 @@
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/shell/AppShell";
+import { GoalPanel } from "@/components/lifting/GoalPanel";
 import { JournalCard } from "@/components/lifting/JournalCard";
 import { LiftingDetail } from "@/components/lifting/LiftingDetail";
-import { mockDetail, mockProgression, mockSummaries } from "@/components/lifting/mock";
+import { mockDetail, mockGoal, mockProgression, mockSummaries } from "@/components/lifting/mock";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,7 @@ export default function PreviewLifting() {
         <h1 style={{ fontFamily: "var(--font-display)", fontSize: 25, fontWeight: 600, margin: 0, letterSpacing: "-0.01em" }}>Training journal</h1>
         <div style={{ fontFamily: mono, fontSize: 11.5, color: "var(--color-text-muted)", marginTop: 7 }}>The numbers are Hevy&apos;s; the meaning is ours. {mockSummaries.length} sessions ingested · {needsRead} awaiting a read</div>
       </div>
+      <GoalPanel goal={mockGoal} />
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {mockSummaries.map((s) => (
           <JournalCard key={s.id} s={s} />

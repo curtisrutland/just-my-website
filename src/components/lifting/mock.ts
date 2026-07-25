@@ -1,4 +1,4 @@
-import type { SessionDetail, SessionSummary } from "@/lib/lifting/types";
+import type { GoalView, SessionDetail, SessionSummary } from "@/lib/lifting/types";
 
 /**
  * Lifting UI mock data for the dev `/preview` harness (read-only, no server actions). Deliberately
@@ -79,8 +79,17 @@ export const mockProgression: Record<string, number[]> = {
   triceps: [lb(80), lb(80), lb(80), lb(60)],
 };
 
+/** The goal in force over the mock history — the frame the reads below are written against. */
+export const mockGoal: GoalView = {
+  id: "g1",
+  effectiveFrom: "2026-06-01",
+  statement:
+    "General strength through the summer, at a bodyweight I hold steady. Priority is the big pulls — I want the lat pulldown and row moving. Pressing stays honest: full range, no ego loads while the shoulder settles. Two upper, one lower, one accessory day a week.",
+};
+
 export const mockDetail: SessionDetail = {
   id: "m2",
+  goal: mockGoal,
   hevyId: "h2",
   title: "Session B",
   startedAt: "2026-07-09T22:04:20.000Z",

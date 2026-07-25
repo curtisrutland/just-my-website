@@ -8,6 +8,11 @@ The lifting module is a training JOURNAL over Hevy: the sets/reps/weights are He
 and READ-ONLY. What this skill writes is the ANNOTATION — Claude's `interpretation` + `focus`. Curtis
 owns `session_notes` + `quality` (he edits those in the web); this client does not touch them.
 
+Above the sessions sits the GOAL STATEMENT — prose describing what the training is for right now.
+It is the frame a session is read against, and it rides along on every session read (`get_session`
+returns `["goal"]`; the list calls return it on the envelope), so a read is never written goal-blind.
+Both surfaces write it: Curtis in the web, you via `set_goal`.
+
 Weights everywhere are canonical KILOGRAMS (`weightKg`, `e1rmKg`, `tonnageKg`, PR `value`). Curtis
 logs and thinks in POUNDS — reason and write in whole lb (use `kg_to_lb`), never raw kg.
 """
@@ -85,7 +90,8 @@ class LiftingClient:
         offset: int = 0,
     ) -> dict:
         """Paginated session summaries, newest first. Filter by `interpreted` (the read queue),
-        `focus`, and a startedAt range (`from_`/`to`, ISO date or datetime)."""
+        `focus`, and a startedAt range (`from_`/`to`, ISO date or datetime). The envelope also
+        carries `["goal"]` — the CURRENT goal statement (or None) — beside `["items"]`."""
         params: dict[str, Any] = {"limit": limit, "offset": offset, "focus": focus, "from": from_, "to": to}
         if interpreted is not None:
             params["interpreted"] = "true" if interpreted else "false"
@@ -96,9 +102,11 @@ class LiftingClient:
         return self.list_sessions(interpreted=False, limit=limit)
 
     def get_session(self, session_id: str) -> dict:
-        """A full session: exercises → sets, derived stats (tonnage/e1RM/PRs), and the annotation.
+        """A full session: exercises → sets, derived stats (tonnage/e1RM/PRs), the annotation, and
+        `["goal"]` — the goal in force ON THIS SESSION'S DATE (not necessarily today's), or None.
         READ `annotation.sessionNotes` first — Curtis records context there (e.g. a machine change),
-        so you never misread a load drop as a regression."""
+        so you never misread a load drop as a regression — and read `goal` before you interpret:
+        the same numbers mean different things under 'build the pull' vs 'hold through a deload'."""
         return self._request("GET", f"/sessions/{session_id}")
 
     def get_lift(self, template_id: str) -> dict:
@@ -108,6 +116,33 @@ class LiftingClient:
         Read `["points"]`. Weights are kg; `e1rmKg` is null for bodyweight lifts. Use to ground
         trajectory claims in the interpretation."""
         return self._request("GET", f"/lifts/{template_id}")
+
+    # -- the goal statement (module-level; both surfaces write it) --------------
+    def get_goal(self, on: Optional[str] = None) -> Optional[dict]:
+        """The goal statement in force today, or on the calendar date `on` ('YYYY-MM-DD'). Returns
+        `{"id", "effectiveFrom", "statement"}`, or None if no goal has ever been set. Bring this into
+        context BEFORE discussing or interpreting any training data."""
+        return self._request("GET", "/goal", params={"on": on})
+
+    def list_goals(self, limit: int = 50) -> dict:
+        """Goal history, newest first (`["items"]`). Superseded goals are kept — use this to see how
+        the intent has moved across blocks, or to read an old session against the goal of its era."""
+        return self._request("GET", "/goals", params={"limit": limit})
+
+    def set_goal(self, statement: str, *, effective_from: Optional[str] = None) -> dict:
+        """Set the goal — freeform prose, in CURTIS'S words. One live goal per `effective_from` date
+        (default today), so this UPSERTS on that date: restating today's goal rewords it, a new date
+        supersedes and keeps the old one in history.
+
+        This is Curtis's statement of intent, not your read. Write it when he tells you the goal has
+        changed ("I'm shifting to a strength block through the fall") — capture what he said, don't
+        author a goal for him or fold your own interpretation into it."""
+        if not statement.strip():
+            raise LiftingError("goal statement cannot be empty")
+        body: dict[str, Any] = {"statement": statement}
+        if effective_from is not None:
+            body["effectiveFrom"] = effective_from
+        return self._request("POST", "/goal", body=body)
 
     # -- writes (the annotation — Claude's fields only) -------------------------
     def interpret(self, session_id: str, *, interpretation: Optional[str] = None, focus: Optional[str] = None) -> dict:

@@ -3,8 +3,9 @@ name: manage-lifting
 description: >-
   Read and interpret Curtis's lifting sessions in justmy.website (the training journal over Hevy).
   Use whenever Curtis asks you to read/interpret his workouts, catch up on un-interpreted sessions,
-  classify a session's focus, review a lift's progression, or pull recent workouts from Hevy. This is
-  the interpretation layer — you write the read; the sets/reps/weights are Hevy's and read-only.
+  classify a session's focus, review a lift's progression, pull recent workouts from Hevy, or state
+  and update his overall training goals. This is the interpretation layer — you write the read; the
+  sets/reps/weights are Hevy's and read-only.
 ---
 
 # manage-lifting
@@ -30,10 +31,38 @@ lf = LiftingClient()   # base URL + Curtis's agent token are baked in
 Curtis logs and thinks in whole POUNDS.** Reason and write in lb — `kg_to_lb(kg)` gives the whole
 pound value. Never put a raw kg number or a decimal in an interpretation.
 
+## Read the goal first — always
+
+Above the sessions sits the **goal statement**: prose, in Curtis's words, describing what the
+training is *for* right now. **Bring it into context before you discuss, interpret, or summarize any
+training data** — not as a formality, but because it decides what the numbers mean. A flat bench e1RM
+is *stalling* under "get the press moving" and *exactly right* under "hold pressing while the
+shoulder settles"; a tonnage drop is a *regression* in a build block and *the plan working* in a
+deload.
+
+```python
+goal = lf.get_goal()      # {"id", "effectiveFrom", "statement"} or None
+```
+
+You rarely need that call in the normal loop — **the goal rides along on the reads you already make**:
+
+- `list_sessions` / `list_uninterpreted` → `["goal"]` on the envelope, beside `["items"]` (today's goal).
+- `get_session(id)` → `["goal"]`, the goal in force **on that session's date** — an old session is
+  judged against the goal that actually applied then, not today's.
+
+Either can be `None` (no goal set yet). When it is, say so rather than inventing a frame — and tell
+Curtis a goal would sharpen the reads.
+
+**Writing the goal.** `lf.set_goal("...")` records it in **Curtis's words**, when *he* says the goal
+has changed. It upserts on `effective_from` (default today): restating today's rewords it, a new day
+supersedes and keeps the old one in history (`lf.list_goals()`). Do NOT author a goal for him, and do
+not fold your own read into it — the goal is his statement of intent; the interpretation is yours.
+
 ## The loop: read the queue → read a session → write the interpretation
 
 ```python
 queue = lf.list_uninterpreted()          # sessions with no read yet (interpreted=false)
+queue["goal"]                            # ← the current goal, on the envelope. Read it.
 for s in queue["items"]:
     print(s["startedAt"][:10], s["title"], s["derived"]["prs"])
 ```
@@ -42,10 +71,14 @@ Pick a session and read it in FULL before interpreting:
 
 ```python
 d = lf.get_session(session_id)
+d["goal"]                         # ← the goal in force ON THIS SESSION'S DATE — the frame (or None)
 d["annotation"]["sessionNotes"]   # ← READ THIS FIRST — Curtis's context (see "Honesty" below)
 d["derived"]                      # tonnageKg, workingSets, totalReps, topE1rmKg, durationMin, prs[]
 d["exercises"]                    # each: title, exerciseTemplateId, e1rmKg, e1rmUnreliable, sets[]
 ```
+
+Write the read **against the goal**: say whether the session served it, and where the block sits
+relative to it. Don't restate the goal back at him — use it as the yardstick, not the content.
 
 Write the read (and, usually, the focus tag) in one call:
 

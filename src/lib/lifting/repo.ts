@@ -1,15 +1,25 @@
 import { randomUUID } from "node:crypto";
 import { and, asc, count, desc, eq, gte, inArray, isNotNull, isNull, lte, type SQL } from "drizzle-orm";
 import { db } from "@/lib/db";
+import { todayISO } from "@/lib/date";
 import {
   liftingExercise,
+  liftingGoal,
   liftingSession,
   liftingSessionNote,
   liftingSet,
   type LiftingSession,
 } from "@/lib/db/schema";
 import { listWorkouts } from "./hevy";
-import { hevyWorkoutSchema, normalizeWorkout, type LiftingAnnotationPatch, type LiftingFocus, type NormalizedSession } from "./schema";
+import {
+  hevyWorkoutSchema,
+  normalizeWorkout,
+  type LiftingAnnotationPatch,
+  type LiftingFocus,
+  type LiftingGoalCreate,
+  type LiftingGoalPatch,
+  type NormalizedSession,
+} from "./schema";
 import {
   exerciseE1rm,
   tonnage,
@@ -21,6 +31,7 @@ import {
 } from "./derive";
 import type {
   ExerciseView,
+  GoalView,
   LiftProgression,
   LiftProgressionPoint,
   PrFlag,
@@ -44,6 +55,7 @@ import type {
 
 const liveSession = isNull(liftingSession.deletedAt);
 const liveNote = isNull(liftingSessionNote.deletedAt);
+const liveGoal = isNull(liftingGoal.deletedAt);
 
 // -- Ingestion ----------------------------------------------------------------
 
@@ -309,6 +321,88 @@ function toSummary(session: LiftingSession, exercises: ExerciseView[], note: typ
   };
 }
 
+// -- Goal statement -----------------------------------------------------------
+
+function toGoal(row: typeof liftingGoal.$inferSelect): GoalView {
+  return { id: row.id, effectiveFrom: row.effectiveFrom, statement: row.statement };
+}
+
+/**
+ * The goal in force on a calendar date: the latest live goal whose `effectiveFrom` is on/before it.
+ * A goal dated in the future is not yet in force (post-dating a planned block change is deliberate).
+ * Defaults to today in Curtis's timezone.
+ */
+export async function getGoalOn(date: string = todayISO()): Promise<GoalView | null> {
+  const [row] = await db
+    .select()
+    .from(liftingGoal)
+    .where(and(lte(liftingGoal.effectiveFrom, date), liveGoal))
+    .orderBy(desc(liftingGoal.effectiveFrom))
+    .limit(1);
+  return row ? toGoal(row) : null;
+}
+
+/** The full goal history, newest first — how the training's intent has moved across blocks. */
+export async function listGoals(opts: { limit?: number; offset?: number } = {}): Promise<{ items: GoalView[]; count: number }> {
+  const { limit = 50, offset = 0 } = opts;
+  const rows = await db
+    .select()
+    .from(liftingGoal)
+    .where(liveGoal)
+    .orderBy(desc(liftingGoal.effectiveFrom))
+    .limit(limit)
+    .offset(offset);
+  const [{ c }] = await db.select({ c: count() }).from(liftingGoal).where(liveGoal);
+  return { items: rows.map(toGoal), count: c };
+}
+
+/**
+ * Set the goal. One live goal per `effectiveFrom` date, so this is an UPSERT on that date — restating
+ * the goal the same day rewords it rather than stacking a second row; a new date supersedes without
+ * touching what came before. `effectiveFrom` defaults to today in Curtis's timezone.
+ */
+export async function setGoal(input: LiftingGoalCreate): Promise<GoalView> {
+  const effectiveFrom = input.effectiveFrom ?? todayISO();
+  const [existing] = await db
+    .select({ id: liftingGoal.id })
+    .from(liftingGoal)
+    .where(and(eq(liftingGoal.effectiveFrom, effectiveFrom), liveGoal))
+    .limit(1);
+
+  const [row] = existing
+    ? await db.update(liftingGoal).set({ statement: input.statement }).where(eq(liftingGoal.id, existing.id)).returning()
+    : await db.insert(liftingGoal).values({ effectiveFrom, statement: input.statement }).returning();
+  return toGoal(row);
+}
+
+/** Edit one dated goal in place (reword it, or correct when it started). */
+export async function patchGoal(id: string, patch: LiftingGoalPatch): Promise<GoalView | null> {
+  if (Object.keys(patch).length === 0) {
+    const [row] = await db.select().from(liftingGoal).where(and(eq(liftingGoal.id, id), liveGoal)).limit(1);
+    return row ? toGoal(row) : null;
+  }
+  const [row] = await db
+    .update(liftingGoal)
+    .set(patch)
+    .where(and(eq(liftingGoal.id, id), liveGoal))
+    .returning();
+  return row ? toGoal(row) : null;
+}
+
+export async function softDeleteGoal(id: string): Promise<boolean> {
+  const [row] = await db
+    .update(liftingGoal)
+    .set({ deletedAt: new Date() })
+    .where(and(eq(liftingGoal.id, id), liveGoal))
+    .returning({ id: liftingGoal.id });
+  return !!row;
+}
+
+export async function hardDeleteGoal(id: string): Promise<boolean> {
+  const [row] = await db.delete(liftingGoal).where(eq(liftingGoal.id, id)).returning({ id: liftingGoal.id });
+  return !!row;
+}
+
 // -- Reads --------------------------------------------------------------------
 
 export type ListSessionsOpts = {
@@ -320,8 +414,13 @@ export type ListSessionsOpts = {
   to?: string; // ISO instant/date, inclusive upper bound on startedAt
 };
 
-/** The journal list: session summaries (derived headline + annotation + PR flags), newest first. */
-export async function listSessions(opts: ListSessionsOpts = {}): Promise<{ items: SessionSummary[]; count: number }> {
+/**
+ * The journal list: session summaries (derived headline + annotation + PR flags), newest first, plus
+ * the CURRENT goal statement. The goal rides along on the envelope (not per item — it's one
+ * module-level fact, not a property of a session) so the queue read carries the frame the sessions
+ * are meant to be read against.
+ */
+export async function listSessions(opts: ListSessionsOpts = {}): Promise<{ items: SessionSummary[]; count: number; goal: GoalView | null }> {
   const { limit = 50, offset = 0 } = opts;
 
   // Note-based filters apply against the left-joined (live) note; a null note fails `interpreted:true`
@@ -358,10 +457,14 @@ export async function listSessions(opts: ListSessionsOpts = {}): Promise<{ items
   const items = rows.map((r) =>
     toSummary(r.session, exercisesBySession.get(r.session.id) ?? [], r.note ?? undefined, prIndex.prsBySession.get(r.session.id) ?? [])
   );
-  return { items, count: c };
+  return { items, count: c, goal: await getGoalOn() };
 }
 
-/** A full session: the exercise → set tree, derived stats, PR flags, and the annotation. */
+/**
+ * A full session: the exercise → set tree, derived stats, PR flags, the annotation, and the goal in
+ * force ON THE SESSION'S DATE (not today's — an old session is judged against the goal that actually
+ * applied then). Carrying the goal here means no interpretation can be written goal-blind.
+ */
 export async function getSession(id: string): Promise<SessionDetail | null> {
   const [row] = await db
     .select({ session: liftingSession, note: liftingSessionNote })
@@ -374,7 +477,8 @@ export async function getSession(id: string): Promise<SessionDetail | null> {
   const prIndex = await loadPrIndex();
   const exercises = (await buildExercisesBySession([id], prIndex.prSetIds)).get(id) ?? [];
   const summary = toSummary(row.session, exercises, row.note ?? undefined, prIndex.prsBySession.get(id) ?? []);
-  return { ...summary, exercises };
+  const goal = await getGoalOn(row.session.startedAt.toISOString().slice(0, 10));
+  return { ...summary, exercises, goal };
 }
 
 /** Best-e1RM (and top-set weight) per session for one lift identity, oldest → newest. */
