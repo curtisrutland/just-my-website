@@ -3,6 +3,7 @@ import { requireBearer } from "@/lib/auth/tokens";
 import { parseJson } from "@/lib/http/errors";
 import { paginated, parsePagination } from "@/lib/http/pagination";
 import { created, ok } from "@/lib/http/responses";
+import { macroDomainErrorResponse } from "@/lib/macros/http";
 import { createEntry, listEntries } from "@/lib/macros/repo";
 import { entryCreateSchema } from "@/lib/macros/schema";
 
@@ -20,6 +21,13 @@ export async function POST(request: NextRequest) {
   if (!auth.ok) return auth.response;
   const parsed = await parseJson(request, entryCreateSchema);
   if (!parsed.ok) return parsed.response;
-  const entry = await createEntry(parsed.data);
-  return created(entry, `/api/macros/entries/${entry.id}`);
+  try {
+    const entry = await createEntry(parsed.data);
+    return created(entry, `/api/macros/entries/${entry.id}`);
+  } catch (e) {
+    // The batch draw guard: 404 unknown batch, 409 finished batch.
+    const domain = macroDomainErrorResponse(e);
+    if (domain) return domain;
+    throw e;
+  }
 }
