@@ -4,7 +4,7 @@ import * as z from "zod";
  * The error envelope (CONVENTIONS §3). Every error response is:
  *   { "error": { "code": "...", "message": "...", "details": { } } }
  */
-export type ErrorCode = "validation_error" | "invalid_json" | "unauthorized" | "not_found";
+export type ErrorCode = "validation_error" | "invalid_json" | "unauthorized" | "not_found" | "conflict";
 
 export function errorResponse(
   status: number,
