@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  batchCreateSchema,
+  batchPatchSchema,
   dayTagCreateSchema,
   entryCreateSchema,
   entryPatchSchema,
@@ -104,6 +106,50 @@ describe("entry", () => {
       note: "one big thigh, eyeballed",
     });
     expect(r.success).toBe(true);
+  });
+});
+
+describe("batch (an instance with a lifecycle)", () => {
+  const per100g = { calories: 142, proteinContent: 17.9, fatContent: 6.8, carbohydrateContent: 1.9 };
+
+  it("requires the four targeted macros — a batch exists to pin numbers", () => {
+    expect(batchCreateSchema.safeParse({ name: "taco chicken", madeOn: "2026-07-21", ...per100g }).success).toBe(true);
+    const { calories: _dropped, ...missingCal } = per100g;
+    expect(batchCreateSchema.safeParse({ name: "taco chicken", madeOn: "2026-07-21", ...missingCal }).success).toBe(false);
+  });
+
+  it("rejects finishing before it was made; allows same-day", () => {
+    const base = { name: "chili", madeOn: "2026-07-25", ...per100g };
+    expect(batchCreateSchema.safeParse({ ...base, finishedOn: "2026-07-24" }).success).toBe(false);
+    expect(batchCreateSchema.safeParse({ ...base, finishedOn: "2026-07-25" }).success).toBe(true);
+  });
+
+  it("accepts a verbatim basis and rejects unknown keys inside it", () => {
+    const base = { name: "chili", madeOn: "2026-07-25", ...per100g };
+    const basis = { totalCookedGrams: 1840, components: [{ name: "chicken thighs", grams: 1600, calories: 2288 }] };
+    expect(batchCreateSchema.safeParse({ ...base, basis }).success).toBe(true);
+    expect(batchCreateSchema.safeParse({ ...base, basis: { totalGrams: 1840 } }).success).toBe(false);
+  });
+
+  it("patch allows a lone finishedOn — including null to un-finish", () => {
+    expect(batchPatchSchema.safeParse({ finishedOn: "2026-07-26" }).success).toBe(true);
+    expect(batchPatchSchema.safeParse({ finishedOn: null }).success).toBe(true);
+  });
+});
+
+describe("entry linkage: food XOR batch", () => {
+  const entry = { consumedOn: "2026-07-05", quantityGrams: 200, confidence: "measured" };
+  const food = "7e57ab1e-0000-4000-8000-000000000001";
+  const batch = "7e57ab1e-0000-4000-8000-000000000002";
+
+  it("accepts a food link, a batch link, or neither", () => {
+    expect(entryCreateSchema.safeParse({ ...entry, foodId: food }).success).toBe(true);
+    expect(entryCreateSchema.safeParse({ ...entry, batchId: batch }).success).toBe(true);
+    expect(entryCreateSchema.safeParse(entry).success).toBe(true);
+  });
+
+  it("rejects both at once", () => {
+    expect(entryCreateSchema.safeParse({ ...entry, foodId: food, batchId: batch }).success).toBe(false);
   });
 });
 

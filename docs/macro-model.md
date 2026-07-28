@@ -40,6 +40,35 @@ single code path. USDA is per-100g natively. The rounding cost on back-computed
 per-serving foods is calorie-level noise, irrelevant at Curtis's precision (hitting a
 band and a ~160g protein target, not competition-cutting).
 
+## Table: `macro_batch` — a cooked batch: an instance, not a fact sheet
+
+Added 2026-07-28 per the approved `docs/batches-brief.md`. A cooked/prepared batch of food
+("taco chicken") with **pinned per-100g macros** and an honest **lifecycle** — which is why it
+is NOT a `macro_food` row: a catalog food is a timeless fact; a batch is made on a date, drawn
+against, finished, and then never usable again (though history keeps pointing at it).
+
+- `name` (text, required) — as Curtis says it. NOT unique: generations of the same name are
+  separate rows, related by name + dates only (no `previousBatchId` chain).
+- `madeOn` (date, required) — local calendar date cooked; orders generations.
+- `finishedOn` (date, nullable) — null = ACTIVE; set = finished that date. **Status is derived
+  from this, never stored.** Finished ≠ deleted: soft-delete remains for "shouldn't exist."
+- `initialGrams` (real, nullable) — total cooked weight. Remaining = initialGrams − Σ(live
+  entries' quantityGrams against the batch), derived, and **advisory** (family draws aren't
+  logged).
+- Per-100g macros — the eight schema.org fields, same floor as registration demands elsewhere:
+  the four targeted macros are REQUIRED on create (a batch exists to pin numbers).
+- `basis` (jsonb, nullable) — the derivation captured VERBATIM ({ totalCookedGrams,
+  components: [...] }), the batch-level analog of `labelBasis`. Pure audit: never recomputed,
+  components not FK-validated, NOT a recipe system.
+- `note` (text, nullable).
+- Indexes: `name`; (`finishedOn`, `madeOn`) for the active-first listing.
+
+**Lifecycle rule (the honest part):** a finished batch rejects new draws — except entries with
+`consumedOn <= finishedOn` (late logging must not force an unfinish/refinish dance). An entry
+dated after the finish date is a contradiction → 409. Registering a same-name batch while one
+is active doesn't block; the response surfaces the active match (`activeNameMatches`) so the
+agent can ask "finish the old one?".
+
 ## Table: `macro_entry` — an immutable historical fact
 
 The source of truth for what was consumed. **Macros are snapshotted at log time** (as
@@ -52,6 +81,10 @@ silently rewrite past days.
   of scope (no meal slots, no timestamps).
 - `foodId` (uuid, nullable, FK → `macro_food.id`) — reference for "log that again." Nullable
   because an ad-hoc estimate may not correspond to any cataloged food.
+- `batchId` (uuid, nullable, FK → `macro_batch.id`) — a draw against a cooked batch, parallel
+  to `foodId` and **mutually exclusive with it** (DB check + Zod refine): an entry drew from
+  the catalog, or from a batch, or from neither — never both. Snapshotting works identically
+  (batch per-100g × grams at log time).
 - `quantityGrams` (real, required).
 - `confidence` (text, required) — **the schema's honesty about fuzziness.** Three COARSE
   buckets, deliberately not a 1–10 scale (the only decision it informs is "trust today's

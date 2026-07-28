@@ -3,7 +3,7 @@
 **Platform:** justmy.website (macros module)
 **Author:** Curtis (scoped) / Claude (drafted)
 **Date:** 2026-07-28
-**Status:** Scoping — for review; no code until approved
+**Status:** Approved (Curtis, 2026-07-28) — built on `feat/macros-batches`; see BACKLOG for status
 
 ---
 
