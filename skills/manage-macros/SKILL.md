@@ -6,7 +6,9 @@ description: >-
   his day is going against target, wants to correct or remove something he logged, or tells you a
   day was training or rest. Also when he shows you a **nutrition label** to pin a branded ingredient's
   macros, or logs a recurring multi-part food (a smoothie) whose parts should come from pinned values
-  rather than re-estimation. This is the only write path into the tracker.
+  rather than re-estimation. Also when he **cooks a batch** of something ("made a batch of taco
+  chicken"), eats from one ("had 200g of the taco chicken"), or finishes one. This is the only write
+  path into the tracker.
 ---
 
 # manage-macros
@@ -46,11 +48,13 @@ Dates are always `YYYY-MM-DD` in Curtis's local timezone.
 
 1. **Parse** what Curtis said into distinct items.
 2. **Get numbers.** Prefer a pinned value over a fresh estimate, in this order:
-   (a) a **registry ingredient** — `m.search_ingredient("ripple", category="plant-milk")` for a
+   (a) a **batch** — if it's a cooked batch Curtis is eating from ("the taco chicken"),
+   `m.search_batches("taco chicken")` and log against the active row (see *Batches* below);
+   (b) a **registry ingredient** — `m.search_ingredient("ripple", category="plant-milk")` for a
    branded/label food Curtis has pinned (see *Ingredient registry* below);
-   (b) **USDA** — `m.search_usda("chicken thigh cooked")` → pick an `fdcId` → `m.resolve_usda(fdcId)`
+   (c) **USDA** — `m.search_usda("chicken thigh cooked")` → pick an `fdcId` → `m.resolve_usda(fdcId)`
    (caches it, returns per-100g macros) → scale by the amount;
-   (c) otherwise **estimate** from your own knowledge.
+   (d) otherwise **estimate** from your own knowledge.
 3. **Log** each item with a concise **`name`** and absolute macros (quantity already applied). The
    call returns the created entry — check its `id` to confirm the write inline (no need to re-read):
 
@@ -178,6 +182,69 @@ m.log_entries([
 
 Because macros are snapshotted at log time, later fixing an ingredient (or upgrading a proxy to scanned)
 **never rewrites past days** — it only affects logs made after the fix. That's the intended behavior.
+
+## Batches — pin a cooked batch, draw from it for days
+
+When Curtis cooks in bulk ("made a big batch of taco chicken"), the macros get computed **once, at
+cook time**, and every later serving is arithmetic — no re-finding the math in old conversations. A
+batch is an **instance with a lifecycle**, not a catalog food: made on a date, drawn against, then
+**finished** and never usable again (though old entries keep pointing at it). Don't put batches in
+the ingredient registry — they have their own store.
+
+### Register at cook time
+Sum the components (use registry/USDA rows where they exist), divide by the total cooked weight for
+per-100g, and keep the derivation as `basis` **verbatim** so the math stays auditable:
+
+```python
+b = m.register_batch(
+    "taco chicken", m.today(),
+    # per-100g = component totals ÷ total cooked grams × 100:
+    calories=142, proteinContent=17.9, fatContent=6.8, carbohydrateContent=1.9,
+    initial_grams=1840,                       # total cooked weight — enables remaining-tracking
+    basis={"totalCookedGrams": 1840, "components": [
+        {"name": "chicken thighs, raw", "foodId": "<registry-id>", "grams": 1600, "calories": 2288, "proteinContent": 274},
+        {"name": "taco seasoning", "grams": 40, "calories": 130, "carbohydrateContent": 26},
+    ]},
+)
+if b["activeNameMatches"]:
+    # an earlier "taco chicken" is still active — ask Curtis whether to finish it (usually yes):
+    # m.finish_batch(b["activeNameMatches"][0]["id"], finished_on=<when it was actually done>)
+    ...
+```
+
+### Draw from it — estimation-free
+Same pattern as registry logging: `batch_id` + weighed grams, **no macros** — the API scales the
+batch's pinned per-100g and snapshots it onto the entry:
+
+```python
+hits = m.search_batches("taco chicken")["items"]     # ACTIVE-first; each row carries status/finishedOn
+batch = hits[0]
+if batch["status"] != "active":
+    # every match is finished → tell Curtis, ask if he's got a new batch to register
+    ...
+m.log_entry(consumed_on=m.today(), name="taco chicken", batch_id=batch["id"],
+            quantity_grams=200, confidence="measured")
+```
+
+- `search_batches` never needs a status juggle: the current generation is item one; if everything
+  that comes back is `finished`, there IS no current batch — say so, don't silently reuse an old one.
+- `get_batch(id)` adds `consumedGrams` / `remainingGrams` / `drawCount`. `remainingGrams` is
+  **advisory** (family servings aren't logged) — treat it as a gauge, not truth.
+
+### Finish it
+When Curtis says the batch is done ("finished the taco chicken"): **log any last serving first**,
+then finish. A finished batch rejects entries dated after `finished_on` (the API error names the
+batch); entries dated on/before it still work, so late logging is fine.
+
+```python
+m.finish_batch(batch["id"])                    # finished today (or pass the actual date)
+m.update_batch(batch["id"], finished_on=None)  # undo, if it was a mistake
+```
+
+Corrections use `update_batch(id, ...)` — same id, so past entries (snapshotted) are untouched and
+only future draws see the fix. It errors on unrecognised fields, like every update method here.
+New cook of the same dish → a **new** `register_batch` with the same name; generations are separate
+rows told apart by `madeOn`/`status`.
 
 ## Day kind (which target applies)
 

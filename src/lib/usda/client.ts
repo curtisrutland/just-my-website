@@ -94,11 +94,21 @@ export function mapToFoodCreate(food: FdcFood): FoodCreate {
     return row ? row.amount : null;
   };
 
-  // Energy: FDC carries both #208 (kcal) and #268 (kJ). Take the kcal row.
+  // Energy: no single nutrient number covers every data type. SR Legacy / Survey / Branded carry
+  // #208 (kcal, alongside #268 kJ which must be skipped); Foundation foods carry NO #208 — only the
+  // Atwater rows #957 (General Factors) / #958 (Specific Factors), both kcal. Cascade in preference
+  // order: #208, then #957 (General matches nutrition labels, keeping usda rows consistent with
+  // scanned ones), then #958. Every candidate is unit-checked to KCAL.
   let calories: number | null = null;
-  for (const n of food.foodNutrients ?? []) {
-    if (n.nutrient?.number === "208" && (n.nutrient?.unitName ?? "").toUpperCase() === "KCAL" && typeof n.amount === "number") {
-      calories = n.amount;
+  for (const num of ["208", "957", "958"]) {
+    const hit = (food.foodNutrients ?? []).find(
+      (n) =>
+        n.nutrient?.number === num &&
+        (n.nutrient?.unitName ?? "").toUpperCase() === "KCAL" &&
+        typeof n.amount === "number"
+    );
+    if (hit) {
+      calories = hit.amount!;
       break;
     }
   }

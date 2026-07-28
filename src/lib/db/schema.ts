@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  check,
   date,
   index,
   integer,
@@ -101,6 +102,42 @@ export const macroFood = pgTable(
 );
 
 /**
+ * `macro_batch` — a cooked/prepared batch of food: an INSTANCE with a lifecycle, not a timeless
+ * catalog fact (which is why it is not a `macro_food` row). Made on a date, drawn against via
+ * entries, finished, then never usable again — but still pointed to by every entry that drew
+ * from it. Storage basis is per-100g, same as the catalog. See docs/batches-brief.md.
+ */
+export const macroBatch = pgTable(
+  "macro_batch",
+  {
+    ...auditColumns(),
+    // As Curtis says it ("taco chicken"). NOT unique: generations of the same name are separate
+    // rows, related by name + dates only.
+    name: text("name").notNull(),
+    // LOCAL calendar date cooked. Orders generations of the same name.
+    madeOn: date("made_on", { mode: "string" }).notNull(),
+    // null = ACTIVE; set = finished on that date. Status is DERIVED from this, never stored.
+    // Finished ≠ deleted: a finished batch stays referenced by history; soft-delete remains
+    // for "this row shouldn't exist".
+    finishedOn: date("finished_on", { mode: "string" }),
+    // Total cooked weight, for advisory remaining-tracking (remaining = this − Σ drawn entries).
+    initialGrams: real("initial_grams"),
+    // The derivation, VERBATIM: { totalCookedGrams, components: [...] } as-computed at cook time.
+    // Pure audit, the batch-level analog of labelBasis — never recomputed, components not
+    // FK-validated. NOT a recipe system.
+    basis: jsonb("basis"),
+    note: text("note"),
+    // Per-100g macros.
+    ...nutritionColumns(),
+  },
+  (t) => [
+    index("macro_batch_name_idx").on(t.name),
+    // Serves the active-first listing (finished_on nulls + made_on ordering).
+    index("macro_batch_finished_made_idx").on(t.finishedOn, t.madeOn),
+  ]
+);
+
+/**
  * `macro_entry` — an immutable historical fact: the source of truth for what was consumed.
  * Macros are SNAPSHOTTED at log time as absolute values (quantity already applied) so later
  * edits to the food catalog never silently rewrite past days.
@@ -116,6 +153,9 @@ export const macroEntry = pgTable(
     consumedOn: date("consumed_on", { mode: "string" }).notNull(),
     // Reference for "log that again". Nullable: an ad-hoc estimate may match no cataloged food.
     foodId: uuid("food_id").references(() => macroFood.id),
+    // A draw against a cooked batch — parallel to foodId, mutually exclusive with it (an entry
+    // drew from the catalog, or from a batch, or from neither; never both — see check below).
+    batchId: uuid("batch_id").references(() => macroBatch.id),
     quantityGrams: real("quantity_grams").notNull(),
     // The schema's honesty about fuzziness — three coarse buckets:
     // 'measured' | 'estimated' | 'logged_serving'. Enforced by the Zod schema.
@@ -126,7 +166,10 @@ export const macroEntry = pgTable(
     // is auditable and re-estimable. On an estimate this is the source of truth for the numbers.
     note: text("note"),
   },
-  (t) => [index("macro_entry_consumed_on_idx").on(t.consumedOn)]
+  (t) => [
+    index("macro_entry_consumed_on_idx").on(t.consumedOn),
+    check("macro_entry_food_xor_batch", sql`${t.foodId} is null or ${t.batchId} is null`),
+  ]
 );
 
 /**
@@ -426,6 +469,8 @@ export type MacroFood = typeof macroFood.$inferSelect;
 export type NewMacroFood = typeof macroFood.$inferInsert;
 export type MacroEntry = typeof macroEntry.$inferSelect;
 export type NewMacroEntry = typeof macroEntry.$inferInsert;
+export type MacroBatch = typeof macroBatch.$inferSelect;
+export type NewMacroBatch = typeof macroBatch.$inferInsert;
 export type MacroDayTag = typeof macroDayTag.$inferSelect;
 export type NewMacroDayTag = typeof macroDayTag.$inferInsert;
 export type MacroTargetProfile = typeof macroTargetProfile.$inferSelect;

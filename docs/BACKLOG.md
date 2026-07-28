@@ -340,6 +340,22 @@ verified end-to-end against the prod domain — register/dedupe/update round-tri
 has been exercised successfully in real use. skyr `proxy`→`scanned` upgrade remains as a natural
 future validation when its label is in hand (not a task).
 
+## Batches (macros: first-class cooked batches — NOT registry rows)
+
+Full scoping brief: **`docs/batches-brief.md`** (approved 2026-07-28). Cooked/prepared food
+("taco chicken") was being mis-stored in the ingredient registry; a batch is an **instance with a
+lifecycle** (madeOn → drawn against via entries → finishedOn, then rejected for new draws but still
+pointed to by history), not a timeless catalog fact. Decisions (Curtis): new `macro_batch` table +
+`batchId` on `macro_entry` (XOR with `foodId`); remaining derived from entries (advisory — family
+draws aren't logged); derivation stored verbatim as `basis` jsonb (audit, NOT a recipe system);
+migrate the three mis-stored registry rows. **Status: BUILT on branch `feat/macros-batches`** —
+migration `0009` (applied to Neon), schemas/repo/routes/OpenAPI, draw guard (finished batch rejects
+entries dated after `finishedOn`; late logs on/before it allowed), active-first listing,
+`activeNameMatches` surfacing on register, `manage-macros` batch methods + SKILL.md section, 3
+registry rows migrated (6 entries repointed, snapshots untouched, food rows soft-deleted). Same
+branch carries the USDA Foundation-energy fix (#208→#957→#958 cascade). Pending: Curtis local
+verify → merge → `manage-macros.zip` re-upload to claude.ai.
+
 ## Pending publish / follow-ups
 
 - [x] **`manage-shopping` skill** — built (`skills/manage-shopping/` — SKILL.md + stdlib Python

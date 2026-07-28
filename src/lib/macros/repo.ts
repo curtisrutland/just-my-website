@@ -1,11 +1,13 @@
-import { and, asc, count, desc, eq, gte, ilike, inArray, isNull, lte, sql, sum } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, ilike, inArray, isNotNull, isNull, lte, ne, sql, sum } from "drizzle-orm";
 import { dateRange } from "@/lib/date";
 import { db } from "@/lib/db";
 import {
+  macroBatch,
   macroDayTag,
   macroEntry,
   macroFood,
   macroTargetProfile,
+  type MacroBatch,
   type MacroDayTag,
   type MacroEntry,
   type MacroFood,
@@ -13,6 +15,11 @@ import {
 } from "@/lib/db/schema";
 import { bump } from "@/lib/panel/version";
 import type {
+  BatchBasis,
+  BatchCreate,
+  BatchDetailView,
+  BatchPatch,
+  BatchView,
   DayTagCreate,
   DayTagPatch,
   EntryCreate,
@@ -32,8 +39,9 @@ import type {
  *
  * Mutations that change what the panel's health screen shows — entries, day tags, target profiles
  * — call `bump("health")` AFTER they commit so the panel's version poll notices (panel-contract
- * §4.2). Food-catalog writes do NOT bump (entries snapshot nutrition at log time, so editing a food
- * doesn't change today's totals). Fire-and-forget; never fails a write. New write paths MUST bump.
+ * §4.2). Food-catalog and batch writes do NOT bump (entries snapshot nutrition at log time, so
+ * editing a food or batch doesn't change today's totals). Fire-and-forget; never fails a write.
+ * New write paths MUST bump.
  */
 
 const NUTRITION_KEYS = [
@@ -56,14 +64,16 @@ const live = (deletedAt: unknown) => isNull(deletedAt as never);
  * The ONE entry projection every read path returns (`EntryView`). Both `listEntries` and
  * `getDayRollup` select through this so the two endpoints hand back an identical entry object —
  * same keys, same macro set. `name` is resolved here (the entry's own label, else the linked
- * food's), which is why callers must `leftJoin(macroFood)`. Confidence comes back as the DB's
+ * food's, else the linked batch's), which is why callers must `leftJoin(macroFood)` AND
+ * `leftJoin(macroBatch)`. Confidence comes back as the DB's
  * `text`; the shape is asserted to `EntryView` at the call site (writes constrain it to the enum).
  */
 const entrySelection = {
   id: macroEntry.id,
-  name: sql<string | null>`coalesce(${macroEntry.name}, ${macroFood.name})`,
+  name: sql<string | null>`coalesce(${macroEntry.name}, ${macroFood.name}, ${macroBatch.name})`,
   consumedOn: macroEntry.consumedOn,
   foodId: macroEntry.foodId,
+  batchId: macroEntry.batchId,
   quantityGrams: macroEntry.quantityGrams,
   confidence: macroEntry.confidence,
   note: macroEntry.note,
@@ -150,22 +160,195 @@ export async function hardDeleteFood(id: string): Promise<boolean> {
   return !!row;
 }
 
+// ────────────────────────────────────────────────────────── Batches ──────────
+
+/**
+ * A domain-rule violation the routes translate into an envelope error (unlike not-found nulls,
+ * these carry a reason the caller must see — e.g. WHICH batch is finished and since when).
+ */
+export class MacroDomainError extends Error {
+  constructor(
+    readonly code: "batch_not_found" | "batch_finished" | "batch_dates_invalid" | "food_xor_batch",
+    message: string
+  ) {
+    super(message);
+    this.name = "MacroDomainError";
+  }
+}
+
+/** Status is DERIVED from finishedOn — never stored, and never left for the caller to infer. */
+const batchToView = (b: MacroBatch): BatchView => ({
+  id: b.id,
+  name: b.name,
+  status: b.finishedOn == null ? "active" : "finished",
+  madeOn: b.madeOn,
+  finishedOn: b.finishedOn,
+  initialGrams: b.initialGrams,
+  basis: (b.basis as BatchBasis | null) ?? null,
+  note: b.note,
+  calories: b.calories,
+  proteinContent: b.proteinContent,
+  fatContent: b.fatContent,
+  carbohydrateContent: b.carbohydrateContent,
+  fiberContent: b.fiberContent,
+  sugarContent: b.sugarContent,
+  sodiumContent: b.sodiumContent,
+  saturatedFatContent: b.saturatedFatContent,
+});
+
+async function getBatchRowById(id: string): Promise<MacroBatch | null> {
+  const [row] = await db
+    .select()
+    .from(macroBatch)
+    .where(and(eq(macroBatch.id, id), live(macroBatch.deletedAt)))
+    .limit(1);
+  return row ?? null;
+}
+
+/**
+ * The draw guard: a finished batch rejects draws — with one honest exception, an entry dated
+ * on/before the finish date (late logging must not force an unfinish/refinish dance). Runs even
+ * when the entry supplies its own macros: the lifecycle rule is about the batch, not the math.
+ * Returns the live row so the snapshot path doesn't re-fetch.
+ */
+async function assertDrawableBatch(batchId: string, consumedOn: string): Promise<MacroBatch> {
+  const batch = await getBatchRowById(batchId);
+  if (!batch) throw new MacroDomainError("batch_not_found", "Batch not found");
+  if (batch.finishedOn != null && consumedOn > batch.finishedOn) {
+    throw new MacroDomainError(
+      "batch_finished",
+      `Batch "${batch.name}" was finished on ${batch.finishedOn}; an entry consumed ${consumedOn} cannot draw from it. Register a new batch, or backdate the entry to on/before ${batch.finishedOn}.`
+    );
+  }
+  return batch;
+}
+
+/**
+ * Register a batch. Never blocks on an active same-name batch — it SURFACES it (the dedupe-on-
+ * write pattern): a non-empty `activeNameMatches` usually means the old generation should have
+ * been finished, and the agent asks. No bump: batch writes change no day's totals.
+ */
+export async function createBatch(
+  input: BatchCreate
+): Promise<{ batch: BatchView; activeNameMatches: BatchView[] }> {
+  const [row] = await db.insert(macroBatch).values(input).returning();
+  const matches = await db
+    .select()
+    .from(macroBatch)
+    .where(
+      and(
+        live(macroBatch.deletedAt),
+        isNull(macroBatch.finishedOn),
+        ilike(macroBatch.name, input.name),
+        ne(macroBatch.id, row.id)
+      )
+    )
+    .orderBy(desc(macroBatch.madeOn));
+  return { batch: batchToView(row), activeNameMatches: matches.map(batchToView) };
+}
+
+/**
+ * List batches, ACTIVE-FIRST then newest-made: the current generation of a name is always item
+ * one, older generations follow visibly finished. This ordering is what lets "get me the taco
+ * chicken" answer all three cases (current exists / only old ones / nothing) in a single call.
+ */
+export async function listBatches(
+  opts: Page & { q?: string; status?: "active" | "finished" | "all" } = {}
+): Promise<Paged<BatchView>> {
+  const { limit = 50, offset = 0, q, status = "all" } = opts;
+  const conds = [live(macroBatch.deletedAt)];
+  if (q) conds.push(ilike(macroBatch.name, `%${q}%`));
+  if (status === "active") conds.push(isNull(macroBatch.finishedOn));
+  if (status === "finished") conds.push(isNotNull(macroBatch.finishedOn));
+  const where = and(...conds);
+  const items = await db
+    .select()
+    .from(macroBatch)
+    .where(where)
+    .orderBy(sql`(${macroBatch.finishedOn} is null) desc`, desc(macroBatch.madeOn), desc(macroBatch.createdAt))
+    .limit(limit)
+    .offset(offset);
+  const [{ c }] = await db.select({ c: count() }).from(macroBatch).where(where);
+  return { items: items.map(batchToView), count: c };
+}
+
+/** The detail view: the row plus derived consumption. `remainingGrams` is ADVISORY (only logged
+ *  draws deplete it) and null unless the batch recorded initialGrams. */
+export async function getBatchById(id: string): Promise<BatchDetailView | null> {
+  const row = await getBatchRowById(id);
+  if (!row) return null;
+  const [agg] = await db
+    .select({ consumed: sum(macroEntry.quantityGrams), draws: count() })
+    .from(macroEntry)
+    .where(and(eq(macroEntry.batchId, id), live(macroEntry.deletedAt)));
+  const consumedGrams = Number(agg?.consumed ?? 0);
+  return {
+    ...batchToView(row),
+    consumedGrams,
+    remainingGrams: row.initialGrams == null ? null : row.initialGrams - consumedGrams,
+    drawCount: agg?.draws ?? 0,
+  };
+}
+
+/** Patch a batch — including finish ({ finishedOn }) and unfinish ({ finishedOn: null }). The
+ *  finishedOn>=madeOn cross-check runs against the EFFECTIVE (patched-over-stored) values. */
+export async function patchBatch(id: string, patch: BatchPatch): Promise<BatchView | null> {
+  const existing = await getBatchRowById(id);
+  if (!existing) return null;
+  if (Object.keys(patch).length === 0) return batchToView(existing);
+  const madeOn = patch.madeOn ?? existing.madeOn;
+  const finishedOn = patch.finishedOn === undefined ? existing.finishedOn : patch.finishedOn;
+  if (finishedOn != null && finishedOn < madeOn) {
+    throw new MacroDomainError("batch_dates_invalid", `finishedOn (${finishedOn}) must be on or after madeOn (${madeOn})`);
+  }
+  const [row] = await db
+    .update(macroBatch)
+    .set(patch)
+    .where(and(eq(macroBatch.id, id), live(macroBatch.deletedAt)))
+    .returning();
+  return row ? batchToView(row) : null;
+}
+
+export async function softDeleteBatch(id: string): Promise<boolean> {
+  const [row] = await db
+    .update(macroBatch)
+    .set({ deletedAt: new Date() })
+    .where(and(eq(macroBatch.id, id), live(macroBatch.deletedAt)))
+    .returning({ id: macroBatch.id });
+  return !!row;
+}
+
+/** Hard delete — physically removes the row. Auth layer gates this to the primary key. */
+export async function hardDeleteBatch(id: string): Promise<boolean> {
+  const [row] = await db.delete(macroBatch).where(eq(macroBatch.id, id)).returning({ id: macroBatch.id });
+  return !!row;
+}
+
 // ────────────────────────────────────────────────────────── Entries ──────────
 
 type MacroColumns = Record<(typeof NUTRITION_KEYS)[number], number | null>;
 
-/** Derive absolute snapshot macros: caller-supplied values win; the rest come from the food's
- *  per-100g values × quantity. Snapshotting freezes the entry as an immutable fact. */
+/**
+ * Derive absolute snapshot macros: caller-supplied values win; the rest come from the linked
+ * food's — or batch's — per-100g values × quantity. Snapshotting freezes the entry as an
+ * immutable fact. A batch draw ALWAYS passes the draw guard here, even with all macros supplied.
+ */
 async function snapshotMacros(input: EntryCreate): Promise<MacroColumns> {
-  const needsDerivation = input.foodId != null && NUTRITION_KEYS.some((k) => input[k] == null);
-  const food: MacroFood | null = needsDerivation ? await getFoodById(input.foodId!) : null;
+  const needsDerivation = NUTRITION_KEYS.some((k) => input[k] == null);
+  let per100: MacroColumns | null = null;
+  if (input.batchId != null) {
+    const batch = await assertDrawableBatch(input.batchId, input.consumedOn);
+    if (needsDerivation) per100 = batch;
+  } else if (input.foodId != null && needsDerivation) {
+    per100 = await getFoodById(input.foodId);
+  }
 
   const factor = input.quantityGrams / 100;
   const out = {} as MacroColumns;
   for (const k of NUTRITION_KEYS) {
     const supplied = input[k];
     if (supplied != null) out[k] = supplied;
-    else if (food && food[k] != null) out[k] = (food[k] as number) * factor;
+    else if (per100 && per100[k] != null) out[k] = (per100[k] as number) * factor;
     else out[k] = null;
   }
   return out;
@@ -179,6 +362,7 @@ export async function createEntry(input: EntryCreate): Promise<MacroEntry> {
       name: input.name ?? null,
       consumedOn: input.consumedOn,
       foodId: input.foodId ?? null,
+      batchId: input.batchId ?? null,
       quantityGrams: input.quantityGrams,
       confidence: input.confidence,
       note: input.note ?? null,
@@ -201,6 +385,7 @@ export async function createEntries(inputs: EntryCreate[]): Promise<EntryView[]>
       name: input.name ?? null,
       consumedOn: input.consumedOn,
       foodId: input.foodId ?? null,
+      batchId: input.batchId ?? null,
       quantityGrams: input.quantityGrams,
       confidence: input.confidence,
       note: input.note ?? null,
@@ -215,6 +400,7 @@ export async function createEntries(inputs: EntryCreate[]): Promise<EntryView[]>
     .select(entrySelection)
     .from(macroEntry)
     .leftJoin(macroFood, eq(macroEntry.foodId, macroFood.id))
+    .leftJoin(macroBatch, eq(macroEntry.batchId, macroBatch.id))
     .where(inArray(macroEntry.id, ids))) as EntryView[];
   const byId = new Map(rows.map((r) => [r.id, r]));
   await bump("health");
@@ -239,6 +425,7 @@ export async function listEntries(opts: Page & { on?: string } = {}): Promise<Pa
     .select(entrySelection)
     .from(macroEntry)
     .leftJoin(macroFood, eq(macroEntry.foodId, macroFood.id))
+    .leftJoin(macroBatch, eq(macroEntry.batchId, macroBatch.id))
     .where(where)
     .orderBy(desc(macroEntry.consumedOn), asc(macroEntry.createdAt))
     .limit(limit)
@@ -249,6 +436,21 @@ export async function listEntries(opts: Page & { on?: string } = {}): Promise<Pa
 
 export async function patchEntry(id: string, patch: EntryPatch): Promise<MacroEntry | null> {
   if (Object.keys(patch).length === 0) return getEntryById(id);
+  // Re-validate batch rules against the EFFECTIVE (patched-over-stored) linkage/date: the
+  // food-XOR-batch invariant (friendlier than the DB check's 500), and the draw guard when the
+  // patch touches the batch linkage or the date.
+  if (patch.foodId !== undefined || patch.batchId !== undefined || patch.consumedOn !== undefined) {
+    const existing = await getEntryById(id);
+    if (!existing) return null;
+    const foodId = patch.foodId === undefined ? existing.foodId : patch.foodId;
+    const batchId = patch.batchId === undefined ? existing.batchId : patch.batchId;
+    if (foodId != null && batchId != null) {
+      throw new MacroDomainError("food_xor_batch", "an entry links to a food or a batch, never both");
+    }
+    if (batchId != null && (patch.batchId !== undefined || patch.consumedOn !== undefined)) {
+      await assertDrawableBatch(batchId, patch.consumedOn ?? existing.consumedOn);
+    }
+  }
   const [row] = await db
     .update(macroEntry)
     .set(patch)
@@ -438,6 +640,7 @@ export async function getDayRollup(date: string): Promise<DayRollup> {
     .select(entrySelection)
     .from(macroEntry)
     .leftJoin(macroFood, eq(macroEntry.foodId, macroFood.id))
+    .leftJoin(macroBatch, eq(macroEntry.batchId, macroBatch.id))
     .where(and(eq(macroEntry.consumedOn, date), live(macroEntry.deletedAt)))
     .orderBy(asc(macroEntry.createdAt))) as EntryView[];
 

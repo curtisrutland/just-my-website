@@ -37,6 +37,7 @@ APP_TZ = ZoneInfo(os.environ.get("JMW_TZ", "America/Chicago"))
 
 CONFIDENCE = ("measured", "estimated", "logged_serving")
 KIND = ("training", "rest")
+BATCH_STATUS = ("active", "finished", "all")
 
 # A catalog food's PROVENANCE / trust, one axis (ingredient registry). 'usda' carries an fdcId;
 # the other three are non-usda and MUST carry a category. 'scanned' = a real label (highest trust),
@@ -89,6 +90,17 @@ _CORRECTABLE = {
 }
 
 
+# Structural (non-macro) batch fields register/update accept -> the API field name. Macros are
+# per-100g, handled via _MACRO_FIELDS, same as foods.
+_BATCH_STRUCTURAL = {
+    "name": "name",
+    "made_on": "madeOn",
+    "finished_on": "finishedOn",
+    "initial_grams": "initialGrams",
+    "basis": "basis",
+    "note": "note",
+}
+
 # Structural (non-macro) food fields register/update accept -> the API field name. Macros are
 # handled separately via _MACRO_FIELDS (per-100g on a food).
 _FOOD_STRUCTURAL = {
@@ -129,6 +141,7 @@ _LOG_STRUCTURAL = {
     "name": "name",
     "note": "note",
     "food_id": "foodId",
+    "batch_id": "batchId",
 }
 _LOG_REQUIRED = ("consumed_on", "quantity_grams", "confidence")
 
@@ -234,6 +247,7 @@ class MacrosClient:
         name: Optional[str] = None,
         note: Optional[str] = None,
         food_id: Optional[str] = None,
+        batch_id: Optional[str] = None,
         calories: Optional[float] = None,
         proteinContent: Optional[float] = None,
         fatContent: Optional[float] = None,
@@ -248,7 +262,12 @@ class MacrosClient:
         macros for the whole entry (quantity already applied), using the schema.org field names
         (proteinContent, fatContent, carbohydrateContent, ...) — the SAME names you read back. Use
         confidence 'estimated' + a `note` capturing the fuzziness / how you estimated. Returns the
-        created entry (check its `id`)."""
+        created entry (check its `id`).
+
+        Linkage (at most ONE of): `food_id` (catalog/registry row) or `batch_id` (a cooked batch —
+        see the batches section). Either way, omit the macros and the API snapshots them from the
+        row's per-100g × grams; a finished batch rejects entries dated after its finishedOn (the
+        error names the batch — register a new batch or backdate, don't force it)."""
         payload = _entry_payload(
             {
                 "consumed_on": consumed_on,
@@ -257,6 +276,7 @@ class MacrosClient:
                 "name": name,
                 "note": note,
                 "food_id": food_id,
+                "batch_id": batch_id,
                 "calories": calories,
                 "proteinContent": proteinContent,
                 "fatContent": fatContent,
@@ -500,6 +520,98 @@ class MacrosClient:
         row = self._request("PATCH", f"/foods/{ingredient_id}", body=patch)
         self._ingredient_cache[ingredient_id] = row  # refresh the session cache
         return row
+
+    # -- batches -----------------------------------------------------------------
+    # A cooked/prepared batch ("taco chicken") is an INSTANCE with a lifecycle, not a catalog fact:
+    # made on a date, drawn against via entries, finished, then never usable again — but still
+    # pointed to by every entry that drew from it. Per-100g macros are pinned at registration, so
+    # "I used 200g of the taco chicken" is arithmetic, not transcript archaeology.
+    def search_batches(
+        self, q: Optional[str] = None, *, status: str = "all", limit: int = 20, offset: int = 0
+    ) -> dict:
+        """Find batches by fuzzy name. Results come back ACTIVE-FIRST, then newest-made, each with a
+        derived `status` ("active"/"finished") + `finishedOn` — so one call answers all three cases:
+        a current batch exists (item one, active); only old generations exist (everything returned is
+        visibly finished → say so and offer to register a new one); nothing (empty). NEVER auto-pick
+        when multiple batches are active — confirm, same discipline as ingredients."""
+        if status not in BATCH_STATUS:
+            raise MacrosError(f"status must be one of {BATCH_STATUS}")
+        return self._request("GET", "/batches", params={"q": q, "status": status, "limit": limit, "offset": offset})
+
+    def get_batch(self, batch_id: str) -> dict:
+        """The full batch row plus derived consumption: `consumedGrams`, `remainingGrams` (null
+        unless the batch recorded initialGrams — and ADVISORY either way: only logged draws deplete
+        it, family servings don't), and `drawCount`. Not cached — consumption moves."""
+        return self._request("GET", f"/batches/{batch_id}")
+
+    def register_batch(
+        self,
+        name: str,
+        made_on: str,
+        *,
+        initial_grams: Optional[float] = None,
+        basis: Optional[dict[str, Any]] = None,
+        note: Optional[str] = None,
+        finished_on: Optional[str] = None,
+        **per100g: Any,
+    ) -> dict:
+        """Register a cooked batch. REQUIRED: `name` (as Curtis says it), `made_on` (YYYY-MM-DD), and
+        per-100g `calories`/`proteinContent`/`fatContent`/`carbohydrateContent` (the pinned value is
+        the whole point). Pass `basis` = the derivation VERBATIM — {"totalCookedGrams": ...,
+        "components": [{"name", "foodId"?, "grams", ...absolute macros}]} — so the math stays
+        auditable; and `initial_grams` (total cooked weight, you already know it from the /100g math)
+        to enable remaining-tracking.
+
+        Registration NEVER blocks, but the returned row carries `activeNameMatches`: if non-empty, an
+        earlier generation of this name is still active — ASK whether to `finish_batch` it (usually
+        yes) rather than leaving two "current" taco chickens. Returns the created row (check `id`)."""
+        missing = [m for m in _CORE_MACROS if per100g.get(m) is None]
+        if missing:
+            raise MacrosError(f"register_batch needs per-100g macro(s) {missing} (the pinned value is the point)")
+        payload: dict[str, Any] = {"name": name, "madeOn": made_on}
+        if initial_grams is not None:
+            payload["initialGrams"] = initial_grams
+        if basis is not None:
+            payload["basis"] = basis
+        if note is not None:
+            payload["note"] = note
+        if finished_on is not None:
+            payload["finishedOn"] = finished_on
+        payload.update(_macros_payload(per100g))
+        return self._request("POST", "/batches", body=payload)
+
+    def finish_batch(self, batch_id: str, finished_on: Optional[str] = None) -> dict:
+        """Mark a batch finished (default: today, Curtis's local date). Log the LAST serving first,
+        then finish — a finished batch rejects entries dated after `finished_on` (late logs dated
+        on/before it still work). Finishing is undoable via update_batch(finished_on=None); finished
+        is NOT deleted — history keeps pointing at the batch."""
+        return self._request("PATCH", f"/batches/{batch_id}", body={"finishedOn": finished_on or self.today()})
+
+    def update_batch(self, batch_id: str, **fields: Any) -> dict:
+        """Correct a batch in place (SAME id — entries that snapshotted from it are untouched; only
+        future draws see the fix). Structural fields (snake_case): `name`, `made_on`, `finished_on`
+        (None = un-finish), `initial_grams`, `basis`, `note`; plus any per-100g macro by its
+        schema.org name. Passing an unrecognised field is an ERROR, not a silent no-op. Returns the
+        updated row."""
+        patch: dict[str, Any] = {}
+        macros: dict[str, Any] = {}
+        unknown: list[str] = []
+        for key, value in fields.items():
+            if key in _BATCH_STRUCTURAL:
+                patch[_BATCH_STRUCTURAL[key]] = value
+            elif key in _MACRO_FIELDS:
+                macros[key] = value
+            else:
+                unknown.append(key)
+        if unknown:
+            raise MacrosError(
+                f"update_batch got unrecognised field(s) {unknown}; updatable fields are "
+                f"{list(_BATCH_STRUCTURAL)} plus macros {list(_MACRO_FIELDS)}"
+            )
+        patch.update(_macros_payload(macros))
+        if not patch:
+            raise MacrosError("update_batch called with nothing to change")
+        return self._request("PATCH", f"/batches/{batch_id}", body=patch)
 
     # -- targets ----------------------------------------------------------------
     def set_target(

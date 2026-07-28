@@ -147,19 +147,119 @@ export const foodCreateSchema = foodBase
 /** Partial update. Cross-field invariants aren't re-checked here — the DB holds the rest. */
 export const foodPatchSchema = foodBase.partial();
 
+// --- Batch (an instance with a lifecycle, not a timeless catalog fact) ---
+
+/**
+ * How a batch's per-100g numbers were derived, captured VERBATIM at cook time — the batch-level
+ * analog of `labelBasis`. Pure audit: components are informational (foodId not FK-validated),
+ * never recomputed, never reusable as a template. NOT a recipe system (batches-brief anti-scope).
+ * Component macros are ABSOLUTE (as summed into the batch), not per-100g.
+ */
+export const batchBasisSchema = z
+  .object({
+    totalCookedGrams: z.number().finite().positive().nullish(),
+    components: z
+      .array(
+        z
+          .object({
+            name,
+            foodId: z.uuid().nullish(),
+            grams: z.number().finite().positive().nullish(),
+            ...nutritionShape, // absolute, as summed
+          })
+          .strict()
+      )
+      .nullish(),
+  })
+  .strict();
+
+const batchBase = z
+  .object({
+    // As Curtis says it ("taco chicken"). Generations of the same name are separate rows.
+    name,
+    // Local calendar date cooked — orders generations.
+    madeOn: calendarDate,
+    // null/absent = ACTIVE. Set = finished on that date; finished ≠ deleted.
+    finishedOn: calendarDate.nullish(),
+    // Total cooked weight; enables advisory remaining-tracking. Optional — without it a batch
+    // simply has no gauge.
+    initialGrams: z.number().finite().positive().nullish(),
+    basis: batchBasisSchema.nullish(),
+    note: z.string().trim().min(1).nullish(),
+    ...nutritionShape, // per-100g
+  })
+  .strict();
+
+/**
+ * Register a batch. Invariants:
+ *  - the four targeted macros are the registration floor — a batch exists to pin numbers, so a
+ *    batch without them is a bug, not a partial fact (unlike catalog foods);
+ *  - a batch can't finish before it was made.
+ */
+export const batchCreateSchema = batchBase
+  .refine(
+    (d) =>
+      d.calories != null && d.proteinContent != null && d.fatContent != null && d.carbohydrateContent != null,
+    { error: "a batch requires calories, proteinContent, fatContent, and carbohydrateContent (per-100g)" }
+  )
+  .refine((d) => d.finishedOn == null || d.finishedOn >= d.madeOn, {
+    error: "finishedOn must be on or after madeOn",
+    path: ["finishedOn"],
+  });
+
+/** Partial update (finish = { finishedOn }, undo = { finishedOn: null }). The finishedOn>=madeOn
+ *  cross-check needs the stored row, so it lives in the repo. */
+export const batchPatchSchema = batchBase.partial();
+
+/** A batch as READ BACK: every key present, plus `status` DERIVED from finishedOn so the agent
+ *  never has to infer staleness from null-ness. Shared by list items and the detail view. */
+export const batchViewSchema = z
+  .object({
+    id: z.uuid(),
+    name: z.string(),
+    status: z.enum(["active", "finished"]),
+    madeOn: calendarDate,
+    finishedOn: calendarDate.nullable(),
+    initialGrams: z.number().finite().positive().nullable(),
+    basis: batchBasisSchema.nullable(),
+    note: z.string().nullable(),
+    calories: macroRead,
+    proteinContent: macroRead,
+    fatContent: macroRead,
+    carbohydrateContent: macroRead,
+    fiberContent: macroRead,
+    sugarContent: macroRead,
+    sodiumContent: macroRead,
+    saturatedFatContent: macroRead,
+  })
+  .strict();
+
+/** The detail view (GET /batches/[id]): the row plus derived consumption. `remainingGrams` is
+ *  ADVISORY (family draws aren't logged) and null unless the batch recorded initialGrams. */
+export const batchDetailViewSchema = batchViewSchema
+  .extend({
+    consumedGrams: z.number().finite().nonnegative(),
+    remainingGrams: z.number().finite().nullable(),
+    drawCount: z.int().nonnegative(),
+  })
+  .strict();
+
 // --- Entry (an immutable historical fact) ---
 
 /**
  * Log a consumed food. Macros are the ABSOLUTE snapshot for this entry (quantity already
  * applied). They may be supplied directly (an ad-hoc estimate) or left absent for the repo to
- * snapshot from `foodId`'s per-100g values × quantity. `note` is load-bearing on estimates.
+ * snapshot from the linked food's — or batch's — per-100g values × quantity. `note` is
+ * load-bearing on estimates.
  */
-export const entryCreateSchema = z
+const entryBase = z
   .object({
     // A concise display label for what was eaten. The `note` stays for the fuzziness/reasoning.
     name: name.nullish(),
     consumedOn: calendarDate,
     foodId: z.uuid().nullish(),
+    // A draw against a cooked batch — parallel to foodId, mutually exclusive with it.
+    batchId: z.uuid().nullish(),
     quantityGrams: z.number().finite().positive(),
     confidence: entryConfidence,
     ...nutritionShape, // absolute (quantity applied)
@@ -167,7 +267,13 @@ export const entryCreateSchema = z
   })
   .strict();
 
-export const entryPatchSchema = entryCreateSchema.partial();
+export const entryCreateSchema = entryBase.refine((d) => d.foodId == null || d.batchId == null, {
+  error: "an entry links to a food or a batch, never both",
+  path: ["batchId"],
+});
+
+/** Partial update. The food-XOR-batch invariant isn't re-checked here — the DB check holds. */
+export const entryPatchSchema = entryBase.partial();
 
 /**
  * Batch log: an array of the SAME per-entry payloads `entryCreateSchema` accepts. Validated as a
@@ -190,6 +296,7 @@ export const entryViewSchema = z
     name: z.string().nullable(),
     consumedOn: calendarDate,
     foodId: z.uuid().nullable(),
+    batchId: z.uuid().nullable(),
     quantityGrams: z.number().finite().positive(),
     confidence: entryConfidence,
     note: z.string().nullable(),
@@ -237,6 +344,11 @@ export const targetProfilePatchSchema = targetProfileCreateSchema.partial();
 
 export type FoodCreate = z.infer<typeof foodCreateSchema>;
 export type FoodPatch = z.infer<typeof foodPatchSchema>;
+export type BatchCreate = z.infer<typeof batchCreateSchema>;
+export type BatchPatch = z.infer<typeof batchPatchSchema>;
+export type BatchBasis = z.infer<typeof batchBasisSchema>;
+export type BatchView = z.infer<typeof batchViewSchema>;
+export type BatchDetailView = z.infer<typeof batchDetailViewSchema>;
 export type FoodCategory = z.infer<typeof foodCategory>;
 export type FoodSource = z.infer<typeof foodSource>;
 export type LabelBasis = z.infer<typeof labelBasisSchema>;

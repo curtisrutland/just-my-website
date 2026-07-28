@@ -1,6 +1,10 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import * as z from "zod";
 import {
+  batchCreateSchema,
+  batchDetailViewSchema,
+  batchPatchSchema,
+  batchViewSchema,
   dayTagCreateSchema,
   entryCreateBatchSchema,
   entryCreateSchema,
@@ -27,6 +31,10 @@ const errorResponses = {
   "400": { description: "Validation or invalid JSON", content: { "application/json": { schema: ERR } } },
   "401": { description: "Missing/invalid token", content: { "application/json": { schema: ERR } } },
   "404": { description: "Not found", content: { "application/json": { schema: ERR } } },
+};
+
+const conflictResponse = {
+  "409": { description: "Conflicts with resource state (e.g. drawing from a finished batch)", content: { "application/json": { schema: ERR } } },
 };
 
 const jsonBody = (ref: string) => ({ required: true, content: { "application/json": { schema: { $ref: `#/components/schemas/${ref}` } } } });
@@ -140,6 +148,12 @@ const macrosSpec = {
           carbohydrateContent: { type: "number", nullable: true },
         },
       },
+      BatchCreate: js(batchCreateSchema),
+      BatchPatch: js(batchPatchSchema),
+      // Read shapes: `status` is DERIVED from finishedOn (active/finished); the detail view adds
+      // derived consumption (remainingGrams is ADVISORY — only logged draws deplete it).
+      BatchView: js(batchViewSchema),
+      BatchDetailView: js(batchDetailViewSchema),
       DayTagCreate: js(dayTagCreateSchema),
       TargetProfileCreate: js(targetProfileCreateSchema),
       TargetProfilePatch: js(targetProfilePatchSchema),
@@ -167,9 +181,70 @@ const macrosSpec = {
       patch: { summary: "Update a food", parameters: [pathParam("id")], requestBody: jsonBody("FoodPatch"), responses: { ...ok("Updated food"), ...errorResponses } },
       delete: { summary: "Soft/hard delete a food", parameters: [pathParam("id"), hardParam], responses: { ...noContent, ...errorResponses } },
     },
+    "/api/macros/batches": {
+      get: {
+        summary: "Search batches (active-first, then newest-made)",
+        description:
+          "Fuzzy name match (q) + status filter (default all). Active-first ordering means the current generation of a name is always item one; older generations follow visibly finished — so one call answers 'is there a current taco chicken?'.",
+        parameters: [
+          ...pageParams,
+          { name: "q", in: "query", schema: { type: "string" } },
+          { name: "status", in: "query", schema: { type: "string", enum: ["active", "finished", "all"], default: "all" } },
+        ],
+        responses: { ...okList("BatchView"), ...errorResponses },
+      },
+      post: {
+        summary: "Register a cooked batch",
+        description:
+          "Never blocks on an active same-name batch — the response surfaces it under activeNameMatches so the caller can ask whether the old generation should be finished.",
+        requestBody: jsonBody("BatchCreate"),
+        responses: {
+          "201": {
+            description: "Created batch + any still-active same-name batches",
+            content: {
+              "application/json": {
+                schema: {
+                  allOf: [
+                    { $ref: "#/components/schemas/BatchView" },
+                    {
+                      type: "object",
+                      required: ["activeNameMatches"],
+                      properties: { activeNameMatches: { type: "array", items: { $ref: "#/components/schemas/BatchView" } } },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+          ...errorResponses,
+        },
+      },
+    },
+    "/api/macros/batches/{id}": {
+      get: {
+        summary: "Get a batch (+ derived consumedGrams / remainingGrams / drawCount)",
+        parameters: [pathParam("id")],
+        responses: {
+          "200": { description: "Batch detail", content: { "application/json": { schema: { $ref: "#/components/schemas/BatchDetailView" } } } },
+          ...errorResponses,
+        },
+      },
+      patch: {
+        summary: "Correct a batch; finish = { finishedOn }, undo = { finishedOn: null }",
+        parameters: [pathParam("id")],
+        requestBody: jsonBody("BatchPatch"),
+        responses: { ...ok("Updated batch"), ...errorResponses },
+      },
+      delete: { summary: "Soft/hard delete a batch (finished ≠ deleted; delete means 'should not exist')", parameters: [pathParam("id"), hardParam], responses: { ...noContent, ...errorResponses } },
+    },
     "/api/macros/entries": {
       get: { summary: "List entries", parameters: [...pageParams, { name: "on", in: "query", schema: { type: "string", format: "date" } }], responses: { ...okList("EntryView"), ...errorResponses } },
-      post: { summary: "Log an entry", requestBody: jsonBody("EntryCreate"), responses: { ...created("Logged entry"), ...errorResponses } },
+      post: {
+        summary: "Log an entry",
+        description: "May draw from a batch via batchId (XOR with foodId); a finished batch rejects entries dated after its finishedOn (409).",
+        requestBody: jsonBody("EntryCreate"),
+        responses: { ...created("Logged entry"), ...errorResponses, ...conflictResponse },
+      },
     },
     "/api/macros/entries/batch": {
       post: {
@@ -181,12 +256,13 @@ const macrosSpec = {
             content: { "application/json": { schema: { type: "array", items: { $ref: "#/components/schemas/EntryView" } } } },
           },
           ...errorResponses,
+          ...conflictResponse,
         },
       },
     },
     "/api/macros/entries/{id}": {
       get: { summary: "Get an entry", parameters: [pathParam("id")], responses: { ...ok("Entry"), ...errorResponses } },
-      patch: { summary: "Correct an entry", parameters: [pathParam("id")], requestBody: jsonBody("EntryPatch"), responses: { ...ok("Updated entry"), ...errorResponses } },
+      patch: { summary: "Correct an entry", parameters: [pathParam("id")], requestBody: jsonBody("EntryPatch"), responses: { ...ok("Updated entry"), ...errorResponses, ...conflictResponse } },
       delete: { summary: "Soft/hard delete an entry", parameters: [pathParam("id"), hardParam], responses: { ...noContent, ...errorResponses } },
     },
     "/api/macros/day-tags": {

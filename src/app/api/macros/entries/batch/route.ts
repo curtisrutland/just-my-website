@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { requireBearer } from "@/lib/auth/tokens";
 import { parseJson } from "@/lib/http/errors";
 import { ok } from "@/lib/http/responses";
+import { macroDomainErrorResponse } from "@/lib/macros/http";
 import { createEntries } from "@/lib/macros/repo";
 import { entryCreateBatchSchema } from "@/lib/macros/schema";
 
@@ -15,6 +16,14 @@ export async function POST(request: NextRequest) {
   if (!auth.ok) return auth.response;
   const parsed = await parseJson(request, entryCreateBatchSchema);
   if (!parsed.ok) return parsed.response;
-  const entries = await createEntries(parsed.data);
-  return ok(entries, { status: 201 });
+  try {
+    const entries = await createEntries(parsed.data);
+    return ok(entries, { status: 201 });
+  } catch (e) {
+    // The batch draw guard fires during snapshotting, BEFORE the single insert — so a guarded
+    // element still means zero rows written (the all-or-nothing contract holds).
+    const domain = macroDomainErrorResponse(e);
+    if (domain) return domain;
+    throw e;
+  }
 }
