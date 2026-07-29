@@ -591,3 +591,47 @@
   color: var(--color-text) !important;
   border-color: var(--color-border) !important;
 }
+
+/* Rides playback — the scrubber (input[type=range] needs vendor styling; accent thumb on a
+ * thin border-colored track) and the transport strip's mobile wrap. */
+.ride-scrub {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--color-border);
+  outline: none;
+  cursor: pointer;
+}
+.ride-scrub::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  border: 2px solid var(--color-bg);
+  cursor: grab;
+}
+.ride-scrub::-moz-range-thumb {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  border: 2px solid var(--color-bg);
+  cursor: grab;
+}
+.ride-scrub::-moz-range-track {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--color-border);
+}
+@media (max-width: 768px) {
+  .ride-transport {
+    flex-wrap: wrap;
+  }
+  .ride-transport .ride-scrub {
+    flex: 1 1 100%;
+    order: 4;
+  }
+}

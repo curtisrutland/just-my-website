@@ -281,6 +281,12 @@ ceiling over (contract §11.4).
 
 ## Rides — deferred (from `docs/rides-model.md` Open/deferred)
 
+- [x] **Ride playback** (built 2026-07-29, `feat/ride-playback`) — play a ride back at 30×/60×/300×
+  ride-time with a scrubber: one shared playhead drives the charts' crosshair + readouts and an
+  interpolated marker gliding along the map polyline (fixed camera; chart hover stays an ephemeral
+  preview). Gaps stay honest in motion (marker holds + dims, readouts —). Pure client-side over the
+  existing stream — no schema/API/skill change; +7 unit tests on the interpolation math.
+
 - v2 daemon (outside this repo; contract = `POST /api/rides/upload` + publisher token). Laps/
   structured-workout projection. Power curve. Multi-session (multisport) files. Map thumbnails on
   log cards. Blob orphan sweep. Reprocess-all endpoint. Per-sample temperature + other channels.

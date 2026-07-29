@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import type { RideStreamView } from "@/lib/rides/types";
 import { hms } from "./format";
+import { nearestIndex } from "./playback";
 
 const mono = "var(--font-mono)";
 const FT = 3.280839895;
@@ -29,20 +29,29 @@ function specsFor(data: RideStreamView["data"]): Spec[] {
   return out;
 }
 
-export function RideCharts({ stream }: { stream: RideStreamView }) {
-  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
-
+export function RideCharts({
+  stream,
+  displayT = null,
+  onHover,
+}: {
+  stream: RideStreamView;
+  /** The moment being shown (hover preview or the playback playhead), in ride seconds. */
+  displayT?: number | null;
+  /** Pointer preview: ride seconds under the pointer, or null on leave. */
+  onHover?: (tSec: number | null) => void;
+}) {
   const d = stream.data;
   const t = d.t;
   const N = t.length;
   const specs = specsFor(d);
   if (N < 2 || specs.length === 0) return null;
   const duration = t[N - 1] || 1;
+  const hoverIdx = displayT == null ? null : nearestIndex(t, displayT);
 
   const fromPointer = (clientX: number, el: Element) => {
     const box = el.getBoundingClientRect();
     const p = Math.min(1, Math.max(0, (clientX - box.left) / box.width));
-    setHoverIdx(Math.round(p * (N - 1)));
+    onHover?.(p * duration);
   };
 
   const charts = specs.map((sp) => {
@@ -89,17 +98,19 @@ export function RideCharts({ stream }: { stream: RideStreamView }) {
   });
 
   const gaps = d.heartRate ? d.heartRate.filter((v) => v == null).length : 0;
-  const hoverX = hoverIdx != null ? ((t[hoverIdx] / duration) * W).toFixed(1) : "0";
+  // The crosshair tracks displayT continuously (smooth during playback); readouts snap to the
+  // nearest recorded bucket.
+  const hoverX = displayT != null ? ((Math.min(Math.max(displayT, 0), duration) / duration) * W).toFixed(1) : "0";
   const ticks = [0, 1, 2, 3, 4].map((k) => hms((duration * k) / 4));
 
   return (
     <section style={{ marginTop: 30, border: "1px solid var(--color-border)", borderRadius: "var(--radius)", background: "var(--color-surface)", padding: "4px 16px 12px" }}>
       <div
         onMouseMove={(e) => fromPointer(e.clientX, e.currentTarget)}
-        onMouseLeave={() => setHoverIdx(null)}
+        onMouseLeave={() => onHover?.(null)}
         onTouchStart={(e) => fromPointer(e.touches[0].clientX, e.currentTarget)}
         onTouchMove={(e) => fromPointer(e.touches[0].clientX, e.currentTarget)}
-        onTouchEnd={() => setHoverIdx(null)}
+        onTouchEnd={() => onHover?.(null)}
         style={{ position: "relative", touchAction: "pan-y" }}
       >
         {charts.map((c) => (
