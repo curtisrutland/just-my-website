@@ -260,16 +260,23 @@ training and rest targets for it — that's correct, not a gap to fill.
 
 ## Targets (so the rollup can compare)
 
-Set Curtis's calorie-cycling targets when he gives them (they persist; you only set them when they
-change):
+Targets are dated records per day kind — the latest one effective on/before a day applies.
+**Don't assume a plan shape.** The two kinds may hold identical numbers (flat targets), differ
+(calorie cycling), or be absent — whatever Curtis's plan is right now lives in the data, not here.
+Read the current targets from `get_day(...)["targets"]` and reason from what's there; if it's `{}`,
+no profile is configured yet.
+
+Only *write* a target when Curtis explicitly gives new numbers (they persist; you set them only
+when they change):
 
 ```python
-m.set_target("training", "2026-01-01", calories=2800, proteinContent=160, fatContent=90, carbohydrateContent=300)
-m.set_target("rest",     "2026-01-01", calories=2200, proteinContent=160, fatContent=70,  carbohydrateContent=200)
+# Illustrative numbers, not Curtis's plan — one call per kind whose target changed.
+m.set_target("training", "2026-01-01", calories=2500, proteinContent=160, fatContent=80, carbohydrateContent=250)
+m.set_target("rest",     "2026-01-01", calories=2500, proteinContent=160, fatContent=80, carbohydrateContent=250)
 ```
 
-Targets are dated — the latest one effective on/before a day applies. If `get_day` returns
-`targets: {}`, no profile is configured yet.
+Day-kind tagging stays meaningful even when both kinds currently hold the same numbers — the tag
+is a fact about the day, and the plan may diverge again later.
 
 ## Reviewing, correcting, removing
 
