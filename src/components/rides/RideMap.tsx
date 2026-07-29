@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import type * as Leaflet from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { RideStreamView } from "@/lib/rides/types";
+import type { PlayheadPosition } from "./playback";
 
 /**
  * The route map (Rides.dc.html §ROUTE): the GPS polyline in the accent color over muted CARTO
@@ -11,10 +12,20 @@ import type { RideStreamView } from "@/lib/rides/types";
  * — it touches `window` at import time, so it can never run during SSR. Rides without GPS never
  * render this component at all (the page omits the section).
  */
-export function RideMap({ stream }: { stream: RideStreamView }) {
+export function RideMap({
+  stream,
+  playhead = null,
+}: {
+  stream: RideStreamView;
+  /** Playback position: the marker glides along the track; `stale` (a recording gap) dims it. */
+  playhead?: PlayheadPosition | null;
+}) {
   const elRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Leaflet.Map | null>(null);
   const tilesRef = useRef<Leaflet.TileLayer | null>(null);
+  const LRef = useRef<typeof Leaflet | null>(null);
+  const playMarkerRef = useRef<Leaflet.CircleMarker | null>(null);
+  const accentRef = useRef("#3ad0d6");
 
   useEffect(() => {
     let cancelled = false;
@@ -27,6 +38,7 @@ export function RideMap({ stream }: { stream: RideStreamView }) {
 
     (async () => {
       const L = (await import("leaflet")).default;
+      LRef.current = L;
       const el = elRef.current;
       if (cancelled || !el || mapRef.current) return;
 
@@ -49,6 +61,7 @@ export function RideMap({ stream }: { stream: RideStreamView }) {
 
       const cs = getComputedStyle(el);
       const accent = (cs.getPropertyValue("--color-accent") || "#3ad0d6").trim();
+      accentRef.current = accent;
       const bg = (cs.getPropertyValue("--color-bg") || "#0a0d0f").trim();
       const txt = (cs.getPropertyValue("--color-text") || "#e7eef1").trim();
       L.polyline(pts, { color: accent, weight: 3, opacity: 0.95, lineJoin: "round" }).addTo(map);
@@ -70,10 +83,38 @@ export function RideMap({ stream }: { stream: RideStreamView }) {
       mapRef.current?.remove();
       mapRef.current = null;
       tilesRef.current = null;
+      playMarkerRef.current = null;
     };
     // The stream is immutable for a given ride page; mount-once is intentional.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // The playback marker: created lazily on the first position, moved per frame (setLatLng is
+  // cheap), dimmed while `stale` (held through a recording gap), removed when playback clears.
+  useEffect(() => {
+    const L = LRef.current;
+    const map = mapRef.current;
+    if (!L || !map) return;
+    if (!playhead) {
+      playMarkerRef.current?.remove();
+      playMarkerRef.current = null;
+      return;
+    }
+    const opacity = playhead.stale ? 0.35 : 1;
+    if (!playMarkerRef.current) {
+      playMarkerRef.current = L.circleMarker([playhead.lat, playhead.lon], {
+        radius: 7,
+        color: "#ffffff",
+        weight: 2,
+        fillColor: accentRef.current,
+        fillOpacity: opacity,
+        opacity,
+      }).addTo(map);
+    } else {
+      playMarkerRef.current.setLatLng([playhead.lat, playhead.lon]);
+      playMarkerRef.current.setStyle({ opacity, fillOpacity: opacity });
+    }
+  }, [playhead]);
 
   return <div ref={elRef} className="ride-map" style={{ height: 330, border: "1px solid var(--color-border)", borderRadius: "var(--radius)", overflow: "hidden" }} />;
 }

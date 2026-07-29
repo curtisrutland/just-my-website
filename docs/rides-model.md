@@ -441,6 +441,14 @@ Per `CONVENTIONS §8` + the runbook (the last three are the never-auto-generated
   explicitly not a v1 feature and never a fitness *score*.
 - **Multi-session (multisport) files** — rejected loudly in v1; support when one exists.
 - **Map thumbnails on log cards** — small static polylines; nice, deferred.
+- ~~**Ride playback**~~ — **built (2026-07-29, `feat/ride-playback`)**: the detail page can
+  "play" a ride — one playhead swept over the stream drives the charts' crosshair/readouts and
+  an interpolated marker gliding along the map polyline; transport bar with ▶/⏸, 30×/60×/300×
+  ride-time speeds, and a scrubber. Chart hover stays an ephemeral preview over the playhead.
+  Honesty preserved in motion: recording gaps are never bridged — the marker holds and dims
+  (`stale`), readouts show `—`. Pure client feature over the existing stream; zero backend
+  change. If 10 s buckets ever feel chunky, a finer stream is a reprocess away (the raw file
+  argument paying off).
 - **Blob orphan sweep** — a crashed ingest can strand a blob; harmless, sweep tool if it ever
   accumulates.
 - **Reprocess-all** — v1 reprocess is per-ride; a sweep endpoint/script when a parser upgrade

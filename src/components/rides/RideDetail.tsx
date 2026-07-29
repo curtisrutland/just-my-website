@@ -1,9 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import type { RideDetail as RideDetailData } from "@/lib/rides/types";
 import { ft, hms, mdLong, mi, mph, rideTag, rideTitle, watts } from "./format";
+import { positionAt, type PlaybackSpeed } from "./playback";
+import { PlaybackBar } from "./PlaybackBar";
 import { RideCharts } from "./RideCharts";
 import { RideMap } from "./RideMap";
 import { ZoneBar } from "./ZoneBar";
@@ -46,6 +48,50 @@ export function RideDetail({
 
   const title = rideTitle({ ...ride, name });
 
+  // ---- playback: one playhead shared by the charts' crosshair and the map marker. Chart
+  // hover is an ephemeral PREVIEW layered over it; the transport owns the playhead itself. ----
+  const stream = ride.stream;
+  const streamT = stream?.data.t ?? [];
+  const duration = streamT.length ? streamT[streamT.length - 1] : 0;
+  const canPlay = streamT.length > 1 && duration > 0;
+  const [hoverT, setHoverT] = useState<number | null>(null);
+  const [playheadT, setPlayheadT] = useState<number | null>(null);
+  const [playing, setPlaying] = useState(false);
+  const [speed, setSpeed] = useState<PlaybackSpeed>(60);
+  const playheadRef = useRef<number | null>(null);
+  playheadRef.current = playheadT;
+
+  useEffect(() => {
+    if (!playing || !canPlay) return;
+    let raf = 0;
+    let last = performance.now();
+    const step = (now: number) => {
+      // Clamp dt so a background-tab resume doesn't jump the playhead.
+      const dt = Math.min((now - last) / 1000, 0.25);
+      last = now;
+      const next = (playheadRef.current ?? 0) + dt * speed;
+      if (next >= duration) {
+        setPlayheadT(duration);
+        setPlaying(false);
+        return;
+      }
+      setPlayheadT(next);
+      raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [playing, speed, duration, canPlay]);
+
+  const togglePlay = () => {
+    if (!playing && (playheadRef.current ?? 0) >= duration) setPlayheadT(0); // replay from the top
+    setPlaying((p) => !p);
+  };
+
+  // Hover previews; the playhead persists underneath.
+  const displayT = hoverT ?? playheadT;
+  const playheadPos =
+    stream && displayT != null ? positionAt(stream.data, displayT, stream.resolutionSeconds) : null;
+
   const commitName = () => {
     const v = nameDraft.trim();
     setName(v || null);
@@ -85,7 +131,6 @@ export function RideDetail({
   if (ride.calories != null) stats.push({ label: "CALORIES", value: `${ride.calories.toLocaleString("en-US")} kcal` });
   if (ride.avgTemperatureC != null) stats.push({ label: "AVG TEMP", value: `${Math.round((ride.avgTemperatureC * 9) / 5 + 32)}°F` });
 
-  const stream = ride.stream;
   const hasGps = !!stream?.data.lat;
 
   return (
@@ -182,7 +227,23 @@ export function RideDetail({
 
       {ride.timeInHrZone && <ZoneBar zoneData={ride.timeInHrZone} />}
 
-      {stream && <RideCharts stream={stream} />}
+      {stream && <RideCharts stream={stream} displayT={displayT} onHover={setHoverT} />}
+
+      {canPlay && (
+        <PlaybackBar
+          duration={duration}
+          playheadT={playheadT}
+          displayT={displayT}
+          playing={playing}
+          speed={speed}
+          onTogglePlay={togglePlay}
+          onSpeedChange={setSpeed}
+          onScrub={(t) => {
+            setPlayheadT(t);
+            setHoverT(null);
+          }}
+        />
+      )}
 
       {hasGps && stream && (
         <section style={{ marginTop: 26 }}>
@@ -192,7 +253,7 @@ export function RideDetail({
               {ride.distanceMeters != null ? `gps · ${mi(ride.distanceMeters)} mi` : "gps"}
             </span>
           </div>
-          <RideMap stream={stream} />
+          <RideMap stream={stream} playhead={playheadPos} />
         </section>
       )}
 
