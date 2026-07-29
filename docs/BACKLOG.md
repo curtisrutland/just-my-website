@@ -268,9 +268,16 @@ ceiling over (contract §11.4).
       (publisher upload 201 → dedupe 200 → streams → human-layer-only PATCH → Blob-round-trip
       reprocess → token scoping → soft/hard lifecycle); the real first ride (2026-07-28 MTB,
       Instinct 3) is ingested; 167 unit tests green incl. real-fixture decode (fixture gitignored —
-      Curtis to decide if it's committed). **Remaining:** (a) UI (log + upload + detail w/ charts +
-      Leaflet map — Claude Design in progress) + nav/landing flip; (b) README + ARCHITECTURE rows
-      at ship; (c) merge + deploy + prod verify; (d) claude.ai upload of `manage-rides.zip`.
+      Curtis to decide if it's committed). **UI built** same day from the Claude Design handoff
+      ("Rides.dc.html" + "Rides Mobile.dc.html", project 338fd708): `src/app/(app)/rides/`
+      (log w/ weekly strip · sport chips · week groups · multi-file upload panel with
+      ingested/deduped/failed rows; detail w/ click-to-name, stat band, HR-zone histogram,
+      gap-honest SVG effort charts, Leaflet route map on theme-following CARTO tiles, note
+      editor, soft-delete) + `src/components/rides/`, server actions through the shared ingest
+      pipeline, nav + landing flipped LIVE, `/preview/rides` harness (SSR content-verified).
+      **Remaining:** (a) Curtis browser-poke locally; (b) README + ARCHITECTURE rows at ship;
+      (c) merge + deploy + prod verify (Vercel needs nothing new beyond the already-set
+      `JMW_PUBLISHER_TOKEN` + the linked Blob store); (d) claude.ai upload of `manage-rides.zip`.
 
 ## Rides — deferred (from `docs/rides-model.md` Open/deferred)
 

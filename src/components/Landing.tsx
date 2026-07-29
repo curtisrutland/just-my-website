@@ -43,6 +43,14 @@ const MODULES: Module[] = [
   },
   {
     glyph: "▸",
+    name: "rides",
+    badge: "LIVE",
+    href: "/rides",
+    active: true,
+    desc: "The Garmin ride log — the meter's numbers, honestly kept. No fitness scores, no streaks; a FIT file goes in, the ride is simply remembered.",
+  },
+  {
+    glyph: "▸",
     name: "shopping",
     badge: "LIVE",
     href: "/shopping",
