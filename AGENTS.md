@@ -46,3 +46,9 @@ envelope, pagination shape, the app-shell chrome (`src/components/shell/`), the 
 utility (`src/lib/date.ts`), and these conventions. Nothing else is "platform." The layering
 rule is one-directional: UI imports from `lib`, never the reverse — so a module's domain types
 live in `src/lib/{module}/types.ts`, not in its components.
+
+The one sanctioned cross-cut is the **skill layer**: a skill may read across modules
+(`manage-health` assembles the unified daily/weekly health view) — **read-only**, over the
+modules' own token-API read endpoints, adding no new metrics and renaming no fields. Server-side
+code never crosses modules, and a cross-cutting write path is never allowed (writes stay in the
+per-module skills). See `docs/CONVENTIONS.md` §9.

@@ -148,3 +148,32 @@ module plan MUST include them:
 - [ ] **Docs: add `docs/{module}-model.md`, update the README module list, the live-modules table
       in `docs/ARCHITECTURE.md`, and `docs/BACKLOG.md`.** If there's a design handoff, add
       `docs/{module}-design-brief.md` too.
+- [ ] **Skill wiring: register the skill in `scripts/build-skills.mjs`.** If the module is
+      **health-related** (see §9), also add its numbers to `manage-health`'s daily/weekly views
+      and add the sibling cross-reference section to the other health skills' `SKILL.md`s.
+
+## 9. Skills — and the one sanctioned cross-cut
+
+Each module's skill (`skills/manage-{module}/`) is a standalone Python-stdlib client over the
+token API — the agent's surface for that module. Skills follow the module boundary: one module,
+one skill, the module's own field names verbatim (no aliases, no per-skill renaming).
+
+**The exception is deliberate.** Modules are self-contained everywhere in the codebase, but the
+*person* the health modules describe is one person — so cross-cutting is sanctioned at exactly
+one layer, under hard limits:
+
+- **Skill layer only.** A cross-cutting skill (`manage-health`) composes the modules' existing
+  token-API **read** endpoints. No server-side code crosses modules: no cross-module repo calls,
+  no aggregate API routes, no shared tables.
+- **Read-only.** A cross-cutting skill has no write methods. Writes stay in the per-module
+  skills, which own the write prose (confidence, normalization, correction semantics).
+- **Assemble, never invent.** Every number in the composed view is a module's own number under
+  the module's own field name. No derived cross-module metrics, no scores. The only additive
+  layer is `gaps` — factual absences (nothing logged, nothing pending-interpreted), stated as
+  observations, never judgments.
+
+**Health-related** means it describes Curtis's body, training, or intake — today: macros,
+weight, lifting, rides. Convenience modules (shopping) are out. A new health module joins
+`manage-health`'s daily/weekly views, and every health skill's `SKILL.md` carries a short
+"other health skills" section nudging toward its siblings — the skills are separate tools, but
+they should know they're a set.

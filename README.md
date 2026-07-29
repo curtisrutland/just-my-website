@@ -122,12 +122,13 @@ the Neon and Clerk Marketplace integrations. The rest:
 
 ## Status
 
-Live in production at [justmy.website](https://justmy.website). **macros**, **weight**,
-**shopping**, and **lifting** are deployed — each with its schema, repo, token API routes,
-Clerk-gated UI, generated OpenAPI fragment, and a Python skill (`manage-macros`, `manage-weight`,
-`manage-shopping`, `manage-lifting`). **rides** — the fifth module and the first with a binary
-(FIT-file) input — is fully built (schema, repo, token API, UI, OpenAPI fragment, `manage-rides`
-skill, Blob store + publisher token already provisioned) and pending its first deploy.
+Live in production at [justmy.website](https://justmy.website). All five modules — **macros**,
+**weight**, **shopping**, **lifting**, and **rides** — are deployed, each with its schema, repo,
+token API routes, Clerk-gated UI, generated OpenAPI fragment, and a Python skill
+(`manage-macros`, `manage-weight`, `manage-shopping`, `manage-lifting`, `manage-rides`). A sixth
+skill, **`manage-health`**, is the one sanctioned cross-cut (`docs/CONVENTIONS.md` §9): a
+read-only unified daily/weekly view over the four health modules, assembled at the skill layer
+from their existing read endpoints — no server-side aggregation.
 Auth currently runs on the Clerk **dev** instance (the production-instance switch is backlogged).
 Outstanding work and deferred decisions are tracked in [`docs/BACKLOG.md`](docs/BACKLOG.md).
 
