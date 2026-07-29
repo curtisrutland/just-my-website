@@ -52,3 +52,4 @@ __pycache__/
 .idea
 .vscode
 .env*
+src/lib/rides/fixtures/*.fit

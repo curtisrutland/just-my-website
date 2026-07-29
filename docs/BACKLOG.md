@@ -253,7 +253,39 @@ ceiling over (contract §11.4).
 
 ## Future modules
 
-- _(none queued — macros, weight, shopping, and lifting are all built/live.)_
+- [ ] **Rides module (backend BUILT on `feat/rides-module`; UI awaiting design)** — fifth module,
+      the **second ingestion module** and the first with a **binary input** (Garmin FIT files), per
+      `docs/rides-model.md` + `docs/rides-design-brief.md`. Built + verified 2026-07-29:
+      `src/lib/rides/` (fit.ts decode/normalize/timestamp-bucketed 10s downsample over
+      `@garmin/fitsdk`; Zod ingestion + human-layer schemas; repo; shared ingest pipeline;
+      private-Blob wrapper), `ride` + `ride_stream` tables (migration `0010`, applied),
+      `src/app/api/rides/` (upload · list · [id] GET/PATCH/DELETE · [id]/reprocess · weekly),
+      OpenAPI fragment (`openapi/rides.json`, 5 paths), `manage-rides` skill (read + annotate,
+      imperial display converters) + zip built. Three documented kernel departures: binary write
+      path (decode → `fitRideSchema.parse` → repo), **`JMW_PUBLISHER_TOKEN`** (upload-route-only
+      third token, in `.env.local` + Vercel prod), and **Vercel Blob** as the raw-file store
+      (`jmw-rides-raw`, private, linked all envs). Verified end-to-end locally: 32/32 checks
+      (publisher upload 201 → dedupe 200 → streams → human-layer-only PATCH → Blob-round-trip
+      reprocess → token scoping → soft/hard lifecycle); the real first ride (2026-07-28 MTB,
+      Instinct 3) is ingested; 167 unit tests green incl. real-fixture decode (fixture gitignored —
+      Curtis to decide if it's committed). **UI built** same day from the Claude Design handoff
+      ("Rides.dc.html" + "Rides Mobile.dc.html", project 338fd708): `src/app/(app)/rides/`
+      (log w/ weekly strip · sport chips · week groups · multi-file upload panel with
+      ingested/deduped/failed rows; detail w/ click-to-name, stat band, HR-zone histogram,
+      gap-honest SVG effort charts, Leaflet route map on theme-following CARTO tiles, note
+      editor, soft-delete) + `src/components/rides/`, server actions through the shared ingest
+      pipeline, nav + landing flipped LIVE, `/preview/rides` harness (SSR content-verified).
+      **Remaining:** (a) Curtis browser-poke locally; (b) README + ARCHITECTURE rows at ship;
+      (c) merge + deploy + prod verify (Vercel needs nothing new beyond the already-set
+      `JMW_PUBLISHER_TOKEN` + the linked Blob store); (d) claude.ai upload of `manage-rides.zip`.
+
+## Rides — deferred (from `docs/rides-model.md` Open/deferred)
+
+- v2 daemon (outside this repo; contract = `POST /api/rides/upload` + publisher token). Laps/
+  structured-workout projection. Power curve. Multi-session (multisport) files. Map thumbnails on
+  log cards. Blob orphan sweep. Reprocess-all endpoint. Per-sample temperature + other channels.
+  Per-lap HR zones (session-level kept). Cross-module tie-ins (ride → macros day-kind) stay
+  agent-side judgment.
 
 ## PWA — installable to home screen ([#4])
 

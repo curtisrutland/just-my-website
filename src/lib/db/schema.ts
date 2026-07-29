@@ -465,6 +465,114 @@ export const liftingGoal = pgTable(
   ]
 );
 
+/**
+ * `ride` — one row per ingested Garmin FIT activity (rides module, the second ingestion module
+ * and the first with a BINARY input). Every parsed column is an ingested fact — immutable from
+ * the surfaces, rewritten only by reprocessing the raw file (kept forever in Vercel Blob at
+ * `blobKey`). Exactly two columns are surface-writable: `name` and `note` (the human layer).
+ * Named `ride` deliberately — any Garmin activity lands here (`sport` keeps it honest), but
+ * riding is the module's reason for existing. See docs/rides-model.md.
+ */
+export const ride = pgTable(
+  "ride",
+  {
+    ...auditColumns(),
+    // sha256 of the FIT bytes — the primary dedupe key. Re-uploading the same file (the v2
+    // daemon will, forever) is idempotent: return the existing row, never duplicate.
+    fileHash: text("file_hash").notNull(),
+    // Session start (UTC instant) — the sort key. With deviceSerial, the secondary dedupe:
+    // the same activity re-exported with different bytes.
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+    // The ride's LOCAL calendar date, from the file's own activity.localTimestamp (the device
+    // knew where it was) — stored because it cannot be recomputed from startedAt without a
+    // timezone guess. This is the log's grouping date ("Tuesday's ride").
+    localDate: date("local_date", { mode: "string" }).notNull(),
+    // Where the raw FIT lives in Vercel Blob: `rides/<fileHash>.fit` (deterministic → a
+    // crashed ingest retries idempotently).
+    blobKey: text("blob_key").notNull(),
+    // Device identity, from fileIdMesgs. `deviceProduct` prefers the readable garminProduct
+    // string ("instinct3Amoled50mm") over the numeric product code.
+    deviceManufacturer: text("device_manufacturer"),
+    deviceProduct: text("device_product"),
+    deviceSerial: text("device_serial"),
+    // Garmin's classification, verbatim ("cycling"/"mountain"), plus the device profile name
+    // ("MTB") — the display fallback of choice for unnamed rides.
+    sport: text("sport").notNull(),
+    subSport: text("sub_sport"),
+    sportProfileName: text("sport_profile_name"),
+    // Durations are the only universally-present summary facts. Seconds, SI throughout —
+    // display units (mi/ft/mph) are a UI concern, like lb in lifting.
+    elapsedSeconds: real("elapsed_seconds").notNull(),
+    movingSeconds: real("moving_seconds").notNull(),
+    // Everything below is nullable — honesty about what a given device captured (a watch ride
+    // has no power; a trainer ride has no GPS; a hike has neither).
+    distanceMeters: real("distance_meters"),
+    totalAscentMeters: real("total_ascent_meters"),
+    totalDescentMeters: real("total_descent_meters"),
+    avgPowerWatts: real("avg_power_watts"),
+    maxPowerWatts: real("max_power_watts"),
+    // Stored because the DEVICE computed it (an ingested fact); this module computes no power
+    // model of its own.
+    normalizedPowerWatts: real("normalized_power_watts"),
+    avgHeartRate: integer("avg_heart_rate"),
+    maxHeartRate: integer("max_heart_rate"),
+    avgCadence: real("avg_cadence"),
+    maxCadence: real("max_cadence"),
+    avgSpeedMps: real("avg_speed_mps"),
+    maxSpeedMps: real("max_speed_mps"),
+    // kcal — the same energy unit as macros.
+    calories: integer("calories"),
+    avgTemperatureC: real("avg_temperature_c"),
+    // The session-referenced timeInZone message VERBATIM: seconds-per-zone plus the boundaries
+    // it was computed with. Kept because it's a histogram of measurements (avgHeartRate with
+    // shape), not a model score — and self-describing, so a later zone-config change never
+    // falsifies old rides.
+    timeInHrZone: jsonb("time_in_hr_zone"),
+    // The decoded session message verbatim — where Garmin's training-load numbers, MTB
+    // grit/flow totals, and the GPS bounding box deliberately stay: present in data, absent
+    // from schema and UI. The Blob is the authoritative raw; this is convenience.
+    rawSession: jsonb("raw_session"),
+    // The human layer — the ONLY surface-writable columns.
+    name: text("name"),
+    note: text("note"),
+  },
+  (t) => [
+    index("ride_started_at_idx").on(t.startedAt),
+    index("ride_sport_idx").on(t.sport),
+    // Unique among live rows so a soft-deleted bad upload can be re-ingested.
+    uniqueIndex("ride_file_hash_key")
+      .on(t.fileHash)
+      .where(sql`${t.deletedAt} is null`),
+    // Same activity, different bytes (a re-export). NULL serials never collide (Postgres
+    // treats index NULLs as distinct) — fileHash still catches exact dupes for them.
+    uniqueIndex("ride_started_at_device_serial_key")
+      .on(t.startedAt, t.deviceSerial)
+      .where(sql`${t.deletedAt} is null`),
+  ]
+);
+
+/**
+ * `ride_stream` — the downsampled time series, 1:1 with a ride. A PROJECTION of the raw file,
+ * rebuilt wholesale on reprocess (like lifting's exercise/set children) — so `id` + `createdAt`
+ * only, no soft-delete; cascades from the ride. `data` holds aligned arrays keyed by channel
+ * (`t` = seconds from start; null = gap — Garmin smart recording is irregular, 1–12 s observed).
+ */
+export const rideStream = pgTable(
+  "ride_stream",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    rideId: uuid("ride_id")
+      .notNull()
+      .references(() => ride.id, { onDelete: "cascade" }),
+    // The downsample bucket width — 10 s in v1.
+    resolutionSeconds: integer("resolution_seconds").notNull(),
+    // { t: [...], heartRate: [...], lat: [...], ... } — absent key = channel never recorded.
+    data: jsonb("data").notNull(),
+  },
+  (t) => [uniqueIndex("ride_stream_ride_id_key").on(t.rideId)]
+);
+
 export type MacroFood = typeof macroFood.$inferSelect;
 export type NewMacroFood = typeof macroFood.$inferInsert;
 export type MacroEntry = typeof macroEntry.$inferSelect;
@@ -493,3 +601,7 @@ export type LiftingSessionNote = typeof liftingSessionNote.$inferSelect;
 export type NewLiftingSessionNote = typeof liftingSessionNote.$inferInsert;
 export type LiftingGoal = typeof liftingGoal.$inferSelect;
 export type NewLiftingGoal = typeof liftingGoal.$inferInsert;
+export type Ride = typeof ride.$inferSelect;
+export type NewRide = typeof ride.$inferInsert;
+export type RideStream = typeof rideStream.$inferSelect;
+export type NewRideStream = typeof rideStream.$inferInsert;

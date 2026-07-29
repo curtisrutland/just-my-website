@@ -4,8 +4,8 @@ A private, single-user personal-data platform. Two users, ever: **Curtis** (huma
 **Claude** (machine, via a Python skill over a token API). Everything sits behind auth —
 there are no public pages and no anonymous reads.
 
-Four modules are live: a **macro / food-intake tracker**, a **daily weight tracker**, a
-**shopping list**, and a **lifting journal**. In the macro tracker, Curtis tells Claude what he ate in
+Five modules are live: a **macro / food-intake tracker**, a **daily weight tracker**, a
+**shopping list**, a **lifting journal**, and a **ride log**. In the macro tracker, Curtis tells Claude what he ate in
 vague terms ("a couple handfuls of almonds, a big chicken thigh") and Claude logs it — the whole
 design is built around one principle: **be honest about fuzziness.** An estimate is never presented
 with the authority of a measured fact. The weight tracker applies the same honesty from the other
@@ -15,7 +15,10 @@ the truth, not the noise. The shopping list is the plain-utility counterpoint: o
 the others its web UI is a full editor, not just a review surface. The lifting journal is the first
 **ingestion** module: workouts flow in from **Hevy** (read-only facts), and the module owns a thin
 annotation layer on top — the signature is *the numbers are Hevy's; the meaning is ours*, so it reads
-and interprets training rather than logging it.
+and interprets training rather than logging it. The ride log ingests **Garmin FIT files** (the
+second ingestion module, and the first with a binary input): the signature is *the log is the
+value* — the meter's numbers, honestly kept, with no fitness scores, no streaks, and exactly two
+human-writable fields (a ride's name and note).
 
 ## Stack
 
@@ -56,9 +59,9 @@ src/app/(app)/{module}/**  # Clerk-gated UI (thin)
 
 Tables live in `src/lib/db/schema.ts`, namespaced by module (`macro_food`, `macro_entry`,
 `macro_day_tag`, `macro_target_profile`, `weight_entry`, `shopping_item`, `lifting_session`,
-`lifting_exercise`, `lifting_set`, `lifting_session_note`, `lifting_goal`). Each module's OpenAPI fragment is
-**generated** from its Zod schemas (`openapi/macros.json`, `openapi/weight.json`, `openapi/lifting.json`), never
-hand-written.
+`lifting_exercise`, `lifting_set`, `lifting_session_note`, `lifting_goal`, `ride`, `ride_stream`).
+Each module's OpenAPI fragment is **generated** from its Zod schemas (`openapi/macros.json`,
+`openapi/weight.json`, `openapi/lifting.json`, `openapi/rides.json`), never hand-written.
 
 ## Getting started
 
@@ -109,6 +112,8 @@ the Neon and Clerk Marketplace integrations. The rest:
 | [`docs/macro-model.md`](docs/macro-model.md) | The macro module's data model (closed spec) |
 | [`docs/weight-model.md`](docs/weight-model.md) | The weight module's data model + trend/rollup math |
 | [`docs/lifting-model.md`](docs/lifting-model.md) | The lifting module's data model — Hevy ingestion + the annotation layer, derived e1RM/tonnage/PRs |
+| [`docs/rides-model.md`](docs/rides-model.md) | The rides module's data model — FIT ingestion, the raw-file Blob store, streams, the publisher token |
+| [`docs/rides-design-brief.md`](docs/rides-design-brief.md) | Brief that fed the rides module's visual design (grounded in the real first FIT file) |
 | [`docs/UI-CONTRACT.md`](docs/UI-CONTRACT.md) | Design tokens, component inventory, layout slots |
 | [`docs/HANDOFF-CODE.md`](docs/HANDOFF-CODE.md) | Build brief for the macro module and skill |
 | [`docs/HANDOFF-DESIGN.md`](docs/HANDOFF-DESIGN.md) | Brief for the visual/structural design reference |
@@ -117,12 +122,12 @@ the Neon and Clerk Marketplace integrations. The rest:
 
 ## Status
 
-Live in production at [justmy.website](https://justmy.website). **macros**, **weight**, and
-**shopping** are deployed — each with its schema, repo, token API routes, Clerk-gated UI,
-generated OpenAPI fragment, and a Python skill (`manage-macros`, `manage-weight`,
-`manage-shopping`). **lifting** — the fourth module and first Hevy-ingestion module — is fully
-built (schema, repo, token API, UI, OpenAPI fragment, `manage-lifting` skill) and pending its
-first deploy; its Hevy webhook needs `HEVY_WEBHOOK_TOKEN` set on Vercel + registered with Hevy.
+Live in production at [justmy.website](https://justmy.website). **macros**, **weight**,
+**shopping**, and **lifting** are deployed — each with its schema, repo, token API routes,
+Clerk-gated UI, generated OpenAPI fragment, and a Python skill (`manage-macros`, `manage-weight`,
+`manage-shopping`, `manage-lifting`). **rides** — the fifth module and the first with a binary
+(FIT-file) input — is fully built (schema, repo, token API, UI, OpenAPI fragment, `manage-rides`
+skill, Blob store + publisher token already provisioned) and pending its first deploy.
 Auth currently runs on the Clerk **dev** instance (the production-instance switch is backlogged).
 Outstanding work and deferred decisions are tracked in [`docs/BACKLOG.md`](docs/BACKLOG.md).
 

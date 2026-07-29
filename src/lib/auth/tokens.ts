@@ -52,3 +52,22 @@ export function requirePrimary(request: Request): AuthOk | AuthFail {
   }
   return auth;
 }
+
+/**
+ * The scoped third token (rides module, documented kernel departure — docs/rides-model.md):
+ * `JMW_PUBLISHER_TOKEN` is the v2 daemon's credential and is accepted by EXACTLY ONE route,
+ * `POST /api/rides/upload` — which calls this instead of `requireBearer`. It is deliberately
+ * NOT added to `identify()`: the publisher token can never pass `requireBearer`/`requirePrimary`,
+ * so it can't read, patch, or delete anything, anywhere. Least privilege: a leaked daemon box
+ * can push FIT files and nothing else.
+ */
+export type UploadTokenKind = TokenKind | "publisher";
+type UploadAuthOk = { ok: true; kind: UploadTokenKind };
+
+export function requireUploadToken(request: Request): UploadAuthOk | AuthFail {
+  const token = extractBearer(request);
+  if (!token) return { ok: false, response: unauthorized("Missing bearer token") };
+  const publisher = process.env.JMW_PUBLISHER_TOKEN;
+  if (publisher && safeEqual(token, publisher)) return { ok: true, kind: "publisher" };
+  return requireBearer(request);
+}

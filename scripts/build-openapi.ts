@@ -16,6 +16,7 @@ import {
   targetProfilePatchSchema,
 } from "../src/lib/macros/schema";
 import { liftingAnnotationPatchSchema, liftingGoalCreateSchema, liftingGoalPatchSchema } from "../src/lib/lifting/schema";
+import { ridePatchSchema } from "../src/lib/rides/schema";
 import { shoppingCreateSchema, shoppingPatchSchema } from "../src/lib/shopping/schema";
 import { weightCreateSchema, weightPatchSchema } from "../src/lib/weight/schema";
 
@@ -648,11 +649,224 @@ const liftingSpec = {
   },
 };
 
+const ridesSpec = {
+  openapi: "3.0.3",
+  info: {
+    title: "justmy.website — rides",
+    version: "0.1.0",
+    description:
+      "Token API for the rides module (the second ingestion module; the first with a binary input). Garmin FIT activities are uploaded, parsed once, and become the record of what was ridden. Every parsed field is an ingested fact — immutable from the surfaces; only name/note are writable. All quantities are SI (m, s, m/s, W, bpm, kcal, °C); display units are a client concern. Generated from Zod schemas + the read types; do not hand-edit.",
+  },
+  security: [{ bearerAuth: [] }],
+  components: {
+    securitySchemes: {
+      ...securitySchemes,
+      publisherToken: {
+        type: "http",
+        scheme: "bearer",
+        description:
+          "JMW_PUBLISHER_TOKEN — the upload daemon's credential. Accepted ONLY by POST /api/rides/upload; structurally rejected everywhere else (least privilege: it can push FIT files and nothing more).",
+      },
+    },
+    schemas: {
+      RidePatch: js(ridePatchSchema),
+      TimeInHrZone: {
+        type: "object",
+        nullable: true,
+        description:
+          "The session-referenced HR-zone histogram, verbatim from the file: seconds-per-zone PLUS the bpm boundaries it was computed with (self-describing — a later zone-config change never falsifies old rides). A histogram of measurements, not a fitness score.",
+        properties: {
+          timeInHrZone: { type: "array", items: { type: "number" }, description: "seconds per zone bucket" },
+          hrZoneHighBoundary: { type: "array", items: { type: "number" }, description: "bpm upper bounds the buckets were computed against" },
+          maxHeartRate: { type: "number" },
+        },
+      },
+      RideView: {
+        type: "object",
+        description:
+          "The one read shape every rides surface shares. Most fields nullable — honesty about what a given device captured (a watch ride has no power; a trainer ride no GPS).",
+        required: [
+          "id", "name", "note", "sport", "subSport", "sportProfileName", "startedAt", "localDate",
+          "elapsedSeconds", "movingSeconds", "distanceMeters", "totalAscentMeters", "totalDescentMeters",
+          "avgPowerWatts", "maxPowerWatts", "normalizedPowerWatts", "avgHeartRate", "maxHeartRate",
+          "avgCadence", "maxCadence", "avgSpeedMps", "maxSpeedMps", "calories", "avgTemperatureC",
+          "timeInHrZone", "deviceManufacturer", "deviceProduct", "createdAt", "updatedAt",
+        ],
+        properties: {
+          id: { type: "string", format: "uuid" },
+          name: { type: "string", nullable: true, description: "the human layer; display falls back to sportProfileName + localDate" },
+          note: { type: "string", nullable: true },
+          sport: { type: "string", description: "Garmin sport string verbatim (cycling, running, …)" },
+          subSport: { type: "string", nullable: true },
+          sportProfileName: { type: "string", nullable: true, description: "device profile name (\"MTB\") — the display fallback for unnamed rides" },
+          startedAt: { type: "string", format: "date-time" },
+          localDate: { type: "string", format: "date", description: "the ride's LOCAL calendar date, from the file's own clock — use this for display/grouping, never the UTC date of startedAt" },
+          elapsedSeconds: { type: "number" },
+          movingSeconds: { type: "number" },
+          distanceMeters: { type: "number", nullable: true },
+          totalAscentMeters: { type: "number", nullable: true },
+          totalDescentMeters: { type: "number", nullable: true },
+          avgPowerWatts: { type: "number", nullable: true },
+          maxPowerWatts: { type: "number", nullable: true },
+          normalizedPowerWatts: { type: "number", nullable: true, description: "device-computed; this module computes no power model of its own" },
+          avgHeartRate: { type: "integer", nullable: true },
+          maxHeartRate: { type: "integer", nullable: true },
+          avgCadence: { type: "number", nullable: true },
+          maxCadence: { type: "number", nullable: true },
+          avgSpeedMps: { type: "number", nullable: true },
+          maxSpeedMps: { type: "number", nullable: true },
+          calories: { type: "integer", nullable: true, description: "kcal — the same energy unit as macros" },
+          avgTemperatureC: { type: "number", nullable: true },
+          timeInHrZone: { $ref: "#/components/schemas/TimeInHrZone" },
+          deviceManufacturer: { type: "string", nullable: true },
+          deviceProduct: { type: "string", nullable: true },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
+        },
+      },
+      RideStream: {
+        type: "object",
+        required: ["resolutionSeconds", "data"],
+        description: "Downsampled aligned arrays. `t` is seconds from start; other channels align to it with null gaps (smart recording is irregular — gaps are data, not errors). Absent channel = never recorded.",
+        properties: {
+          resolutionSeconds: { type: "integer" },
+          data: {
+            type: "object",
+            required: ["t"],
+            properties: { t: { type: "array", items: { type: "number" } } },
+            additionalProperties: { type: "array", items: { type: "number", nullable: true } },
+          },
+        },
+      },
+      RideDetail: {
+        allOf: [
+          { $ref: "#/components/schemas/RideView" },
+          {
+            type: "object",
+            required: ["stream"],
+            properties: {
+              stream: { allOf: [{ $ref: "#/components/schemas/RideStream" }], nullable: true, description: "present only when ?streams=1" },
+            },
+          },
+        ],
+      },
+      IngestResult: {
+        allOf: [
+          { $ref: "#/components/schemas/RideView" },
+          {
+            type: "object",
+            required: ["deduped"],
+            properties: {
+              deduped: { type: "boolean", description: "true = this file (or the same activity from the same device) was already ingested; the existing ride is returned. Normal, not an error — the daemon re-sends files forever." },
+            },
+          },
+        ],
+      },
+      WeeklyStats: {
+        type: "object",
+        required: ["weeks"],
+        properties: {
+          weeks: {
+            type: "array",
+            description: "newest week first; weeks with no matching rides are omitted",
+            items: {
+              type: "object",
+              required: ["weekStart", "rides", "distanceMeters", "movingSeconds", "totalAscentMeters", "avgPowerWatts"],
+              properties: {
+                weekStart: { type: "string", format: "date", description: "Monday of the ISO week" },
+                rides: { type: "integer" },
+                distanceMeters: { type: "number" },
+                movingSeconds: { type: "number" },
+                totalAscentMeters: { type: "number" },
+                avgPowerWatts: { type: "number", nullable: true, description: "mean across the week's rides that have power; null when none do" },
+              },
+            },
+          },
+        },
+      },
+      Error: errorSchema,
+    },
+  },
+  paths: {
+    "/api/rides/upload": {
+      post: {
+        summary: "Ingest a FIT file (raw binary body)",
+        description:
+          "Body is the raw FIT bytes (application/octet-stream) — `curl --data-binary @ride.fit`. Idempotent: known bytes (or the same activity re-exported) return 200 + the existing ride with deduped:true; a new ride returns 201 + Location. Undecodable or multi-session files are 400s. The ONLY route that accepts the publisher token.",
+        security: [{ bearerAuth: [] }, { publisherToken: [] }],
+        requestBody: { required: true, content: { "application/octet-stream": { schema: { type: "string", format: "binary" } } } },
+        responses: {
+          "201": { description: "New ride ingested", content: { "application/json": { schema: { $ref: "#/components/schemas/IngestResult" } } } },
+          "200": { description: "Dedupe hit — the existing ride, deduped:true", content: { "application/json": { schema: { $ref: "#/components/schemas/IngestResult" } } } },
+          "400": { description: "Not a FIT file / integrity failure / multi-session / oversized", content: { "application/json": { schema: ERR } } },
+          "401": { description: "Missing/invalid token", content: { "application/json": { schema: ERR } } },
+        },
+      },
+    },
+    "/api/rides": {
+      get: {
+        summary: "List rides (the log)",
+        description: "Summaries only (never streams), newest startedAt first. There is no POST here — rides are never authored, only ingested.",
+        parameters: [
+          ...pageParams,
+          { name: "sport", in: "query", schema: { type: "string" }, description: "Garmin sport string verbatim (e.g. cycling)" },
+          { name: "from", in: "query", schema: { type: "string", format: "date" }, description: "inclusive lower bound on localDate" },
+          { name: "to", in: "query", schema: { type: "string", format: "date" }, description: "inclusive upper bound on localDate" },
+          { name: "q", in: "query", schema: { type: "string" }, description: "substring on name OR sportProfileName (unnamed rides are the norm; \"MTB\" finds them)" },
+        ],
+        responses: { ...okList("RideView"), ...errorResponses },
+      },
+    },
+    "/api/rides/{id}": {
+      get: {
+        summary: "Get one ride",
+        parameters: [pathParam("id"), { name: "streams", in: "query", schema: { type: "string", enum: ["1"] }, description: "include the downsampled stream arrays (heavy; off by default)" }],
+        responses: { "200": { description: "Ride detail", content: { "application/json": { schema: { $ref: "#/components/schemas/RideDetail" } } } }, ...errorResponses },
+      },
+      patch: {
+        summary: "Write the human layer (name/note — the ONLY writable fields)",
+        description: "Every measured field is immutable from the surfaces; corrections happen via reprocess. Unknown fields are 400s by design.",
+        parameters: [pathParam("id")],
+        requestBody: jsonBody("RidePatch"),
+        responses: { "200": { description: "Updated ride", content: { "application/json": { schema: { $ref: "#/components/schemas/RideView" } } } }, ...errorResponses },
+      },
+      delete: {
+        summary: "Soft/hard delete (hard requires the primary key and also removes the raw file from Blob)",
+        parameters: [pathParam("id"), hardParam],
+        responses: { ...noContent, ...errorResponses },
+      },
+    },
+    "/api/rides/{id}/reprocess": {
+      post: {
+        summary: "Re-decode the stored raw FIT and rewrite the facts in place",
+        description: "The corrections/back-fill lever: fact columns + stream are rebuilt from a fresh decode of the SAME raw file; name/note untouched. Normal JMW tokens only (not the publisher token).",
+        parameters: [pathParam("id")],
+        responses: {
+          "200": { description: "Reprocessed ride", content: { "application/json": { schema: { $ref: "#/components/schemas/RideDetail" } } } },
+          ...errorResponses,
+          "409": { description: "Raw file missing from storage, or no longer decodes", content: { "application/json": { schema: ERR } } },
+        },
+      },
+    },
+    "/api/rides/weekly": {
+      get: {
+        summary: "Weekly rollup (per ISO week: rides / distance / moving time / ascent / avg power)",
+        parameters: [
+          { name: "weeks", in: "query", schema: { type: "integer", default: 8, minimum: 1, maximum: 104 }, description: "max buckets returned, newest first" },
+          { name: "sport", in: "query", schema: { type: "string", default: "cycling" }, description: "defaults to cycling (rides-first); pass 'all' for every activity" },
+        ],
+        responses: { "200": { description: "Weekly stats", content: { "application/json": { schema: { $ref: "#/components/schemas/WeeklyStats" } } } }, ...errorResponses },
+      },
+    },
+  },
+};
+
 const fragments = [
   ["macros", macrosSpec],
   ["weight", weightSpec],
   ["shopping", shoppingSpec],
   ["lifting", liftingSpec],
+  ["rides", ridesSpec],
 ] as const;
 
 mkdirSync("openapi", { recursive: true });

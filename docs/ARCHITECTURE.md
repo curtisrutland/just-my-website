@@ -25,7 +25,7 @@ Everything sits behind authentication. There are **no public pages and no anonym
 reads** — this is not a product with a signup funnel, it is one person's data with a
 second, machine-shaped door into it.
 
-Four feature modules are live today:
+Five feature modules are live today:
 
 | Module | What it stores | The honesty principle it encodes |
 |---|---|---|
@@ -33,6 +33,7 @@ Four feature modules are live today:
 | **weight** | One body-weight measurement per day | A single day's number is noise; the **7-day rolling average is the truth.** The trend leads, the raw weigh-in is subordinate. |
 | **shopping** | A single flat list of items, one category level deep | Restraint: a plain working utility, not a dashboard. No quantities (the words carry it), no normalization, no history beyond a 7-day "recently bought". Its web UI is a **full editor** (add/check/edit/delete), not just review. |
 | **lifting** | Hevy workouts (read-only facts) + a thin annotation layer | *The numbers are Hevy's; the meaning is ours.* The first **ingestion** module — sets/reps/weights are pulled from Hevy and immutable; what it owns is the annotation (session notes + quality are Curtis's; the interpretation + focus are Claude's). Derived e1RM/tonnage/PRs, never stored. A dated **goal statement** sits above the sessions — freeform prose, written by both surfaces — and rides along on every session read, so an interpretation is never written goal-blind. Bends the kernel twice, deliberately: ingested-not-authored data, and a Hevy-webhook route with a dedicated secret. |
+| **rides** | Garmin FIT activities (rides first; any sport lands here) — summary facts + a downsampled stream per ride, the raw file kept forever in private Vercel Blob | *The log is the value.* The second ingestion module and the first with a **binary** input: decode → `fitRideSchema.parse` → repo, so the no-unvalidated-writes rule survives the file. Every parsed column is immutable from the surfaces (`name`/`note` are the only writable fields; corrections happen by **reprocessing** the stored file). No fitness scores, ever — device-computed training-load numbers stay unexposed in `rawSession`; the HR-zone **histogram** (self-describing, boundaries included) is kept because it's a measurement, not a model. Bends the kernel once more: a third bearer token, `JMW_PUBLISHER_TOKEN`, accepted by exactly one route (`POST /api/rides/upload`) — the future upload daemon's least-privilege credential. |
 | **panel** | Device/service tokens + the panel's one active recipe; a KV-backed version stamp per section | Does less on purpose. A glanceable kitchen appliance, not an app — read-mostly, no text entry, anything better on a phone stays there. A distinct surface (device-token-scoped API + kiosk UI), not a skill module. See `docs/panel-contract.md`. |
 
 Those two "honesty" principles aren't decoration — they're the reason the data model
