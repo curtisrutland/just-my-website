@@ -285,6 +285,25 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  /* Keep the pull gesture inside the content scroller — never rubber-band the fixed
+   * chrome or trigger the browser's own pull-to-refresh in the standalone PWA. */
+  overscroll-behavior-y: contain;
+}
+/* Pull-to-refresh indicator: a collapsed (height 0, empty at rest) strip above the
+ * content that the pull gesture reveals. Height is driven inline by PullToRefresh. */
+.ptr-indicator {
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+@keyframes refresh-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.refresh-spin {
+  animation: refresh-spin 0.8s linear infinite;
 }
 .content-inner {
   max-width: 940px;

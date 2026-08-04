@@ -2,6 +2,8 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { ThemeToggle } from "./ThemeToggle";
 import { NavPendingDot } from "./NavPendingDot";
+import { PullToRefresh } from "./PullToRefresh";
+import { RefreshControl } from "./RefreshControl";
 import { todayISO } from "@/lib/date";
 
 /**
@@ -62,10 +64,15 @@ export function AppShell({
               ▋
             </span>
           </div>
-          {headerRight}
+          <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+            {headerRight}
+            <RefreshControl />
+          </div>
         </header>
 
         <main className="content">
+          {/* Leaf indicator + native listeners on this scroller; must stay the first child. */}
+          <PullToRefresh />
           <div className="content-inner">{children}</div>
         </main>
       </div>
