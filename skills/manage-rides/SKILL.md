@@ -94,3 +94,16 @@ to edit around it.
 - **No deletes beyond soft.** `soft_delete(ride_id)` for a bad upload; hard deletion is
   Curtis's key only.
 - **No fitness commentary beyond the numbers.** The module refuses scores; so do you.
+
+## The other health skills
+
+A ride is also a training day. When the conversation widens past the ride itself:
+
+- **manage-health** — the unified daily/weekly view (rides + lifting + macros + weight in one
+  call) for "how's the week going" and check-ins.
+- **manage-lifting** — the other half of training. The goal statement lives there and names the
+  bike focus; a big ride is context for interpreting a session, and vice versa.
+- **manage-macros** — a ride is evidence for that day's `training` tag, and a long ride is
+  fueling context.
+- **manage-weight** — the trend the training serves. Reference it factually; no scores here
+  either.

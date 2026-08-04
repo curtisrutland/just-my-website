@@ -337,3 +337,17 @@ avg_fat = sum(d["totals"]["fatContent"] for d in days) / len(days)
 - The client snapshots the numbers at log time — correcting a food later never rewrites past days.
 - If Curtis is vague, estimate and say so (confidence `estimated` + note). Don't refuse to log because
   the input is fuzzy — that's the normal case.
+
+## The other health skills
+
+Macros are one lens on the same person. When you're missing context, it usually lives in a
+sibling skill — reach across instead of guessing:
+
+- **manage-health** — the unified daily/weekly view (macros + weight + lifting + rides in one
+  call). Use it when Curtis asks how the day or week is going overall, or for a check-in that's
+  bigger than food.
+- **manage-lifting / manage-rides** — whether a day was a training day is often already in the
+  record: a lifting session or a ride that day is strong evidence for `set_day_kind(day,
+  "training")`. Check there before asking Curtis — then confirm, don't silently tag.
+- **manage-weight** — the outcome these targets aim at. Adherence questions ("is it working?")
+  pair with the 7-day weight trend there.
