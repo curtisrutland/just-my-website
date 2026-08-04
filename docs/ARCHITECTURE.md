@@ -162,6 +162,13 @@ The web UI never presents a token; it authenticates via Clerk session and never 
 `src/proxy.ts` keeps the API out of the Clerk matcher so a session cookie can never
 accidentally authorize an API call.
 
+Two later, deliberately-scoped additions bend this without weakening it:
+`JMW_PUBLISHER_TOKEN` is a third bearer token accepted by exactly one route
+(`POST /api/rides/upload` — least privilege for a future upload daemon), and the panel
+surface has its own hashed/revocable `device_tokens` guarding `/api/panel/**` only (that
+surface also accepts a Clerk session, a documented exception for the no-hardware dev path —
+see `panel-contract.md`).
+
 ---
 
 ## 4. The module / API / skill pattern
@@ -304,31 +311,40 @@ and was fixed; the fix computes the local date via `Intl` with `America/Chicago`
 
 Read top-to-bottom, here is the system as it stands:
 
-- **Infrastructure** is provisioned and live: Neon Postgres, Clerk auth, the two API tokens,
+- **Infrastructure** is provisioned and live: Neon Postgres, Clerk auth, the bearer tokens
+  (§3), Upstash Redis (the panel's KV version stamps), private Vercel Blob (raw FIT files),
   and a USDA FoodData Central API key, all deployed to Vercel production at
   [justmy.website](https://justmy.website).
 - **A small shared kernel** carries auth (`src/lib/auth/`), the HTTP helpers
   (`src/lib/http/` — error envelope, pagination, param parsing, success responses), the pure
   date utility (`src/lib/date.ts`), and the app-shell chrome (`src/components/shell/`). By
-  design it stays small.
-- **Two complete modules**, each a full vertical slice (schema → repo → token API → Clerk-gated
-  UI → generated OpenAPI fragment → Python skill):
-  - **macros** — food/macro logging with USDA lookups (foods cache into `macro_food` on first
-    resolve), calorie-cycling `training`/`rest` targets that are *dated* (change the profile
-    once and all days of that kind follow), a day-rollup that reports totals against target(s)
-    and an honest "estimation %", and a `manage-macros` skill.
-  - **weight** — one weigh-in per day, a derived 7-day rolling-average trend with a
-    least-squares slope in lb/week, and a `manage-weight` skill.
+  design it stays small — five modules later, it has grown only by documented exceptions.
+- **Five complete modules** (the §1 table), each a full vertical slice (schema → repo →
+  token API → Clerk-gated UI → generated OpenAPI fragment → Python skill): **macros** (with
+  the ingredient registry and first-class cooked **batches**), **weight**, **shopping**,
+  **lifting** (Hevy ingestion + webhook), and **rides** (FIT-file ingestion + Blob). Two are
+  *ingestion* modules — their facts arrive from devices, not conversation, and stay immutable
+  from both surfaces.
+- **The panel** — a third surface, not a module: a wall-mounted kitchen kiosk (Pi + 7"
+  touchscreen, deployed) reading a device-token-scoped `/api/panel/**` with KV-cached version
+  polling. The one sanctioned server-side cross-cut: module repos call the panel's
+  fire-and-forget `bump()` after writes so the kiosk knows to re-pull.
+- **Six skills**: `manage-{macros,weight,shopping,lifting,rides}` plus the read-only
+  cross-cutting `manage-health` daily/weekly view (§4). The web UI is installable as a
+  standalone **PWA** with in-app refresh affordances (header control + pull-to-refresh).
 - **Build tooling** that keeps the conventions true rather than aspirational:
   `scripts/build-openapi.ts` (spec generated from Zod, runs on every build) and
   `scripts/build-skills.mjs` (token-injected, zero-dependency skill bundles).
-- **A test suite** (Vitest) covering the load-bearing logic: token auth, schema
-  normalization, the macro day-rollup, the weight repo/rollup math, and the USDA client.
+- **A test suite** (Vitest, ~175 tests) covering the load-bearing logic: token auth, each
+  module's schema normalization, the macro day-rollup and batch lifecycle, the weight
+  repo/rollup math, lifting's derived e1RM/tonnage, FIT decode against a real fixture, ride
+  playback interpolation, the panel's auth/normalizer/version seams, and the USDA client.
 
-The **macro tracker** and **weight tracker** are two halves of the same idea from opposite
-directions — one refuses to present an *estimate* as fact, the other refuses to present a
-single day's *measurement* as a trend. That shared insistence on being honest about
-uncertainty is the through-line of everything built here, and it is why the data model, not
+Every module encodes the same underlying stance from a different angle — an *estimate* is
+never dressed as fact (macros), a single measurement is never dressed as a trend (weight),
+ingested numbers are never edited, only annotated (lifting) or reprocessed (rides), and a
+plain utility is allowed to stay plain (shopping). That shared insistence on being honest
+about what the data actually is remains the through-line, and it is why the data model, not
 just the UI, is shaped the way it is.
 
 ### Known status & what's next
@@ -348,6 +364,10 @@ configured but deferred to a real domain activation step).
 | The rules for *agents* working in this repo | [`AGENTS.md`](../AGENTS.md) |
 | The macro module's closed data-model spec | [`macro-model.md`](macro-model.md) |
 | The weight module's data model + trend math | [`weight-model.md`](weight-model.md) |
+| The shopping module's data model | [`shopping-model.md`](shopping-model.md) |
+| The lifting module's Hevy ingestion + annotation model | [`lifting-model.md`](lifting-model.md) |
+| The rides module's FIT ingestion + stream model | [`rides-model.md`](rides-model.md) |
+| The panel surface's binding contract | [`panel-contract.md`](panel-contract.md) |
 | Design tokens, component inventory, layout | [`UI-CONTRACT.md`](UI-CONTRACT.md) |
 | Outstanding work & deferred decisions | [GitHub Issues](https://github.com/curtisrutland/just-my-website/issues) |
 | Setup & scripts | [`../README.md`](../README.md) |
