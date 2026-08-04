@@ -60,3 +60,10 @@ not in docs files. When work ships, close its issue; when something is deliberat
 file an issue for it. The old `docs/BACKLOG.md` tracker is frozen at `docs/archive/BACKLOG.md`
 (historical record only; never add to it). Completed briefs/handoffs also move to
 `docs/archive/`.
+
+**Labels** (see `gh label list` for the full set + descriptions): every issue gets a size
+(`size:XS` minutes · `S` an hour or two · `M` an afternoon · `L` multi-day) and usually an
+area (`area:infra|ui|api|skill`, or `documentation`). Add a `module:{name}` label only when
+the issue is specific to one module — shell/kernel work gets none. `epic` marks a parent
+with sub-issues; `someday` marks deliberately-parked items (pick up on real need, not
+proactively). Types stay on GitHub's defaults (`bug`/`enhancement`/`documentation`).
