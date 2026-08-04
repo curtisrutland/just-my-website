@@ -81,8 +81,8 @@ don't silently change an approved spec.
 
 ## Phase 2 — (Optional) design brief (`docs/{module}-design-brief.md`)
 
-Only if the module has UI worth a Claude Design handoff. Template: `docs/weight-design-brief.md` or
-`docs/shopping-design-brief.md`. Reuse the existing design system — same tokens, mono numbers,
+Only if the module has UI worth a Claude Design handoff. Template: `docs/archive/weight-design-brief.md`
+or `docs/archive/shopping-design-brief.md`. Reuse the existing design system — same tokens, mono numbers,
 `AppShell` chrome; don't invent a new aesthetic. State the one signature idea and where to spend
 boldness (or, for a plain utility, where to spend restraint).
 
@@ -90,7 +90,8 @@ boldness (or, for a plain utility, where to spend restraint).
 
 ## Phase 3 — Build, in order
 
-Following the module anatomy (`CONVENTIONS §8`) and the macro build order in `HANDOFF-CODE.md`:
+Following the module anatomy (`CONVENTIONS §8`) and the macro build order in
+`archive/HANDOFF-CODE.md`:
 
 1. `src/lib/{module}/schema.ts` — Zod + normalization (single source of truth).
 2. Tables in `src/lib/db/schema.ts` + a Drizzle **migration**.
@@ -113,7 +114,7 @@ Per `CONVENTIONS §8` — **nothing auto-generates these, so they must be explic
   → add `["{module}", {module}Spec]` to `fragments`), run `npm run openapi:build`, confirm
   `openapi/{module}.json` appears. (The weight fragment was missed exactly here once.)
 - **Docs:** model doc committed, README module list updated, the live-modules table in
-  `docs/ARCHITECTURE.md` updated, `docs/BACKLOG.md` updated.
+  `docs/ARCHITECTURE.md` updated.
 
 ---
 
@@ -121,5 +122,6 @@ Per `CONVENTIONS §8` — **nothing auto-generates these, so they must be explic
 
 - Verify end-to-end (drive the real flow — API smoke checks + the web UI), not just typecheck.
 - Deploy (Vercel), confirm against the live domain if it touches the API.
-- Update `docs/BACKLOG.md`: move the module to the done roadmap; log any new deferred items.
+- Close the module's GitHub Issue(s); file a new issue for each deferred item worth keeping
+  (deferred ideas that don't earn an issue can live in the model doc's "Open/deferred" section).
 </content>

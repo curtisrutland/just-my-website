@@ -52,3 +52,11 @@ The one sanctioned cross-cut is the **skill layer**: a skill may read across mod
 modules' own token-API read endpoints, adding no new metrics and renaming no fields. Server-side
 code never crosses modules, and a cross-cutting write path is never allowed (writes stay in the
 per-module skills). See `docs/CONVENTIONS.md` §9.
+
+## Work tracking
+
+Future work, deferred decisions, and bugs are tracked as **GitHub Issues** on this repo —
+not in docs files. When work ships, close its issue; when something is deliberately deferred,
+file an issue for it. The old `docs/BACKLOG.md` tracker is frozen at `docs/archive/BACKLOG.md`
+(historical record only; never add to it). Completed briefs/handoffs also move to
+`docs/archive/`.

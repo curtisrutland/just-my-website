@@ -1,4 +1,8 @@
-# justmy.website — backlog & tracker
+# justmy.website — backlog & tracker (ARCHIVED 2026-08-04)
+
+> **This file is no longer the tracker.** Outstanding work is tracked as
+> [GitHub Issues](https://github.com/curtisrutland/just-my-website/issues); this copy is kept
+> as the historical record of everything up to the migration. Do not add new items here.
 
 Running tracker for outstanding work, deferred decisions, and refinements. Newest context at
 the top of each section.

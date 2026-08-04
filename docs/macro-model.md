@@ -42,7 +42,7 @@ band and a ~160g protein target, not competition-cutting).
 
 ## Table: `macro_batch` — a cooked batch: an instance, not a fact sheet
 
-Added 2026-07-28 per the approved `docs/batches-brief.md`. A cooked/prepared batch of food
+Added 2026-07-28 per the approved `docs/archive/batches-brief.md`. A cooked/prepared batch of food
 ("taco chicken") with **pinned per-100g macros** and an honest **lifecycle** — which is why it
 is NOT a `macro_food` row: a catalog food is a timeless fact; a batch is made on a date, drawn
 against, finished, and then never usable again (though history keeps pointing at it).
@@ -122,7 +122,7 @@ job.
 UNSPECIFIED, not "rest."** These are different states and conflating them (boolean-by-
 absence) would present "Curtis never said" as "it was a rest day," which is the same
 dishonesty the `confidence` enum exists to prevent. The day-rollup treats unspecified
-honestly — see the rollup spec in HANDOFF-CODE.md and the dual-target shape in
+honestly — see the rollup spec in archive/HANDOFF-CODE.md and the dual-target shape in
 UI-CONTRACT.md §4.
 
 ## Table: `macro_target_profile` — dated target records

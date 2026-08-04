@@ -113,12 +113,9 @@ the Neon and Clerk Marketplace integrations. The rest:
 | [`docs/weight-model.md`](docs/weight-model.md) | The weight module's data model + trend/rollup math |
 | [`docs/lifting-model.md`](docs/lifting-model.md) | The lifting module's data model — Hevy ingestion + the annotation layer, derived e1RM/tonnage/PRs |
 | [`docs/rides-model.md`](docs/rides-model.md) | The rides module's data model — FIT ingestion, the raw-file Blob store, streams, the publisher token |
-| [`docs/rides-design-brief.md`](docs/rides-design-brief.md) | Brief that fed the rides module's visual design (grounded in the real first FIT file) |
 | [`docs/UI-CONTRACT.md`](docs/UI-CONTRACT.md) | Design tokens, component inventory, layout slots |
-| [`docs/HANDOFF-CODE.md`](docs/HANDOFF-CODE.md) | Build brief for the macro module and skill |
-| [`docs/HANDOFF-DESIGN.md`](docs/HANDOFF-DESIGN.md) | Brief for the visual/structural design reference |
-| [`docs/weight-design-brief.md`](docs/weight-design-brief.md) | Brief that fed the weight module's visual design |
-| [`docs/BACKLOG.md`](docs/BACKLOG.md) | Running tracker of outstanding work + deferred decisions |
+| [`docs/archive/`](docs/archive/) | Historical briefs, handoffs, and the pre-issues backlog (see its README) |
+| [GitHub Issues](https://github.com/curtisrutland/just-my-website/issues) | Outstanding work + deferred decisions (the tracker) |
 
 ## Status
 
@@ -129,8 +126,10 @@ token API routes, Clerk-gated UI, generated OpenAPI fragment, and a Python skill
 skill, **`manage-health`**, is the one sanctioned cross-cut (`docs/CONVENTIONS.md` §9): a
 read-only unified daily/weekly view over the four health modules, assembled at the skill layer
 from their existing read endpoints — no server-side aggregation.
-Auth currently runs on the Clerk **dev** instance (the production-instance switch is backlogged).
-Outstanding work and deferred decisions are tracked in [`docs/BACKLOG.md`](docs/BACKLOG.md).
+Auth currently runs on the Clerk **dev** instance (the production-instance switch is an open issue).
+Outstanding work and deferred decisions are tracked as
+[GitHub Issues](https://github.com/curtisrutland/just-my-website/issues); the pre-issues
+tracker is archived at [`docs/archive/BACKLOG.md`](docs/archive/BACKLOG.md).
 
 ## Related
 

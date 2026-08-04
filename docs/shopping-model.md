@@ -270,7 +270,7 @@ Per `CONVENTIONS §8` — the last two are the ones nothing auto-generates, so t
       add `["shopping", shoppingSpec]` to `fragments`), then `npm run openapi:build` and confirm
       `openapi/shopping.json` appears.
 - [ ] **Docs:** this file is the model; on ship update the README module list, the live-modules
-      table in `docs/ARCHITECTURE.md` (add a `shopping` row; "Two" → "Three"), and `docs/BACKLOG.md`.
+      table in `docs/ARCHITECTURE.md` (add a `shopping` row; "Two" → "Three"), and `docs/archive/BACKLOG.md`.
 
 ## Open / deferred (for the backlog)
 

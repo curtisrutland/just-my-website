@@ -211,7 +211,7 @@ pattern:
 **`schema.ts` is the source of truth; the spec is downstream of it.** A hand-written spec is a
 second description of the same shapes that rots the moment the schema changes. Generating it
 means the documented API and the enforced API cannot disagree — the disagreement is impossible
-to express. (The doc audit in `BACKLOG.md` caught exactly this: the weight module existed but
+to express. (A doc audit caught exactly this: the weight module existed but
 wasn't wired into the generator, so the "per-module fragment" convention was quietly untrue
 until it was fixed.)
 
@@ -296,8 +296,7 @@ string mode**, never as timestamps. A weigh-in or a food-log entry happens on a 
 at an instant, and pulling it into JavaScript `Date` math would drag in a timezone the data
 doesn't have. Storing and returning a plain `'YYYY-MM-DD'` string keeps the whole class of
 timezone bugs off the table. (One such bug — "today" resolving in UTC in production — did occur
-and is documented as fixed in `BACKLOG.md`; the fix computes the local date via `Intl` with
-`America/Chicago`.)
+and was fixed; the fix computes the local date via `Intl` with `America/Chicago`.)
 
 ---
 
@@ -333,11 +332,11 @@ uncertainty is the through-line of everything built here, and it is why the data
 just the UI, is shaped the way it is.
 
 ### Known status & what's next
-Tracked in full in [`BACKLOG.md`](BACKLOG.md). Both skills (`manage-macros` and
-`manage-weight`) are built, uploaded to claude.ai, and validated. The headline open item: auth
-currently runs on the Clerk **dev** instance (the production-instance switch is configured but
-deferred to a real domain activation step). A short list of design refinements and optional
-tech-debt items (Vercel analytics, per-request API logging) is deferred, not lost.
+Outstanding work and deferred decisions are tracked as
+[GitHub Issues](https://github.com/curtisrutland/just-my-website/issues) (the pre-issues
+tracker is archived at [`archive/BACKLOG.md`](archive/BACKLOG.md)). The headline open item:
+auth currently runs on the Clerk **dev** instance (the production-instance switch is
+configured but deferred to a real domain activation step).
 
 ---
 
@@ -350,6 +349,6 @@ tech-debt items (Vercel analytics, per-request API logging) is deferred, not los
 | The macro module's closed data-model spec | [`macro-model.md`](macro-model.md) |
 | The weight module's data model + trend math | [`weight-model.md`](weight-model.md) |
 | Design tokens, component inventory, layout | [`UI-CONTRACT.md`](UI-CONTRACT.md) |
-| Outstanding work & deferred decisions | [`BACKLOG.md`](BACKLOG.md) |
+| Outstanding work & deferred decisions | [GitHub Issues](https://github.com/curtisrutland/just-my-website/issues) |
 | Setup & scripts | [`../README.md`](../README.md) |
 | A concrete, minimal module to trace end-to-end | `src/lib/weight/` + `src/app/api/weight/` + `src/app/(app)/weight/` |
