@@ -9,8 +9,8 @@ the design and implementation work reference this document. If either side needs
 a shape that isn't here, that's a contract change — raise it, don't invent it.
 
 > **This is the in-repo copy** (`docs/panel-contract.md`), which supersedes the
-> original brief bundle in `~/Downloads`. Companion docs: `docs/panel-design-brief.md`,
-> `docs/panel-code-brief.md`.
+> original brief bundle in `~/Downloads`. Companion docs: `docs/archive/panel-design-brief.md`,
+> `docs/archive/panel-code-brief.md`.
 >
 > **Changelog**
 > - **1.1 (2026-07-16)** — §5.1 `weight` reconciled with the as-designed health screen
@@ -458,7 +458,7 @@ Do not build these. They are named so the seams stay open.
 
 ## 11. Panel design tokens & color semantics
 
-From the delivered design (`docs/design-reference` / Claude Design "Wall Panel"). These are
+From the delivered design (`docs/archive/design-reference` / Claude Design "Wall Panel"). These are
 **panel-scoped** — a distinct surface at a distinct viewing distance, built on the same system
 (design brief §3). Reused wholesale when Lifting/Riding tabs arrive.
 

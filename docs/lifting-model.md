@@ -548,7 +548,7 @@ Per `CONVENTIONS §8` — the last two are the ones nothing auto-generates, so t
       `["lifting", liftingSpec]` to `fragments`), run `npm run openapi:build`, confirm
       `openapi/lifting.json` appears
 - [ ] **Docs:** this file is the model; on ship update the README module list, the live-modules table
-      in `docs/ARCHITECTURE.md` (add a `lifting` row; bump the count), and `docs/BACKLOG.md`
+      in `docs/ARCHITECTURE.md` (add a `lifting` row; bump the count), and `docs/archive/BACKLOG.md`
 - [ ] `manage-lifting` skill (after web + API) — list un-interpreted / read / interpret / pull, and
       **read the goal before interpreting** (`get_goal` / `set_goal`; the goal also rides along on
       every session read so a read can't be written goal-blind)

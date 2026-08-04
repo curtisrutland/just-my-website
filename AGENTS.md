@@ -46,3 +46,11 @@ envelope, pagination shape, the app-shell chrome (`src/components/shell/`), the 
 utility (`src/lib/date.ts`), and these conventions. Nothing else is "platform." The layering
 rule is one-directional: UI imports from `lib`, never the reverse — so a module's domain types
 live in `src/lib/{module}/types.ts`, not in its components.
+
+## Work tracking
+
+Future work, deferred decisions, and bugs are tracked as **GitHub Issues** on this repo —
+not in docs files. When work ships, close its issue; when something is deliberately deferred,
+file an issue for it. The old `docs/BACKLOG.md` tracker is frozen at `docs/archive/BACKLOG.md`
+(historical record only; never add to it). Completed briefs/handoffs also move to
+`docs/archive/`.

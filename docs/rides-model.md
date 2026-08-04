@@ -1,7 +1,7 @@
 # Rides module — data model & spec
 
 > Status: **Approved (Curtis, 2026-07-29)** — backend built + verified on `feat/rides-module`
-> the same day (see BACKLOG); UI pending the Claude Design handoff (`docs/rides-design-brief.md`).
+> the same day (see BACKLOG); UI pending the Claude Design handoff (`docs/archive/rides-design-brief.md`).
 > Interview run 2026-07-29; every decision below is Curtis's unless marked *open*.
 
 The fifth module, and the **second ingestion module** (after lifting) — but the first whose
@@ -12,7 +12,7 @@ by a local daemon in v2), parsed once, and become the record of what was ridden.
 it honest), but riding is its reason for existing, the thing Curtis will talk to the agent about,
 and the thing the UI leads with. Runs and hikes are guests in a rides-first house. (Also
 load-bearing: the name `activity` is already claimed in this codebase by the audit-feed scoping
-draft, `docs/activity-model.md` — a completely different feature. Nothing here uses that word as
+draft, `docs/archive/activity-model.md` — a completely different feature. Nothing here uses that word as
 a module name.)
 
 **Core principle (the signature): *the log is the value.*** A calm chronological record of what
@@ -428,7 +428,7 @@ Per `CONVENTIONS §8` + the runbook (the last three are the never-auto-generated
       available
 - [ ] **OpenAPI:** register in `scripts/build-openapi.ts` → `npm run openapi:build` →
       `openapi/rides.json` exists
-- [ ] **Docs:** README module list, `docs/ARCHITECTURE.md` live-modules table, `docs/BACKLOG.md`
+- [ ] **Docs:** README module list, `docs/ARCHITECTURE.md` live-modules table, `docs/archive/BACKLOG.md`
 - [ ] `manage-rides` skill (list / get / weekly / update) + zip built; re-upload noted to Curtis
 
 ## Open / deferred (for the backlog)

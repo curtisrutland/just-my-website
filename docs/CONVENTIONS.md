@@ -145,6 +145,7 @@ module plan MUST include them:
       `{module}Spec` object, and (3) add `["{module}", {module}Spec]` to the `fragments`
       array. Then `npm run openapi:build` emits `openapi/{module}.json` (it also runs as
       `prebuild` on every `npm run build`). Verify the file appears.
-- [ ] **Docs: add `docs/{module}-model.md`, update the README module list, the live-modules table
-      in `docs/ARCHITECTURE.md`, and `docs/BACKLOG.md`.** If there's a design handoff, add
-      `docs/{module}-design-brief.md` too.
+- [ ] **Docs: add `docs/{module}-model.md`, update the README module list and the live-modules
+      table in `docs/ARCHITECTURE.md`; close the module's GitHub Issue(s) and file new issues
+      for anything deferred.** If there's a design handoff, add `docs/{module}-design-brief.md`
+      too (archive it to `docs/archive/` once shipped).
