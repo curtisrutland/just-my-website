@@ -257,7 +257,7 @@ ceiling over (contract §11.4).
 
 ## Future modules
 
-- [ ] **Rides module (backend BUILT on `feat/rides-module`; UI awaiting design)** — fifth module,
+- [x] **Rides module (SHIPPED — merged + prod-verified 2026-07-29)** — fifth module,
       the **second ingestion module** and the first with a **binary input** (Garmin FIT files), per
       `docs/rides-model.md` + `docs/rides-design-brief.md`. Built + verified 2026-07-29:
       `src/lib/rides/` (fit.ts decode/normalize/timestamp-bucketed 10s downsample over
@@ -279,9 +279,21 @@ ceiling over (contract §11.4).
       gap-honest SVG effort charts, Leaflet route map on theme-following CARTO tiles, note
       editor, soft-delete) + `src/components/rides/`, server actions through the shared ingest
       pipeline, nav + landing flipped LIVE, `/preview/rides` harness (SSR content-verified).
-      **Remaining:** (a) Curtis browser-poke locally; (b) README + ARCHITECTURE rows at ship;
-      (c) merge + deploy + prod verify (Vercel needs nothing new beyond the already-set
-      `JMW_PUBLISHER_TOKEN` + the linked Blob store); (d) claude.ai upload of `manage-rides.zip`.
+      Merged + prod-verified 2026-07-29 (12/12 checks; ride playback followed same day).
+      **Remaining:** claude.ai upload of `manage-rides.zip`.
+
+## Cross-cutting — the health skills as a set
+
+- [x] **`manage-health` skill (built 2026-07-29)** — the first sanctioned cross-cut
+      (`docs/CONVENTIONS.md` §9): a READ-ONLY skill-layer aggregator assembling the unified
+      **daily** and **weekly** views over macros + weight + lifting + rides from their existing
+      token-API read endpoints (module field names verbatim, no new metrics, no server-side
+      aggregation, no writes). Adds `gaps` — factual absences only (nothing logged, day untagged,
+      sessions uninterpreted; elapsed days only for weeks). Local-date correct (an evening lift
+      is "tomorrow" in UTC); weeks are Monday-start to match the rides weekly rollup. The four
+      health skills each gained an "other health skills" cross-reference section (the unified
+      view + when to reach for a sibling). Registered in `scripts/build-skills.mjs`.
+      **Remaining:** claude.ai upload of `manage-health.zip` + the four updated health-skill zips.
 
 ## Rides — deferred (from `docs/rides-model.md` Open/deferred)
 
@@ -295,7 +307,7 @@ ceiling over (contract §11.4).
   structured-workout projection. Power curve. Multi-session (multisport) files. Map thumbnails on
   log cards. Blob orphan sweep. Reprocess-all endpoint. Per-sample temperature + other channels.
   Per-lap HR zones (session-level kept). Cross-module tie-ins (ride → macros day-kind) stay
-  agent-side judgment.
+  agent-side judgment — now nudged explicitly by `manage-health` and the sibling-skill prose.
 
 ## PWA — installable to home screen ([#4])
 

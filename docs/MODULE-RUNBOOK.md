@@ -52,6 +52,10 @@ the three existing modules actually differ, so use them as the worked examples.
 6. **Does Claude manage it via a skill?** If yes, what are the marquee actions (macros: log/correct;
    shopping: batch-add "ingredients for X")? The skill is Python-stdlib over the token API, token
    injected at build. Can land after the web + API (see the backlog for `manage-*` skills).
+   **Is the module health-related** (Curtis's body, training, or intake — not a convenience
+   list)? If so, plan the cross-cut too (`docs/CONVENTIONS.md` §9): which of its numbers join
+   `manage-health`'s daily and weekly views, and the sibling skills get updated "other health
+   skills" cross-references.
 
 7. **Deferred / out-of-scope.** Capture everything punted, with the reason, so it lands in the model
    doc's "Open / deferred" section and the backlog — not lost.

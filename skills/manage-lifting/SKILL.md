@@ -162,3 +162,17 @@ lf.pull(pages=50)    # a deeper sweep / initial backfill
 
 New workouts normally arrive by webhook; `pull()` is the manual recovery lever. After a pull, the new
 sessions show up in `list_uninterpreted()` for you to read.
+
+## The other health skills
+
+A session doesn't happen in a vacuum. Context for an interpretation often lives in the
+siblings:
+
+- **manage-rides** — the riding record. Whenever the goal statement points at the bike (read
+  `get_goal()` — it often does), a heavy riding week is training context: why a lift was flat,
+  why a lighter session makes sense. Check it before reading a low-energy session as regression.
+- **manage-macros / manage-weight** — fueling and body weight. A sustained deficit or a moving
+  weight trend is context for stalled numbers, and bodyweight movements read differently as the
+  bodyweight changes.
+- **manage-health** — the unified daily/weekly view; the fastest way to see a week of training +
+  eating + weight at once before you interpret.

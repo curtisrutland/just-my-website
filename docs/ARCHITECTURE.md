@@ -248,6 +248,17 @@ data model, because it only ever speaks the same HTTP the web UI's rules are bui
 never has to know it's talking to an LLM. The database never has to know a request came from a
 conversation.
 
+### The one cross-cutting skill
+
+Modules never touch each other server-side, but the skill layer carries one deliberate
+exception: **`manage-health`** is a read-only aggregator that assembles a unified daily/weekly
+view over the four health modules (macros, weight, lifting, rides) by calling their existing
+token-API read endpoints — module field names verbatim, no new metrics, no writes, plus a
+`gaps` list of factual absences. The cross-cut lives entirely in the replaceable adapter layer,
+so the "modules are self-contained" rule stays true everywhere it's expensive to break (schema,
+repo, routes) and bends only where it's cheap (a Python client). The rules for this are
+`docs/CONVENTIONS.md` §9; each health skill's `SKILL.md` also cross-references its siblings.
+
 ---
 
 ## 5. Conventions that repeat across every module

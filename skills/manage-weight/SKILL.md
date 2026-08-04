@@ -62,3 +62,15 @@ w.delete_weight(entry_id)             # soft delete
 `correct_weight` changes `weight`/`note` in place. To move a weigh-in to a **different day**, don't
 try to correct the date — `log_weight()` on the correct day (it replaces that day's value) and
 `delete_weight()` the wrong one. A weigh-in is keyed one-per-day.
+
+## The other health skills
+
+The scale is an outcome, not a cause. When the conversation asks *why* the trend moved, the
+inputs live in the sibling skills:
+
+- **manage-health** — the unified daily/weekly view; use it for "how am I doing" check-ins that
+  are bigger than weight.
+- **manage-macros** — the eating side; totals vs target are the first place to look when the
+  trend shifts.
+- **manage-lifting / manage-rides** — the training side; volume that week is context for reading
+  a swing. Bring it in as context, never as a computed score.
