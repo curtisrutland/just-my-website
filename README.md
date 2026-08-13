@@ -58,7 +58,7 @@ src/app/(app)/{module}/**  # Clerk-gated UI (thin)
 ```
 
 Tables live in `src/lib/db/schema.ts`, namespaced by module (`macro_food`, `macro_entry`,
-`macro_day_tag`, `macro_target_profile`, `weight_entry`, `shopping_item`, `lifting_session`,
+`macro_day_tag` (retired — history only), `macro_target_profile`, `weight_entry`, `shopping_item`, `lifting_session`,
 `lifting_exercise`, `lifting_set`, `lifting_session_note`, `lifting_goal`, `ride`, `ride_stream`).
 Each module's OpenAPI fragment is **generated** from its Zod schemas (`openapi/macros.json`,
 `openapi/weight.json`, `openapi/lifting.json`, `openapi/rides.json`), never hand-written.

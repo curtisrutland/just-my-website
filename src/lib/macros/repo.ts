@@ -3,12 +3,10 @@ import { dateRange } from "@/lib/date";
 import { db } from "@/lib/db";
 import {
   macroBatch,
-  macroDayTag,
   macroEntry,
   macroFood,
   macroTargetProfile,
   type MacroBatch,
-  type MacroDayTag,
   type MacroEntry,
   type MacroFood,
   type MacroTargetProfile,
@@ -20,8 +18,6 @@ import type {
   BatchDetailView,
   BatchPatch,
   BatchView,
-  DayTagCreate,
-  DayTagPatch,
   EntryCreate,
   EntryPatch,
   EntryView,
@@ -37,8 +33,8 @@ import type {
  * read surfaces (server component, API route) call these; writes arrive already validated by
  * schema.ts. Reads exclude soft-deleted rows by default (`deletedAt IS NULL`).
  *
- * Mutations that change what the panel's health screen shows — entries, day tags, target profiles
- * — call `bump("health")` AFTER they commit so the panel's version poll notices (panel-contract
+ * Mutations that change what the panel's health screen shows — entries, target profiles — call
+ * `bump("health")` AFTER they commit so the panel's version poll notices (panel-contract
  * §4.2). Food-catalog and batch writes do NOT bump (entries snapshot nutrition at log time, so
  * editing a food or batch doesn't change today's totals). Fire-and-forget; never fails a write.
  * New write paths MUST bump.
@@ -476,83 +472,29 @@ export async function hardDeleteEntry(id: string): Promise<boolean> {
   return !!row;
 }
 
-// ────────────────────────────────────────────────────────── Day tags ─────────
-
-/** Upsert a day's kind. One live tag per day: if a live tag exists we update it, else insert. */
-export async function setDayTag(input: DayTagCreate): Promise<MacroDayTag> {
-  const existing = await getLiveDayTag(input.day);
-  const [row] = existing
-    ? await db
-        .update(macroDayTag)
-        .set({ kind: input.kind })
-        .where(eq(macroDayTag.id, existing.id))
-        .returning()
-    : await db.insert(macroDayTag).values(input).returning();
-  await bump("health");
-  return row;
-}
-
-export async function getLiveDayTag(day: string): Promise<MacroDayTag | null> {
-  const [row] = await db
-    .select()
-    .from(macroDayTag)
-    .where(and(eq(macroDayTag.day, day), live(macroDayTag.deletedAt)))
-    .limit(1);
-  return row ?? null;
-}
-
-export async function patchDayTag(day: string, patch: DayTagPatch): Promise<MacroDayTag | null> {
-  const existing = await getLiveDayTag(day);
-  if (!existing) return null;
-  if (Object.keys(patch).length === 0) return existing;
-  const [row] = await db.update(macroDayTag).set(patch).where(eq(macroDayTag.id, existing.id)).returning();
-  if (row) await bump("health");
-  return row ?? null;
-}
-
-export async function softDeleteDayTag(day: string): Promise<boolean> {
-  const [row] = await db
-    .update(macroDayTag)
-    .set({ deletedAt: new Date() })
-    .where(and(eq(macroDayTag.day, day), live(macroDayTag.deletedAt)))
-    .returning({ id: macroDayTag.id });
-  if (row) await bump("health");
-  return !!row;
-}
-
-export async function hardDeleteDayTag(id: string): Promise<boolean> {
-  const [row] = await db.delete(macroDayTag).where(eq(macroDayTag.id, id)).returning({ id: macroDayTag.id });
-  if (row) await bump("health");
-  return !!row;
-}
-
-/** Live day-kinds within [from, to] as a { date: kind } map (absent days omitted → unspecified). */
-export async function dayKindsBetween(from: string, to: string): Promise<Record<string, string>> {
-  const rows = await db
-    .select({ day: macroDayTag.day, kind: macroDayTag.kind })
-    .from(macroDayTag)
-    .where(and(gte(macroDayTag.day, from), lte(macroDayTag.day, to), live(macroDayTag.deletedAt)));
-  return Object.fromEntries(rows.map((r) => [r.day, r.kind]));
-}
-
 // ──────────────────────────────────────────────────── Target profiles ────────
 
+/** The `kind` column is a retired day-type artifact: kept so historical rows stay readable, written
+ *  as a constant so every new profile applies to every day. Resolution ignores it entirely. */
+const TARGET_KIND = "default";
+
 export async function createTargetProfile(input: TargetProfileCreate): Promise<MacroTargetProfile> {
-  const [row] = await db.insert(macroTargetProfile).values(input).returning();
+  const [row] = await db
+    .insert(macroTargetProfile)
+    .values({ ...input, kind: TARGET_KIND })
+    .returning();
   await bump("health"); // a target change moves "remaining" on the health screen
   return row;
 }
 
-export async function listTargetProfiles(opts: Page & { kind?: string } = {}): Promise<Paged<MacroTargetProfile>> {
-  const { limit = 50, offset = 0, kind } = opts;
-  const where = kind
-    ? and(live(macroTargetProfile.deletedAt), eq(macroTargetProfile.kind, kind))
-    : live(macroTargetProfile.deletedAt);
+export async function listTargetProfiles(opts: Page = {}): Promise<Paged<MacroTargetProfile>> {
+  const { limit = 50, offset = 0 } = opts;
+  const where = live(macroTargetProfile.deletedAt);
   const items = await db
     .select()
     .from(macroTargetProfile)
     .where(where)
-    .orderBy(asc(macroTargetProfile.kind), desc(macroTargetProfile.effectiveFrom))
+    .orderBy(desc(macroTargetProfile.effectiveFrom), desc(macroTargetProfile.createdAt))
     .limit(limit)
     .offset(offset);
   const [{ c }] = await db.select({ c: count() }).from(macroTargetProfile).where(where);
@@ -596,19 +538,18 @@ export async function hardDeleteTargetProfile(id: string): Promise<boolean> {
   return !!row;
 }
 
-/** Resolve the target of `kind` in effect on `date`: latest effectiveFrom <= date, live. */
-export async function resolveTarget(kind: string, date: string): Promise<MacroSet | null> {
+/**
+ * Resolve the target in effect on `date`: latest effectiveFrom <= date, live. One target per day —
+ * the day-type split that used to select between a training and a rest profile is retired, so the
+ * newest applicable profile wins outright. `createdAt` breaks ties deterministically when legacy
+ * rows share an effectiveFrom (the old training/rest pairs do).
+ */
+export async function resolveTarget(date: string): Promise<MacroSet | null> {
   const [row] = await db
     .select()
     .from(macroTargetProfile)
-    .where(
-      and(
-        eq(macroTargetProfile.kind, kind),
-        lte(macroTargetProfile.effectiveFrom, date),
-        live(macroTargetProfile.deletedAt)
-      )
-    )
-    .orderBy(desc(macroTargetProfile.effectiveFrom))
+    .where(and(lte(macroTargetProfile.effectiveFrom, date), live(macroTargetProfile.deletedAt)))
+    .orderBy(desc(macroTargetProfile.effectiveFrom), desc(macroTargetProfile.createdAt))
     .limit(1);
   if (!row) return null;
   return {
@@ -622,18 +563,18 @@ export async function resolveTarget(kind: string, date: string): Promise<MacroSe
 // ──────────────────────────────────────────────────────── Day rollup ─────────
 
 export type DayRollup = {
-  day: { date: string; kind: "training" | "rest" | "unspecified" };
+  day: { date: string };
   totals: MacroSet;
   estimation: { estimatedFraction: number; entryCount: number; estimatedCount: number };
-  targets: Partial<Record<"training" | "rest", MacroSet>>;
+  /** The one target in effect on the day, or null when no profile applies yet. */
+  target: MacroSet | null;
   // The day's entries use the SAME shape `GET /entries` returns (`EntryView`).
   entries: EntryView[];
 };
 
 /**
  * The day-rollup (HANDOFF-CODE "the one thing the recipes template can't guide"). Sums the
- * day's live entries, computes the estimated-calorie fraction, resolves the day's kind, and
- * resolves target(s) — returning BOTH training and rest when the day is unspecified.
+ * day's live entries, computes the estimated-calorie fraction, and resolves the day's target.
  */
 export async function getDayRollup(date: string): Promise<DayRollup> {
   const rows = (await db
@@ -663,38 +604,25 @@ export async function getDayRollup(date: string): Promise<DayRollup> {
 
   const estimatedFraction = totalCalories > 0 ? estimatedCalories / totalCalories : 0;
 
-  const tag = await getLiveDayTag(date);
-  const kind = (tag?.kind as "training" | "rest" | undefined) ?? "unspecified";
-
-  const targets: Partial<Record<"training" | "rest", MacroSet>> = {};
-  if (kind === "unspecified") {
-    // Dual-target: resolve BOTH so the UI can show "on target if training, N over if rest".
-    const [training, rest] = await Promise.all([resolveTarget("training", date), resolveTarget("rest", date)]);
-    if (training) targets.training = training;
-    if (rest) targets.rest = rest;
-  } else {
-    const t = await resolveTarget(kind, date);
-    if (t) targets[kind] = t;
-  }
+  const target = await resolveTarget(date);
 
   return {
-    day: { date, kind },
+    day: { date },
     totals,
     estimation: { estimatedFraction, entryCount: rows.length, estimatedCount },
-    targets,
+    target,
     entries: rows,
   };
 }
 
 // ──────────────────────────────────────────────────────── Range ──────────────
 
-/** One day in a range view: its four-macro totals (zeroed when nothing is logged), its kind, and
- *  the target(s) that apply — mirroring `getDayRollup` (BOTH targets on an unspecified day). */
+/** One day in a range view: its four-macro totals (zeroed when nothing is logged) and the single
+ *  target that applies — mirroring `getDayRollup`. */
 export type RangeDay = {
   date: string;
-  kind: "training" | "rest" | "unspecified";
   totals: MacroSet;
-  targets: Partial<Record<"training" | "rest", MacroSet>>;
+  target: MacroSet | null;
 };
 
 const zeroTotals = (): MacroSet => ({ calories: 0, proteinContent: 0, fatContent: 0, carbohydrateContent: 0 });
@@ -729,27 +657,21 @@ export async function getRange(start: string, end: string): Promise<RangeDay[]> 
     });
   }
 
-  const kinds = await dayKindsBetween(start, end);
-
-  // Resolve targets in-memory: fetch every live profile once (latest effectiveFrom wins per kind),
-  // rather than firing resolveTarget per day.
+  // Resolve targets in-memory: fetch every live profile once (latest effectiveFrom wins), rather
+  // than firing resolveTarget per day. Same ordering as resolveTarget, so both agree.
   const profiles = await db
     .select()
     .from(macroTargetProfile)
     .where(live(macroTargetProfile.deletedAt))
-    .orderBy(desc(macroTargetProfile.effectiveFrom));
-  const targetFor = (kind: string, date: string): MacroSet | null => {
-    const p = profiles.find((pr) => pr.kind === kind && pr.effectiveFrom <= date);
+    .orderBy(desc(macroTargetProfile.effectiveFrom), desc(macroTargetProfile.createdAt));
+  const targetFor = (date: string): MacroSet | null => {
+    const p = profiles.find((pr) => pr.effectiveFrom <= date);
     return p ? { calories: p.calories, proteinContent: p.proteinContent, fatContent: p.fatContent, carbohydrateContent: p.carbohydrateContent } : null;
   };
 
-  return dateRange(start, end).map((date) => {
-    const kind = (kinds[date] as "training" | "rest" | undefined) ?? "unspecified";
-    const targets: Partial<Record<"training" | "rest", MacroSet>> = {};
-    for (const k of kind === "unspecified" ? (["training", "rest"] as const) : ([kind] as const)) {
-      const t = targetFor(k, date);
-      if (t) targets[k] = t;
-    }
-    return { date, kind, totals: totalsByDay.get(date) ?? zeroTotals(), targets };
-  });
+  return dateRange(start, end).map((date) => ({
+    date,
+    totals: totalsByDay.get(date) ?? zeroTotals(),
+    target: targetFor(date),
+  }));
 }

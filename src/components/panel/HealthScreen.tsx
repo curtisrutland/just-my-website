@@ -1,5 +1,4 @@
 import type { PanelHealth } from "@/lib/panel/types";
-import { DayTypeToggle } from "./DayTypeToggle";
 import { SectionHeader } from "./SectionHeader";
 
 const fmt = (n: number) => Math.round(n).toLocaleString("en-US");
@@ -101,8 +100,6 @@ export function HealthScreen({ data, renderedAt }: { data: PanelHealth; rendered
       <SectionHeader label="HEALTH" renderedAt={renderedAt} />
 
       <div style={{ padding: "34px 36px 0" }}>
-        <DayTypeToggle initial={data.dayType} />
-
         <div className="p-mono" style={{ fontSize: "var(--p-label)", letterSpacing: "0.18em", color: "var(--p-muted)", marginBottom: 6 }}>
           {over ? "OVER TARGET" : "REMAINING"}
         </div>

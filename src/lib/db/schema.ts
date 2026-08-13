@@ -173,9 +173,11 @@ export const macroEntry = pgTable(
 );
 
 /**
- * `macro_day_tag` — selects which calorie target applies to a day. A macro input (which
- * target), NOT a workout record. A row means the day's kind is KNOWN; ABSENCE means
- * UNSPECIFIED, not "rest" — these are different states and the rollup treats them differently.
+ * `macro_day_tag` — RETIRED (day-type deprecation). It selected which calorie target applied to a
+ * day ('training'/'rest', absence meaning unspecified).
+ * Nothing reads or writes it any more: training days are inferred from the lifting and rides
+ * modules, and calorie cycling — the reason day-type existed — was dropped before it. Kept, with
+ * its rows, purely as history. Do not wire it back up.
  */
 export const macroDayTag = pgTable(
   "macro_day_tag",
@@ -202,6 +204,8 @@ export const macroTargetProfile = pgTable(
   "macro_target_profile",
   {
     ...auditColumns(),
+    // RETIRED with day-type: legacy rows carry 'training'/'rest', new ones a constant. Resolution
+    // ignores it — the latest profile by effectiveFrom applies to every day. Kept for history.
     kind: text("kind").notNull(),
     effectiveFrom: date("effective_from", { mode: "string" }).notNull(),
     calories: real("calories"),
@@ -282,7 +286,7 @@ export const deviceToken = pgTable(
   "device_tokens",
   {
     ...auditColumns(),
-    // 'kitchen-panel' (panel:read + panel:write:shopping|daytype) | 'justmy-recipes' (panel:write:recipe).
+    // 'kitchen-panel' (panel:read + panel:write:shopping) | 'justmy-recipes' (panel:write:recipe).
     name: text("name").notNull(),
     // sha256(raw token) as hex. Looked up directly; the raw token never touches the database.
     tokenHash: text("token_hash").notNull(),

@@ -7,7 +7,7 @@ import { getDayRollup } from "@/lib/macros/repo";
 
 type Ctx = { params: Promise<{ date: string }> };
 
-/** The day-rollup (HANDOFF-CODE): totals, estimation, resolved target(s), and the day's entries. */
+/** The day-rollup (HANDOFF-CODE): totals, estimation, the resolved target, and the day's entries. */
 export async function GET(request: NextRequest, { params }: Ctx) {
   const auth = requireBearer(request);
   if (!auth.ok) return auth.response;

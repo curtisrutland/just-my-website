@@ -51,8 +51,6 @@ export const foodCategory = z.enum([
 /** The schema's honesty about ENTRY fuzziness — three coarse buckets, not a 1-10 scale. Distinct
  * from `foodSource`: this is per-logged-entry, that is per-catalog-food. */
 export const entryConfidence = z.enum(["measured", "estimated", "logged_serving"]);
-/** Which calorie target applies. Extensible (e.g. 'big_training') via a future migration. */
-export const dayKind = z.enum(["training", "rest"]);
 
 // --- Shared primitives ---
 
@@ -311,23 +309,12 @@ export const entryViewSchema = z
   })
   .strict();
 
-// --- Day tag (three-valued by design; absence = unspecified) ---
-
-/** Tag a day's kind. Upsert semantics: one live tag per day (partial-unique in the DB). */
-export const dayTagCreateSchema = z
-  .object({
-    day: calendarDate,
-    kind: dayKind,
-  })
-  .strict();
-
-export const dayTagPatchSchema = dayTagCreateSchema.partial();
-
 // --- Target profile (dated target records) ---
 
+/** One target applies to every day. Day-type/calorie-cycling was retired: the `kind` column still
+ *  exists in the DB (history is kept) but is no longer part of the write contract or resolution. */
 export const targetProfileCreateSchema = z
   .object({
-    kind: dayKind,
     effectiveFrom: calendarDate,
     calories: macro,
     proteinContent: macro,
@@ -356,8 +343,6 @@ export type EntryCreate = z.infer<typeof entryCreateSchema>;
 export type EntryPatch = z.infer<typeof entryPatchSchema>;
 export type EntryView = z.infer<typeof entryViewSchema>;
 export type EntryCreateBatch = z.infer<typeof entryCreateBatchSchema>;
-export type DayTagCreate = z.infer<typeof dayTagCreateSchema>;
-export type DayTagPatch = z.infer<typeof dayTagPatchSchema>;
 export type TargetProfileCreate = z.infer<typeof targetProfileCreateSchema>;
 export type TargetProfilePatch = z.infer<typeof targetProfilePatchSchema>;
 export type MacroSet = {

@@ -2,7 +2,7 @@ import { todayISO } from "@/lib/date";
 import { DayNav } from "./DayNav";
 import { DayRollup } from "./DayRollup";
 import { EntryList } from "./EntryList";
-import type { DayRollupData, WeekDay } from "@/lib/macros/types";
+import type { DayRollupData } from "@/lib/macros/types";
 
 type EntryAction = (entryId: string, formData: FormData) => void | Promise<void>;
 
@@ -19,7 +19,7 @@ export function DayContent({
   deleteEntryAction,
 }: {
   rollup: DayRollupData;
-  week: WeekDay[];
+  week: string[];
   basePath: string;
   patchEntryAction?: EntryAction;
   deleteEntryAction?: EntryAction;

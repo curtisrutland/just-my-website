@@ -1,13 +1,12 @@
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db } from "@/lib/db";
-import { macroDayTag, macroEntry, macroFood, macroTargetProfile } from "@/lib/db/schema";
+import { macroEntry, macroFood, macroTargetProfile } from "@/lib/db/schema";
 import {
   createEntry,
   createFood,
   createTargetProfile,
   getDayRollup,
-  setDayTag,
 } from "./repo";
 
 /**
@@ -22,7 +21,6 @@ const createdFoodIds: string[] = [];
 
 async function cleanup() {
   await db.delete(macroEntry).where(eq(macroEntry.consumedOn, DAY));
-  await db.delete(macroDayTag).where(eq(macroDayTag.day, DAY));
   await db.delete(macroTargetProfile).where(eq(macroTargetProfile.effectiveFrom, EFFECTIVE));
   for (const id of createdFoodIds) await db.delete(macroFood).where(eq(macroFood.id, id));
 }
@@ -30,8 +28,7 @@ async function cleanup() {
 beforeAll(async () => {
   await cleanup(); // idempotent: clear any leftovers from a prior interrupted run.
   // Targets in effect on DAY.
-  await createTargetProfile({ kind: "training", effectiveFrom: EFFECTIVE, calories: 2800, proteinContent: 160, fatContent: 90, carbohydrateContent: 300 });
-  await createTargetProfile({ kind: "rest", effectiveFrom: EFFECTIVE, calories: 2200, proteinContent: 160, fatContent: 70, carbohydrateContent: 200 });
+  await createTargetProfile({ effectiveFrom: EFFECTIVE, calories: 2300, proteinContent: 160, fatContent: 75, carbohydrateContent: 220 });
 
   // A measured entry with absolute macros supplied directly.
   await createEntry({ consumedOn: DAY, quantityGrams: 300, confidence: "measured", calories: 1000, proteinContent: 100, fatContent: 30, carbohydrateContent: 50 });
@@ -41,7 +38,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await db.delete(macroEntry).where(eq(macroEntry.consumedOn, DAY));
-  await db.delete(macroDayTag).where(eq(macroDayTag.day, DAY));
   await db.delete(macroTargetProfile).where(eq(macroTargetProfile.effectiveFrom, EFFECTIVE));
   for (const id of createdFoodIds) await db.delete(macroFood).where(eq(macroFood.id, id));
 });
@@ -57,19 +53,10 @@ describe("day rollup", () => {
     expect(r.estimation.estimatedFraction).toBeCloseTo(400 / 1400, 6);
   });
 
-  it("returns BOTH targets on an unspecified day", async () => {
+  it("resolves the one target in effect on the day", async () => {
     const r = await getDayRollup(DAY);
-    expect(r.day.kind).toBe("unspecified");
-    expect(r.targets.training?.calories).toBe(2800);
-    expect(r.targets.rest?.calories).toBe(2200);
-  });
-
-  it("returns a single target once the day is tagged", async () => {
-    await setDayTag({ day: DAY, kind: "training" });
-    const r = await getDayRollup(DAY);
-    expect(r.day.kind).toBe("training");
-    expect(r.targets.training?.calories).toBe(2800);
-    expect(r.targets.rest).toBeUndefined();
+    expect(r.target?.calories).toBe(2300);
+    expect(r.target?.proteinContent).toBe(160);
   });
 });
 
@@ -86,9 +73,9 @@ describe("entry macro snapshotting", () => {
 });
 
 // Serialization guards for the two 2026-07 bug reports (both were consumer reads of keys that don't
-// exist on the payload). The day-rollup response must carry the day's kind at `day.kind` (not a
-// top-level `day_kind`), and every entry must serialize its macros under the schema.org names,
+// exist on the payload). Every entry must serialize its macros under the schema.org names,
 // consistent with the day totals. The sum==totals check is the one the report says would catch Bug 2.
+// The day-type keys (`day.kind`, `day_kind`) are retired and must NOT come back.
 describe("day-rollup response shape", () => {
   const MACRO_KEYS = [
     "calories",
@@ -101,13 +88,12 @@ describe("day-rollup response shape", () => {
     "saturatedFatContent",
   ] as const;
 
-  it("carries day.kind and per-entry macros (no day_kind, no short/`foodName` keys)", async () => {
+  it("carries per-entry macros and no day-type keys (no day.kind/day_kind, no short/`foodName` keys)", async () => {
     const r = await getDayRollup(DAY);
     expect(r.entries.length).toBeGreaterThan(0);
 
-    // The day's kind is at `day.kind` (a non-empty string), NOT a top-level `day_kind`.
-    expect(typeof r.day.kind).toBe("string");
-    expect(r.day.kind.length).toBeGreaterThan(0);
+    // Day-type is retired: neither the nested nor the top-level key may reappear.
+    expect("kind" in r.day).toBe(false);
     expect("day_kind" in r).toBe(false);
 
     for (const e of r.entries) {

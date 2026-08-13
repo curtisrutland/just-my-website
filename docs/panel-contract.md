@@ -84,7 +84,6 @@ device_tokens
 Scopes for the kitchen panel:
 - `panel:read`
 - `panel:write:shopping`
-- `panel:write:daytype`
 
 **Panel API routes accept either a device token OR a valid Clerk session.** The
 Clerk path exists so the panel UI can be developed and debugged in a normal
@@ -148,7 +147,6 @@ relevant key. Neon is only touched when a section actually changed.
 | Write | Bumps |
 |---|---|
 | Any macro entry created/updated/deleted (skill or web) | `health` |
-| Day-type change (skill, web, or panel) | `health` |
 | Any weight entry created/updated/deleted (skill or web) | `health` |
 | Any shopping list change (skill, web, or panel) | `shopping` |
 | Send-to-panel | `recipe` |
@@ -170,7 +168,6 @@ Auth: `panel:read`
 ```jsonc
 {
   "date": "2026-07-16",              // the day this reflects, in Curtis's TZ
-  "dayType": "training",             // "training" | "rest" | null
   "macros": {
     "consumed": { "kcal": 1420, "protein": 98, "fat": 44, "carb": 152 },
     "target":   { "kcal": 2300, "protein": 160, "fat": 75, "carb": 220 },
@@ -196,13 +193,10 @@ Notes for the implementer:
 - `remaining` is computed server-side. The panel does no arithmetic.
 - `remaining` values may be **negative** (over target). The design handles this.
 - `target` comes from the dated target profile, not a constant. Current profile is
-  flat 2300/160/75/220 for both day kinds, but read it from the profile — the
-  schema supports it changing.
-- **When the day is unspecified (`dayType: null`), resolve the target to the
-  lower-calorie profile, wholesale** — resolve both training and rest, pick the one
-  with the lower `calories`, and use that whole profile (do **not** mix fields into a
-  per-field min; that isn't a real profile). Conservative for the ceilings that drive
-  "how much can I still eat." Moot while both profiles are flat; correct when they diverge.
+  2300/160/75/220, but read it from the profile — the schema supports it changing.
+- **One target applies to every day.** Day-type is retired (§7.2), so there is no
+  per-kind resolution to do: the macros rollup hands back the single target in effect,
+  and the panel renders it. It may be absent if no profile is configured.
 - **Macro kind (floor vs ceiling) is a *display* semantic, not an API field.** kcal,
   fat, carb are **ceilings** (stay at/under); protein is a **floor** (reach at/over).
   The API returns numbers; the viewer colors them per §11. `remaining` stays signed for
@@ -385,18 +379,17 @@ Body: { "checked": true }
 ```
 Bumps `shopping` version. Idempotent.
 
-### 7.2 `POST /api/panel/day-type`
+### 7.2 `POST /api/panel/day-type` — REMOVED
 
-```
-Auth: panel:write:daytype
-Body: { "type": "training" }     // "training" | "rest"
-200 → { "ok": true }
-```
-Applies to today in Curtis's timezone. Bumps `health` version. Idempotent.
+The day-type toggle and its endpoint are gone, along with the `panel:write:daytype`
+scope, when day-type was deprecated across the platform: calorie cycling was dropped,
+so the field drove nothing, and whether training happened is answered by the lifting
+and rides modules. Existing device tokens that still carry the scope keep working —
+there is simply nothing for it to call.
 
-**Why only these two:** checking off a shopping item happens when you're in the
-kitchen with your hands full and your phone in another room — the panel genuinely
-wins. Day-type is a single binary tap. Everything else (logging food, logging
+**Why the panel writes only shopping:** checking off a shopping item happens when you're
+in the kitchen with your hands full and your phone in another room — the panel genuinely
+wins. Everything else (logging food, logging
 weight, editing recipes) is better on a phone, and building it here would make the
 panel worse, not better.
 

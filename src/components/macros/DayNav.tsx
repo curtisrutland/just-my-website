@@ -1,13 +1,8 @@
 import Link from "next/link";
 import { addDays, dayOfMonth, monthDay, weekday2, weekdayFull, year } from "@/lib/date";
-import type { Kind, WeekDay } from "@/lib/macros/types";
-
-const kindDot = (kind: Kind) =>
-  kind === "training" ? "var(--color-warning)" : kind === "rest" ? "var(--color-success)" : "var(--color-accent)";
-
 /**
- * Day-navigation row. Prev/next + the big display date + weekday, and a week strip of day-chips
- * with kind dots. Navigation is link-based: each control routes to `{basePath}/{date}`.
+ * Day-navigation row. Prev/next + the big display date + weekday, and a week strip of day-chips.
+ * Navigation is link-based: each control routes to `{basePath}/{date}`.
  */
 export function DayNav({
   week,
@@ -17,7 +12,7 @@ export function DayNav({
   basePath,
   canNext,
 }: {
-  week: WeekDay[];
+  week: string[];
   selected: string;
   isToday?: boolean;
   today: string;
@@ -65,7 +60,7 @@ export function DayNav({
 
       <div className="week-strip" style={{ display: "flex", gap: 6 }}>
         {week.map((d) => (
-          <DayChip key={d.date} day={d} selected={d.date === selected} basePath={basePath} />
+          <DayChip key={d} date={d} selected={d === selected} basePath={basePath} />
         ))}
       </div>
     </div>
@@ -103,10 +98,10 @@ function NavButton({ glyph, href }: { glyph: string; href: string | null }) {
   );
 }
 
-function DayChip({ day, selected, basePath }: { day: WeekDay; selected: boolean; basePath: string }) {
+function DayChip({ date, selected, basePath }: { date: string; selected: boolean; basePath: string }) {
   return (
     <Link
-      href={`${basePath}/${day.date}`}
+      href={`${basePath}/${date}`}
       style={{
         width: 40,
         display: "flex",
@@ -121,7 +116,7 @@ function DayChip({ day, selected, basePath }: { day: WeekDay; selected: boolean;
       }}
     >
       <span style={{ fontFamily: "var(--font-mono)", fontSize: 8.5, letterSpacing: "0.1em", color: "var(--color-text-muted)" }}>
-        {weekday2(day.date)}
+        {weekday2(date)}
       </span>
       <span
         style={{
@@ -131,9 +126,8 @@ function DayChip({ day, selected, basePath }: { day: WeekDay; selected: boolean;
           color: selected ? "var(--color-text)" : "var(--color-text-muted)",
         }}
       >
-        {dayOfMonth(day.date)}
+        {dayOfMonth(date)}
       </span>
-      <span style={{ width: 5, height: 5, borderRadius: "50%", background: kindDot(day.kind) }} />
     </Link>
   );
 }

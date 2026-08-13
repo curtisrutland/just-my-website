@@ -43,7 +43,7 @@ view = h.daily()             # today
 view = h.daily("2026-07-28") # any day
 ```
 
-Returns one dict: `macros` (the day rollup — totals, estimation, resolved targets, day kind —
+Returns one dict: `macros` (the day rollup — totals, estimation, the resolved target —
 without the entry list), `weight` (`entry` for the day or None, plus `trend` — the rollup summary
 as of that day), `lifting` (`sessions` started that local day, the current `goal`, and
 `uninterpretedCount` across all days), `rides` (that day's activities, **all sports**, not just
@@ -53,10 +53,11 @@ How to speak it:
 - **Lead with what happened**, not with what's missing. Gaps come last, gently.
 - **Weight: the 7-day average (`trend.currentAvg`) is the truth** — a single day's weight is
   noise. Lead with the trend, mention the day's number second if at all.
-- **Macros: totals against the resolved target for the day's kind.** If the day is untagged,
-  say which target you compared against and why.
+- **Macros: totals against the day's resolved target.** One target applies to every day; macros
+  no longer records whether a day was training or rest.
 - Mention training (a lift, a ride) as part of the day's story — it's context for the eating,
-  and vice versa.
+  and vice versa, and since the day-type field was retired, `lifting`/`rides` are the only record
+  that training happened at all.
 
 ## The weekly view
 
@@ -93,7 +94,7 @@ for them the moment the conversation narrows:
 
 | When the conversation turns to… | Use |
 |---|---|
-| what he ate, logging food, correcting an entry, day tags, batches | **manage-macros** |
+| what he ate, logging food, correcting an entry, batches | **manage-macros** |
 | logging a weigh-in, correcting one, the long trend | **manage-weight** |
 | reading/interpreting a workout, a lift's progression, the goal | **manage-lifting** |
 | a specific ride, naming/annotating one, the riding block | **manage-rides** |

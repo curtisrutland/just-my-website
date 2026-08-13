@@ -6,7 +6,6 @@ export type MacroQuad = { kcal: number; protein: number; fat: number; carb: numb
 
 export type PanelHealth = {
   date: string; // today in Curtis's timezone
-  dayType: "training" | "rest" | null; // null = unspecified
   macros: {
     consumed: MacroQuad;
     target: MacroQuad;

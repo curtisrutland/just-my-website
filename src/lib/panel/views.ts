@@ -19,19 +19,6 @@ const round1 = (n: number): number => Math.round(n * 10) / 10;
 
 // ── health ───────────────────────────────────────────────────────────────────
 
-/** `kind`-aware target pick. Specified day → that kind. Unspecified → the LOWER-CALORIE profile,
- *  wholesale (contract §5.1): conservative for the ceilings that drive "how much can I still eat". */
-export function chooseTarget(
-  kind: "training" | "rest" | "unspecified",
-  targets: Partial<Record<"training" | "rest", MacroSet>>
-): MacroSet | null {
-  if (kind === "training") return targets.training ?? null;
-  if (kind === "rest") return targets.rest ?? null;
-  const { training, rest } = targets;
-  if (training && rest) return (training.calories ?? Infinity) <= (rest.calories ?? Infinity) ? training : rest;
-  return training ?? rest ?? null;
-}
-
 /** trend enum from the signed rate. Deadband = display precision: trendPerWeek is already rounded to
  *  0.1 lb/wk, so |x| < 0.05 means it renders "0.0" → flat. The glyph can never disagree with the number. */
 export function trendEnum(trendPerWeek: number | null): "down" | "flat" | "up" | null {
@@ -50,10 +37,9 @@ const quad = (m: MacroSet | null): MacroQuad => ({
 export async function panelHealth(): Promise<PanelHealth> {
   const date = todayISO();
   const rollup = await getDayRollup(date);
-  const dayType = rollup.day.kind === "unspecified" ? null : rollup.day.kind;
 
   const consumed = quad(rollup.totals);
-  const target = quad(chooseTarget(rollup.day.kind, rollup.targets));
+  const target = quad(rollup.target);
   const remaining: MacroQuad = {
     kcal: target.kcal - consumed.kcal,
     protein: target.protein - consumed.protein,
@@ -70,7 +56,6 @@ export async function panelHealth(): Promise<PanelHealth> {
 
   return {
     date,
-    dayType,
     macros: { consumed, target, remaining },
     weight: {
       latest,

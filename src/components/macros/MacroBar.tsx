@@ -1,4 +1,4 @@
-import { barState, targetCaption, type TrackTargets } from "./macro-state";
+import { barState, targetCaption } from "./macro-state";
 import { Track } from "./Track";
 
 const fmt = (n: number) => Math.round(n).toLocaleString("en-US");
@@ -7,28 +7,28 @@ const fmt = (n: number) => Math.round(n).toLocaleString("en-US");
  *  target", "slightly over", …) would wrap and push the value down. Color still carries severity. */
 function stateGlyph(word: string): string {
   if (word.startsWith("under")) return "↓";
-  if (word === "on target" || word === "in range") return "✓";
+  if (word === "on target") return "✓";
   if (word.includes("over")) return "↑";
   return "·"; // no target
 }
 
 /**
- * One macro's value and its bar toward target(s) (UI-CONTRACT §3 MacroBar/MacroValue). Value in
+ * One macro's value and its bar toward target (UI-CONTRACT §3 MacroBar/MacroValue). Value in
  * mono tabular; a state word colored by the target-state rules; the shared Track; a target caption.
  * Units are display-only.
  */
 export function MacroBar({
   label,
   value,
-  targets,
+  target,
   unit,
 }: {
   label: string;
   value: number;
-  targets: TrackTargets;
+  target: number | null;
   unit: "g" | "kcal";
 }) {
-  const state = barState(value, targets);
+  const state = barState(value, target);
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
@@ -66,9 +66,9 @@ export function MacroBar({
           {unit}
         </span>
       </div>
-      <Track value={value} targets={targets} color={state.color} height={8} />
+      <Track value={value} target={target} color={state.color} height={8} />
       <div style={{ fontFamily: "var(--font-mono)", fontSize: 10.5, color: "var(--color-text-muted)", marginTop: 8 }}>
-        {targetCaption(targets, unit)}
+        {targetCaption(target, unit)}
       </div>
     </div>
   );

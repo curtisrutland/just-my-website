@@ -1,34 +1,18 @@
-import type { Kind, MacroSet } from "@/lib/macros/types";
+import type { MacroSet } from "@/lib/macros/types";
 
 const fmt = (n: number) => Math.round(n).toLocaleString("en-US");
 
 /**
- * Which target profile is in effect (UI-CONTRACT §3). A kind dot + kind name + a sub-line.
- * Unspecified shows the dual target; training/rest show their single target.
+ * Which target profile is in effect (UI-CONTRACT §3): the profile's headline numbers, or an
+ * explicit "no target" when none applies. One target per day — the kind dot and the dual-target
+ * sub-line went with the retired day-type field.
  */
-export function TargetProfileBadge({
-  kind,
-  training,
-  rest,
-}: {
-  kind: Kind;
-  training?: MacroSet;
-  rest?: MacroSet;
-}) {
-  const dot = kind === "training" ? "var(--color-warning)" : kind === "rest" ? "var(--color-success)" : "var(--color-accent)";
-  const name = kind === "unspecified" ? "unspecified" : kind;
-
-  let sub = "";
-  if (kind === "unspecified") {
-    const r = rest?.calories;
-    const t = training?.calories;
-    sub = `dual target · ${r != null ? fmt(r) : "—"} / ${t != null ? fmt(t) : "—"} kcal`;
-  } else {
-    const set = kind === "training" ? training : rest;
-    const cal = set?.calories;
-    const p = set?.proteinContent;
-    sub = `${cal != null ? fmt(cal) : "—"} kcal${p != null ? ` · ${fmt(p)}g P` : ""}`;
-  }
+export function TargetProfileBadge({ target }: { target: MacroSet | null }) {
+  const cal = target?.calories;
+  const p = target?.proteinContent;
+  const sub = target
+    ? `${cal != null ? fmt(cal) : "—"} kcal${p != null ? ` · ${fmt(p)}g P` : ""}`
+    : "none in effect";
 
   return (
     <div
@@ -36,11 +20,19 @@ export function TargetProfileBadge({
         border: "1px solid var(--color-border)",
         borderRadius: "var(--radius)",
         padding: "10px 13px",
-        background: kind === "unspecified" ? "var(--band)" : "transparent",
+        background: target ? "transparent" : "var(--band)",
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-        <span style={{ width: 6, height: 6, borderRadius: "50%", background: dot, flex: "none" }} />
+        <span
+          style={{
+            width: 6,
+            height: 6,
+            borderRadius: "50%",
+            background: target ? "var(--color-accent)" : "var(--color-text-muted)",
+            flex: "none",
+          }}
+        />
         <span
           style={{
             fontFamily: "var(--font-mono)",
@@ -51,7 +43,7 @@ export function TargetProfileBadge({
             color: "var(--color-text)",
           }}
         >
-          {name}
+          target
         </span>
       </div>
       <div style={{ fontFamily: "var(--font-mono)", fontSize: 10.5, color: "var(--color-text-muted)", marginTop: 6 }}>

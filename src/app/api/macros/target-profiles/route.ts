@@ -10,8 +10,7 @@ export async function GET(request: NextRequest) {
   const auth = requireBearer(request);
   if (!auth.ok) return auth.response;
   const { limit, offset } = parsePagination(request.nextUrl.searchParams);
-  const kind = request.nextUrl.searchParams.get("kind") ?? undefined;
-  const { items, count } = await listTargetProfiles({ limit, offset, kind });
+  const { items, count } = await listTargetProfiles({ limit, offset });
   return ok(paginated(items, count, limit, offset));
 }
 

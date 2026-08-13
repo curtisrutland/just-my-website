@@ -59,12 +59,11 @@ against the mock rollup shape in §4 so the states are visible. Code implements 
 server/client components as appropriate, pulling real data via `repo.ts`.
 
 ### `DayRollup`
-The centerpiece. Renders one day's totals against target(s).
+The centerpiece. Renders one day's totals against the day's target.
 - **Props:** `rollup: DayRollup` (shape in §4).
-- **Critical dual-target state:** when `rollup.day.kind === "unspecified"`, it renders
-  BOTH targets — "on target if training, N over if rest" — NOT a single defaulted
-  target. This is the honesty-about-fuzziness principle made visual. When kind is
-  known, it renders the single applicable target.
+- **One target per day.** The dual-target "on target if training, N over if rest" state
+  is gone with the retired day-type field (calorie cycling was dropped). `target` may be
+  `null` — render that as an explicit "no target", never as a defaulted number.
 - Shows per-macro progress (calories, protein, fat, carbs) toward target, using
   `--color-success/warning/over` bands.
 - Surfaces the **estimation state**: what fraction of the day's total came from
@@ -95,13 +94,12 @@ Primitive: a single macro's value and its bar toward a target. Composed by `DayR
 ## 4. Mock data shape (for Design to render against)
 
 This is the `DayRollup` response shape from the API's day-rollup endpoint. Design
-renders every component against this so the dual-target and estimation states are real.
+renders every component against this so the target and estimation states are real.
 
 ```jsonc
 {
   "day": {
-    "date": "2026-07-05",
-    "kind": "unspecified"          // "training" | "rest" | "unspecified"
+    "date": "2026-07-05"
   },
   "totals": {                       // absolute sums of the day's entries
     "calories": 2240,
@@ -114,10 +112,8 @@ renders every component against this so the dual-target and estimation states ar
     "entryCount": 9,
     "estimatedCount": 4
   },
-  "targets": {                      // when kind known: one key. when unspecified: BOTH.
-    "training": { "calories": 2800, "proteinContent": 160, "fatContent": 90, "carbohydrateContent": 300 },
-    "rest":     { "calories": 2200, "proteinContent": 160, "fatContent": 70, "carbohydrateContent": 200 }
-  },
+  // The one target in effect on the day, or null when no profile applies yet.
+  "target": { "calories": 2300, "proteinContent": 160, "fatContent": 75, "carbohydrateContent": 220 },
   "entries": [
     {
       "id": "…",
@@ -132,9 +128,8 @@ renders every component against this so the dual-target and estimation states ar
 }
 ```
 
-When `day.kind` is `"training"` or `"rest"`, `targets` contains only that one key and
-`DayRollup` shows a single target. When `"unspecified"`, both keys are present and
-`DayRollup` shows the dual state. Design must render both cases.
+`target` is a single object, or `null` when no profile is in effect yet. Design must render
+both cases — the numbers, and the honest "no target" empty state.
 
 ## 5. What Design delivers vs. what Code delivers
 

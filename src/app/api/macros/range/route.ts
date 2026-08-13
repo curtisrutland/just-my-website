@@ -9,7 +9,7 @@ import { getRange } from "@/lib/macros/repo";
 const MAX_SPAN_DAYS = 366;
 
 /** Per-day four-macro totals across an inclusive [start, end] span — one row per day (empty days
- *  zeroed, never missing), each with the day's kind and applicable target(s). For trend reasoning. */
+ *  zeroed, never missing), each with the target that applies. For trend reasoning. */
 export async function GET(request: NextRequest) {
   const auth = requireBearer(request);
   if (!auth.ok) return auth.response;

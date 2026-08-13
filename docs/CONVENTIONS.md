@@ -98,9 +98,8 @@ Shared with justmy.recipes so a logged food can resolve macros from a recipe som
 
 Preserved from recipes practice: a first-class **create** returns `201` with a `Location`
 header and the full created resource body. Idempotent **upsert** endpoints — where re-sending
-replaces rather than duplicates (weight `POST /entries`, one weigh-in per day; macros
-`POST /day-tags`) — return `200` + `Location` instead, since the call is a set/replace, not a
-fresh creation. Either way the create/upsert returns the **persisted resource** in the body,
+replaces rather than duplicates (weight `POST /entries`, one weigh-in per day) — return `200`
++ `Location` instead, since the call is a set/replace, not a fresh creation. Either way the create/upsert returns the **persisted resource** in the body,
 so a read-back is unnecessary for confirmation yet always consistent if performed. The kernel
 does not enforce the status code in code; each route picks `created()` (201) or `ok()` (200)
 to match its semantics.
