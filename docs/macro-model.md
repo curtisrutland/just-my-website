@@ -107,35 +107,38 @@ non-reproducible. Snapshotting freezes each entry as a fact; `foodId` survives o
 re-log. Correcting a specific bad entry is done via entry-level PATCH, deliberately, not by
 editing the food.
 
-## Table: `macro_day_tag` — three-valued by design
+## Table: `macro_day_tag` — RETIRED (day-type deprecation)
 
-Selects which calorie target applies to a day. **This is a macro input (which target),
-NOT a workout record** — no ride duration/type/distance ever goes here; that's Strava's
-job.
+This table selected which calorie target applied to a day (`'training'` / `'rest'`, with
+absence meaning unspecified). **It is retired.** Nothing reads or writes it: no schema, no
+repo function, no route, no UI. The table and its rows remain purely as history — do not
+wire it back up.
 
-- `day` (date, required, unique index).
-- `kind` (text, required) — `'training'` or `'rest'`. Extensible to e.g. `'big_training'`
-  if two buckets ever prove too coarse. **Never a continuous adjustment** — a per-day
-  calorie nudge would be a burn/ride proxy, which belongs in Strava, not here.
-
-**The critical semantics:** a row means the day's kind is KNOWN. **Absence of a row means
-UNSPECIFIED, not "rest."** These are different states and conflating them (boolean-by-
-absence) would present "Curtis never said" as "it was a rest day," which is the same
-dishonesty the `confidence` enum exists to prevent. The day-rollup treats unspecified
-honestly — see the rollup spec in archive/HANDOFF-CODE.md and the dual-target shape in
-UI-CONTRACT.md §4.
+**Why it went:** it existed to drive calorie cycling, and calorie cycling was dropped —
+both target profiles have held identical numbers since 2026-07-14. That left the field
+answering only "did training happen that day," which the **lifting** and **rides** modules
+now answer from the actual record. Those modules are reactive: they are asked, and nothing
+pushes training days back into macros.
 
 ## Table: `macro_target_profile` — dated target records
 
-Targets change over time without needing to edit every past/future day.
+Targets change over time without needing to edit every past/future day. **One target applies
+to every day** — the latest profile with `effectiveFrom <= day` wins outright.
 
-- `kind` (text, required) — matches `macro_day_tag.kind`.
+- `kind` (text, required) — RETIRED with day-type. Legacy rows carry `'training'`/`'rest'`;
+  new rows carry a constant. Resolution ignores it entirely. Kept for history.
 - `effectiveFrom` (date, required).
 - Target macros: `calories`, `proteinContent`, `fatContent`, `carbohydrateContent` (real,
   nullable). `meta` (jsonb, nullable) for anything target-ish not yet modeled.
 - Index on (`kind`, `effectiveFrom`).
 
 **Why dated profiles instead of numbers-on-the-day:** if a day stored raw target numbers,
-changing the training target from 2800 to 2750 would mean editing every training day by
-hand. A day's `kind` points at the profile of that kind in effect on that date (latest
-`effectiveFrom <= day`); change the profile once and all days of that kind follow.
+changing the target from 2800 to 2750 would mean editing every past day by hand. A day
+points at the profile in effect on that date (latest `effectiveFrom <= day`); change the
+profile once and every day from then on follows.
+
+**Legacy rows share an `effectiveFrom`.** The old training/rest pairs mean two live rows can
+tie on date; resolution breaks the tie by `createdAt` desc so it is deterministic. For days
+on/after 2026-07-14 the tied rows are identical, so the resolved numbers are unambiguous.
+For days *before* that, the pair differed (2800 vs 2200) and the resolved historical target
+is now whichever row is newest — a deliberate consequence of collapsing to one target.

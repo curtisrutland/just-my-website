@@ -100,7 +100,7 @@ class HealthClient:
         Returns (module field names verbatim; `entries` deliberately omitted from macros —
         drill in with manage-macros when the food list itself matters):
             {"date": ...,
-             "macros":  {day-rollup sans entries: day{date,kind}, totals, estimation, targets},
+             "macros":  {day-rollup sans entries: day{date}, totals, estimation, target},
              "weight":  {"entry": the day's weigh-in or None, "trend": rollup summary
                          {currentAvg, current, trendPerWeek, range, window}},
              "lifting": {"sessions": sessions STARTED on this local date, "goal": current goal
@@ -126,8 +126,6 @@ class HealthClient:
         entry_count = macros.get("estimation", {}).get("entryCount", 0)
         if entry_count == 0:
             gaps.append(f"no food logged for {day}")
-        elif macros.get("day", {}).get("kind") == "unspecified":
-            gaps.append(f"food logged but {day} has no training/rest tag")
         if weight_entry is None:
             gaps.append(f"no weight logged for {day}")
         if uninterpreted > 0:
@@ -148,7 +146,7 @@ class HealthClient:
 
         Returns (module field names verbatim):
             {"weekStart": Monday, "weekEnd": Sunday,
-             "macros":  per-day {date, kind, totals, targets} — empty days ZEROED, never missing,
+             "macros":  per-day {date, totals, target} — empty days ZEROED, never missing,
              "weight":  {"days": the week's series points {date, weight, avg} — one per ELAPSED
                          day, weight null when unweighed, "trend": rollup summary over the 30
                          days ending at the week's end (clamped to today)},
@@ -179,10 +177,6 @@ class HealthClient:
         # Gaps only over days that have actually happened — a week isn't missing its Friday on Tuesday.
         elapsed = [d for d in (day.get("date") for day in macros_days) if d and d <= today_s]
         unlogged_food = [d for d in macros_days if d.get("date") in elapsed and not d.get("totals", {}).get("calories")]
-        untagged = [
-            d for d in macros_days
-            if d.get("date") in elapsed and d.get("totals", {}).get("calories") and d.get("kind") == "unspecified"
-        ]
         # A series point exists for EVERY day in the window (weight null when unweighed).
         weighed = {p.get("date") for p in weight_days if p.get("weight") is not None}
         unweighed = [d for d in elapsed if d not in weighed]
@@ -190,8 +184,6 @@ class HealthClient:
         gaps: list[str] = []
         if unlogged_food:
             gaps.append("no food logged: " + ", ".join(d["date"] for d in unlogged_food))
-        if untagged:
-            gaps.append("food logged but day untagged (training/rest): " + ", ".join(d["date"] for d in untagged))
         if unweighed:
             gaps.append("no weight logged: " + ", ".join(unweighed))
         if uninterpreted > 0:

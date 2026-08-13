@@ -1,4 +1,4 @@
-import type { DayRollupData, MacroSet, RollupEntry, WeekDay } from "@/lib/macros/types";
+import type { DayRollupData, MacroSet, RollupEntry } from "@/lib/macros/types";
 
 /**
  * Mock day for the dev preview (UI-CONTRACT §4 shape). The canonical Jul 5 day: unspecified,
@@ -24,7 +24,7 @@ const estimatedCalories = entries
   .reduce((acc, e) => acc + (e.calories ?? 0), 0);
 
 export const mockRollup: DayRollupData = {
-  day: { date: "2026-07-05", kind: "unspecified" },
+  day: { date: "2026-07-05" },
   totals: {
     calories: totalCalories,
     proteinContent: sum("proteinContent"),
@@ -36,20 +36,17 @@ export const mockRollup: DayRollupData = {
     entryCount: entries.length,
     estimatedCount: entries.filter((e) => e.confidence === "estimated").length,
   },
-  targets: {
-    training: { calories: 2800, proteinContent: 160, fatContent: 90, carbohydrateContent: 300 },
-    rest: { calories: 2200, proteinContent: 160, fatContent: 70, carbohydrateContent: 200 },
-  },
+  target: { calories: 2300, proteinContent: 160, fatContent: 75, carbohydrateContent: 220 },
   entries,
 };
 
-/** A 7-day window (Jun 29 – Jul 5) mixing kinds so every day-chip state is visible. */
-export const mockWeek: WeekDay[] = [
-  { date: "2026-06-29", kind: "rest" },
-  { date: "2026-06-30", kind: "training" },
-  { date: "2026-07-01", kind: "training" },
-  { date: "2026-07-02", kind: "rest" },
-  { date: "2026-07-03", kind: "unspecified" },
-  { date: "2026-07-04", kind: "training" },
-  { date: "2026-07-05", kind: "unspecified" },
+/** A 7-day window (Jun 29 – Jul 5) for the day-chip strip. */
+export const mockWeek: string[] = [
+  "2026-06-29",
+  "2026-06-30",
+  "2026-07-01",
+  "2026-07-02",
+  "2026-07-03",
+  "2026-07-04",
+  "2026-07-05",
 ];

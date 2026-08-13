@@ -10,12 +10,8 @@ import type { PanelHealth } from "./types";
 export function applyHealthDemo(base: PanelHealth, state: string): PanelHealth {
   const t = base.macros.target;
   const round = (n: number) => Math.round(n);
-  const withConsumed = (
-    consumed: PanelHealth["macros"]["consumed"],
-    dayType: PanelHealth["dayType"] = base.dayType
-  ): PanelHealth => ({
+  const withConsumed = (consumed: PanelHealth["macros"]["consumed"]): PanelHealth => ({
     ...base,
-    dayType,
     macros: {
       consumed,
       target: t,

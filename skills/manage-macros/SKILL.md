@@ -3,8 +3,8 @@ name: manage-macros
 description: >-
   Log and manage Curtis's food intake in justmy.website (the macro tracker). Use whenever Curtis
   says what he ate or drank ("had a couple handfuls of almonds and a big chicken thigh"), asks how
-  his day is going against target, wants to correct or remove something he logged, or tells you a
-  day was training or rest. Also when he shows you a **nutrition label** to pin a branded ingredient's
+  his day is going against target, or wants to correct or remove something he logged. Also when he
+  shows you a **nutrition label** to pin a branded ingredient's
   macros, or logs a recurring multi-part food (a smoothie) whose parts should come from pinned values
   rather than re-estimation. Also when he **cooks a batch** of something ("made a batch of taco
   chicken"), eats from one ("had 200g of the taco chicken"), or finishes one. This is the only write
@@ -246,42 +246,37 @@ only future draws see the fix. It errors on unrecognised fields, like every upda
 New cook of the same dish → a **new** `register_batch` with the same name; generations are separate
 rows told apart by `madeOn`/`status`.
 
-## Day kind (which target applies)
+## Day type is retired — don't look for it
 
-Only set it when Curtis actually tells you:
+Macros no longer records whether a day was training or rest. There is no day tag, no `day["kind"]`,
+and no per-kind target. It existed for calorie cycling, which was dropped; one target now applies to
+every day.
 
-```python
-m.set_day_kind("2026-07-05", "training")   # or "rest"
-m.clear_day_kind("2026-07-05")             # back to unspecified
-```
-
-**Do not guess.** A day with no tag is `unspecified`, and the rollup deliberately shows BOTH the
-training and rest targets for it — that's correct, not a gap to fill.
+**If you need to know whether Curtis trained on a day, ask the training modules** — a lifting session
+in **manage-lifting** or a ride in **manage-rides** on that date is the record. Those modules are
+*reactive, not proactive*: they answer when asked, and nothing pushes training days into macros. So
+look there when training is actually relevant to the question (explaining a hungrier day, a bigger
+intake), and don't otherwise.
 
 ## Targets (so the rollup can compare)
 
-Targets are dated records per day kind — the latest one effective on/before a day applies.
-**Don't assume a plan shape.** The two kinds may hold identical numbers (flat targets), differ
-(calorie cycling), or be absent — whatever Curtis's plan is right now lives in the data, not here.
-Read the current targets from `get_day(...)["targets"]` and reason from what's there; if it's `{}`,
-no profile is configured yet.
+Targets are dated records — the latest one effective on/before a day applies, to every day alike.
+**Don't assume a plan shape.** A target may be set or absent — whatever Curtis's plan is right now
+lives in the data, not here. Read the current target from `get_day(...)["target"]` and reason from
+what's there; if it's `null`, no profile is configured yet.
 
 Only *write* a target when Curtis explicitly gives new numbers (they persist; you set them only
 when they change):
 
 ```python
-# Illustrative numbers, not Curtis's plan — one call per kind whose target changed.
-m.set_target("training", "2026-01-01", calories=2500, proteinContent=160, fatContent=80, carbohydrateContent=250)
-m.set_target("rest",     "2026-01-01", calories=2500, proteinContent=160, fatContent=80, carbohydrateContent=250)
+# Illustrative numbers, not Curtis's plan — one call, effective from a date.
+m.set_target("2026-01-01", calories=2500, proteinContent=160, fatContent=80, carbohydrateContent=250)
 ```
-
-Day-kind tagging stays meaningful even when both kinds currently hold the same numbers — the tag
-is a fact about the day, and the plan may diverge again later.
 
 ## Reviewing, correcting, removing
 
 ```python
-day = m.get_day("2026-07-05")   # totals, estimation %, target(s), entries (each with an id)
+day = m.get_day("2026-07-05")   # totals, estimation %, target, entries (each with an id)
 m.correct_entry(entry_id, calories=360, proteinContent=50)   # only supplied fields change
 m.correct_entry(entry_id, name="chicken thigh (not breast)")
 m.correct_entry(entry_id, consumed_on="2026-07-06")          # move it to another day (no delete-and-recreate)
@@ -294,11 +289,10 @@ When Curtis says "actually that was closer to X," correct the specific entry —
 raises instead of silently succeeding, so a "success" always means the change landed.
 
 ### Reading it back — the day shape
-`get_day(date)` returns `{"day": {...}, "totals", "estimation", "targets", "entries"}`:
-- The day's tag is at **`day["day"]["kind"]`** — `"training"`, `"rest"`, or `"unspecified"`. There is
-  **no top-level `day_kind`**; reading one yields `None` and misreads every tagged day as untagged.
-  (A tagged day also narrows `targets` to that one kind; an unspecified day returns both — so if
-  `targets` has a single kind, the day IS tagged, and `day["day"]["kind"]` will say which.)
+`get_day(date)` returns `{"day": {"date"}, "totals", "estimation", "target", "entries"}`:
+- **`target`** is a single macro object, or `null` when no profile applies yet. It is `target`
+  (singular) — the old `targets` map keyed by `"training"`/`"rest"` is gone, and so is
+  `day["day"]["kind"]`.
 - `totals` is the four-macro day sum; each of `entries` is the object below.
 
 ### Reading it back — the entry shape
@@ -316,12 +310,12 @@ list above before reasoning from a blank.
 ## Multi-day questions — `get_range`
 
 For anything spanning more than one day ("how's the fat trend this week," "am I consistently under
-calories on rest days," pairing with the weight trend view), pull the whole span in one call instead
+calories," pairing with the weight trend view), pull the whole span in one call instead
 of looping `get_day`:
 
 ```python
 days = m.get_range("2026-07-01", "2026-07-07")   # inclusive; one object per day, chronological
-# each: {"date", "kind", "totals": {calories, proteinContent, fatContent, carbohydrateContent}, "targets"}
+# each: {"date", "totals": {calories, proteinContent, fatContent, carbohydrateContent}, "target"}
 avg_fat = sum(d["totals"]["fatContent"] for d in days) / len(days)
 ```
 
@@ -346,8 +340,8 @@ sibling skill — reach across instead of guessing:
 - **manage-health** — the unified daily/weekly view (macros + weight + lifting + rides in one
   call). Use it when Curtis asks how the day or week is going overall, or for a check-in that's
   bigger than food.
-- **manage-lifting / manage-rides** — whether a day was a training day is often already in the
-  record: a lifting session or a ride that day is strong evidence for `set_day_kind(day,
-  "training")`. Check there before asking Curtis — then confirm, don't silently tag.
+- **manage-lifting / manage-rides** — the record of whether a day was a training day, now that
+  macros doesn't keep one. A lifting session or a ride on that date *is* the answer. Both are
+  reactive: check them when training bears on the question, not routinely.
 - **manage-weight** — the outcome these targets aim at. Adherence questions ("is it working?")
   pair with the 7-day weight trend there.

@@ -5,7 +5,6 @@ import {
   batchDetailViewSchema,
   batchPatchSchema,
   batchViewSchema,
-  dayTagCreateSchema,
   entryCreateBatchSchema,
   entryCreateSchema,
   entryPatchSchema,
@@ -106,25 +105,21 @@ const macrosSpec = {
       EntryView: js(entryViewSchema),
       RangeDay: {
         type: "object",
-        required: ["date", "kind", "totals", "targets"],
+        required: ["date", "totals", "target"],
         properties: {
           date: { type: "string", format: "date" },
-          kind: { type: "string", enum: ["training", "rest", "unspecified"] },
           totals: { $ref: "#/components/schemas/MacroTotals" },
-          targets: {
-            type: "object",
-            properties: { training: { $ref: "#/components/schemas/MacroTotals" }, rest: { $ref: "#/components/schemas/MacroTotals" } },
-          },
+          target: { allOf: [{ $ref: "#/components/schemas/MacroTotals" }], nullable: true },
         },
       },
       DayRollup: {
         type: "object",
-        required: ["day", "totals", "estimation", "targets", "entries"],
+        required: ["day", "totals", "estimation", "target", "entries"],
         properties: {
           day: {
             type: "object",
-            required: ["date", "kind"],
-            properties: { date: { type: "string", format: "date" }, kind: { type: "string", enum: ["training", "rest", "unspecified"] } },
+            required: ["date"],
+            properties: { date: { type: "string", format: "date" } },
           },
           totals: { $ref: "#/components/schemas/MacroTotals" },
           estimation: {
@@ -132,10 +127,7 @@ const macrosSpec = {
             required: ["estimatedFraction", "entryCount", "estimatedCount"],
             properties: { estimatedFraction: { type: "number" }, entryCount: { type: "integer" }, estimatedCount: { type: "integer" } },
           },
-          targets: {
-            type: "object",
-            properties: { training: { $ref: "#/components/schemas/MacroTotals" }, rest: { $ref: "#/components/schemas/MacroTotals" } },
-          },
+          target: { allOf: [{ $ref: "#/components/schemas/MacroTotals" }], nullable: true },
           entries: { type: "array", items: { $ref: "#/components/schemas/EntryView" } },
         },
       },
@@ -155,7 +147,6 @@ const macrosSpec = {
       // derived consumption (remainingGrams is ADVISORY — only logged draws deplete it).
       BatchView: js(batchViewSchema),
       BatchDetailView: js(batchDetailViewSchema),
-      DayTagCreate: js(dayTagCreateSchema),
       TargetProfileCreate: js(targetProfileCreateSchema),
       TargetProfilePatch: js(targetProfilePatchSchema),
       UsdaResolve: { type: "object", required: ["fdcId"], properties: { fdcId: { type: "integer", minimum: 1 } } },
@@ -266,15 +257,8 @@ const macrosSpec = {
       patch: { summary: "Correct an entry", parameters: [pathParam("id")], requestBody: jsonBody("EntryPatch"), responses: { ...ok("Updated entry"), ...errorResponses, ...conflictResponse } },
       delete: { summary: "Soft/hard delete an entry", parameters: [pathParam("id"), hardParam], responses: { ...noContent, ...errorResponses } },
     },
-    "/api/macros/day-tags": {
-      post: { summary: "Set (upsert) a day's kind", requestBody: jsonBody("DayTagCreate"), responses: { ...ok("Day tag"), ...errorResponses } },
-    },
-    "/api/macros/day-tags/{day}": {
-      get: { summary: "Get a day's tag", parameters: [pathParam("day")], responses: { ...ok("Day tag"), ...errorResponses } },
-      delete: { summary: "Clear a day's tag", parameters: [pathParam("day"), hardParam], responses: { ...noContent, ...errorResponses } },
-    },
     "/api/macros/target-profiles": {
-      get: { summary: "List target profiles", parameters: [...pageParams, { name: "kind", in: "query", schema: { type: "string" } }], responses: { ...okList("TargetProfileCreate"), ...errorResponses } },
+      get: { summary: "List target profiles", parameters: [...pageParams], responses: { ...okList("TargetProfileCreate"), ...errorResponses } },
       post: { summary: "Create a target profile", requestBody: jsonBody("TargetProfileCreate"), responses: { ...created("Created profile"), ...errorResponses } },
     },
     "/api/macros/target-profiles/{id}": {
@@ -283,7 +267,7 @@ const macrosSpec = {
     },
     "/api/macros/days/{date}": {
       get: {
-        summary: "Day rollup (totals, estimation, target(s), entries)",
+        summary: "Day rollup (totals, estimation, target, entries)",
         parameters: [pathParam("date")],
         responses: {
           "200": { description: "Day rollup", content: { "application/json": { schema: { $ref: "#/components/schemas/DayRollup" } } } },

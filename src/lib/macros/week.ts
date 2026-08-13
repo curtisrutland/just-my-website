@@ -1,10 +1,7 @@
 import { addDays, dateRange } from "@/lib/date";
-import type { Kind, WeekDay } from "@/lib/macros/types";
-import { dayKindsBetween } from "./repo";
 
-/** The 7-day window ending at `selected`, each day resolved to its kind (absent → unspecified). */
-export async function buildWeek(selected: string): Promise<WeekDay[]> {
-  const from = addDays(selected, -6);
-  const kinds = await dayKindsBetween(from, selected);
-  return dateRange(from, selected).map((date) => ({ date, kind: (kinds[date] as Kind) ?? "unspecified" }));
+/** The 7-day window ending at `selected`, as plain dates. Purely derived from the date — the week
+ *  strip is navigation, so it needs no per-day state (the day-type dots it once carried are gone). */
+export function buildWeek(selected: string): string[] {
+  return dateRange(addDays(selected, -6), selected);
 }

@@ -36,7 +36,6 @@ TOKEN = os.environ.get("JMW_AGENT_TOKEN") or "__JMW_AGENT_TOKEN__"
 APP_TZ = ZoneInfo(os.environ.get("JMW_TZ", "America/Chicago"))
 
 CONFIDENCE = ("measured", "estimated", "logged_serving")
-KIND = ("training", "rest")
 BATCH_STATUS = ("active", "finished", "all")
 
 # A catalog food's PROVENANCE / trust, one axis (ingredient registry). 'usda' carries an fdcId;
@@ -223,7 +222,7 @@ class MacrosClient:
 
     # -- day view ---------------------------------------------------------------
     def get_day(self, date: str) -> dict:
-        """The day-rollup: totals, estimation, resolved target(s), and entries."""
+        """The day-rollup: totals, estimation, the resolved target, and entries."""
         return self._request("GET", f"/days/{date}")
 
     def list_entries(self, on: Optional[str] = None, limit: int = 50, offset: int = 0) -> dict:
@@ -231,8 +230,8 @@ class MacrosClient:
 
     def get_range(self, start: str, end: str) -> list:
         """Per-day four-macro totals across the inclusive span [start, end] (YYYY-MM-DD) — for any
-        multi-day / trend question ("fat trend this week", "under calories on rest days"). Returns
-        ONE object per day, chronological: {date, kind, totals, targets}. Empty days come back ZEROED,
+        multi-day / trend question ("fat trend this week", "how often over target"). Returns
+        ONE object per day, chronological: {date, totals, target}. Empty days come back ZEROED,
         never missing, so a gap can't be mistaken for an unlogged day. `totals` is the four tracked
         macros; aggregate (average / trend / over-under counts) yourself as the question needs."""
         return self._request("GET", "/range", params={"start": start, "end": end})
@@ -337,16 +336,6 @@ class MacrosClient:
     def delete_entry(self, entry_id: str) -> None:
         """Soft-delete an entry (the agent token cannot hard-delete)."""
         self._request("DELETE", f"/entries/{entry_id}")
-
-    # -- day kind ---------------------------------------------------------------
-    def set_day_kind(self, day: str, kind: str) -> dict:
-        if kind not in KIND:
-            raise MacrosError(f"kind must be one of {KIND} (omit the day to leave it unspecified)")
-        return self._request("POST", "/day-tags", body={"day": day, "kind": kind})
-
-    def clear_day_kind(self, day: str) -> None:
-        """Remove a day's tag → back to unspecified."""
-        self._request("DELETE", f"/day-tags/{day}")
 
     # -- foods ------------------------------------------------------------------
     def search_usda(self, query: str) -> dict:
@@ -616,7 +605,6 @@ class MacrosClient:
     # -- targets ----------------------------------------------------------------
     def set_target(
         self,
-        kind: str,
         effective_from: str,
         *,
         calories: Optional[float] = None,
@@ -624,11 +612,9 @@ class MacrosClient:
         fatContent: Optional[float] = None,
         carbohydrateContent: Optional[float] = None,
     ) -> dict:
-        """Create a dated target profile for a kind (training/rest), effective from a date. Macros
-        use the schema.org names (proteinContent, ...) — the same ones every read returns."""
-        if kind not in KIND:
-            raise MacrosError(f"kind must be one of {KIND}")
-        payload: dict[str, Any] = {"kind": kind, "effectiveFrom": effective_from}
+        """Create a dated target profile, effective from a date. One target applies to every day.
+        Macros use the schema.org names (proteinContent, ...) — the same ones every read returns."""
+        payload: dict[str, Any] = {"effectiveFrom": effective_from}
         payload.update(
             _macros_payload(
                 dict(calories=calories, proteinContent=proteinContent, fatContent=fatContent, carbohydrateContent=carbohydrateContent)

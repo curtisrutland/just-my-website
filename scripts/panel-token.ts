@@ -5,7 +5,7 @@ import { createDeviceToken } from "../src/lib/panel/tokens";
 /**
  * Mint a panel credential and print the RAW token ONCE (it is never retrievable afterward).
  *
- *   npm run panel:token -- kitchen-panel     # panel:read + write:shopping + write:daytype
+ *   npm run panel:token -- kitchen-panel     # panel:read + write:shopping
  *   npm run panel:token -- justmy-recipes    # panel:write:recipe (the send-to-panel service token)
  *
  * Or with an explicit name:  npm run panel:token -- justmy-recipes staging-sender

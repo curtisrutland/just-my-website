@@ -1,19 +1,19 @@
 import "./load-env"; // must be first — sets DATABASE_URL before ./index is evaluated
 import { eq, inArray } from "drizzle-orm";
 import { db } from "./index";
-import { macroDayTag, macroEntry, macroFood, macroTargetProfile } from "./schema";
+import { macroEntry, macroFood, macroTargetProfile } from "./schema";
 
 const DAY = "2026-07-05";
 const EFFECTIVE = "2026-01-01";
 
-const WEEK: Array<{ date: string; kind: "training" | "rest" | "unspecified" }> = [
-  { date: "2026-06-29", kind: "rest" },
-  { date: "2026-06-30", kind: "training" },
-  { date: "2026-07-01", kind: "training" },
-  { date: "2026-07-02", kind: "rest" },
-  { date: "2026-07-03", kind: "unspecified" },
-  { date: "2026-07-04", kind: "training" },
-  { date: "2026-07-05", kind: "unspecified" },
+const WEEK = [
+  "2026-06-29",
+  "2026-06-30",
+  "2026-07-01",
+  "2026-07-02",
+  "2026-07-03",
+  "2026-07-04",
+  "2026-07-05",
 ];
 
 type SeedEntry = {
@@ -40,25 +40,18 @@ const ENTRIES: SeedEntry[] = [
 ];
 
 const foodNames = [...new Set(ENTRIES.map((e) => e.food))];
-const weekDates = WEEK.map((w) => w.date);
+const weekDates = WEEK;
 
 async function main() {
   // Idempotent: clear prior seed (entries before foods, to respect the FK).
   await db.delete(macroEntry).where(inArray(macroEntry.consumedOn, weekDates));
   await db.delete(macroFood).where(inArray(macroFood.name, foodNames));
-  await db.delete(macroDayTag).where(inArray(macroDayTag.day, weekDates));
   await db.delete(macroTargetProfile).where(eq(macroTargetProfile.effectiveFrom, EFFECTIVE));
 
+  // One target for every day (day-type/calorie-cycling is retired).
   await db.insert(macroTargetProfile).values([
-    { kind: "training", effectiveFrom: EFFECTIVE, calories: 2800, proteinContent: 160, fatContent: 90, carbohydrateContent: 300 },
-    { kind: "rest", effectiveFrom: EFFECTIVE, calories: 2200, proteinContent: 160, fatContent: 70, carbohydrateContent: 200 },
+    { kind: "default", effectiveFrom: EFFECTIVE, calories: 2300, proteinContent: 160, fatContent: 75, carbohydrateContent: 220 },
   ]);
-
-  // Only training/rest days get a tag; unspecified days have no row (absence = unspecified).
-  const tagged = WEEK.filter((w) => w.kind !== "unspecified");
-  if (tagged.length) {
-    await db.insert(macroDayTag).values(tagged.map((w) => ({ day: w.date, kind: w.kind })));
-  }
 
   // Placeholder foods exist so entries show a name. Entries snapshot absolute macros regardless.
   // Seeded as source 'estimated' (no label) + category 'other' — the honest values for throwaway
@@ -83,7 +76,7 @@ async function main() {
     }))
   );
 
-  console.log(`Seeded: 2 target profiles, ${tagged.length} day tags, ${foods.length} foods, ${ENTRIES.length} entries on ${DAY}.`);
+  console.log(`Seeded: 1 target profile, ${foods.length} foods, ${ENTRIES.length} entries on ${DAY}.`);
 }
 
 main()

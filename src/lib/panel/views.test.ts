@@ -1,10 +1,7 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { todayISO } from "@/lib/date";
-import type { MacroSet } from "@/lib/macros/schema";
 import { addItem, hardDeleteItem, patchItem } from "@/lib/shopping/repo";
-import { chooseTarget, panelHealth, panelShopping, trendEnum } from "./views";
-
-const T = (calories: number): MacroSet => ({ calories, proteinContent: 160, fatContent: 75, carbohydrateContent: 220 });
+import { panelHealth, panelShopping, trendEnum } from "./views";
 
 describe("trendEnum (deadband = display precision)", () => {
   it("maps the signed rate to a glyph the number can't contradict", () => {
@@ -13,18 +10,6 @@ describe("trendEnum (deadband = display precision)", () => {
     expect(trendEnum(-0.6)).toBe("down");
     expect(trendEnum(0.3)).toBe("up");
     expect(trendEnum(-0.1)).toBe("down");
-  });
-});
-
-describe("chooseTarget (unspecified → lower-calorie profile)", () => {
-  it("picks the day's kind when specified", () => {
-    expect(chooseTarget("training", { training: T(2800), rest: T(2200) })).toMatchObject({ calories: 2800 });
-    expect(chooseTarget("rest", { training: T(2800), rest: T(2200) })).toMatchObject({ calories: 2200 });
-  });
-  it("picks the lower-calorie profile, wholesale, when unspecified", () => {
-    expect(chooseTarget("unspecified", { training: T(2800), rest: T(2200) })).toMatchObject({ calories: 2200 });
-    expect(chooseTarget("unspecified", { training: T(2800) })).toMatchObject({ calories: 2800 });
-    expect(chooseTarget("unspecified", {})).toBeNull();
   });
 });
 
@@ -55,7 +40,6 @@ describe("panelHealth (shape smoke vs live data)", () => {
   it("returns today's date, numeric macro quads, and the weight block", async () => {
     const h = await panelHealth();
     expect(h.date).toBe(todayISO());
-    expect([null, "training", "rest"]).toContain(h.dayType);
     for (const k of ["kcal", "protein", "fat", "carb"] as const) {
       expect(typeof h.macros.consumed[k]).toBe("number");
       expect(typeof h.macros.target[k]).toBe("number");

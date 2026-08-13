@@ -1,24 +1,22 @@
-import { scaleFor, type TrackTargets } from "./macro-state";
+import { scaleFor } from "./macro-state";
 
 /**
- * The signature bar. Single-target → a fill + an accent target tick. Dual-target → the "honest
- * corridor": a translucent band spanning rest→training with accent hairline edges, the day's
- * value filled beneath and marked with a text-colored line. Shared by the calorie hero (16px)
- * and each MacroBar (8px).
+ * The signature bar: a fill for the day's value plus an accent target tick. Shared by the calorie
+ * hero (16px) and each MacroBar (8px). The dual "honest corridor" band this once drew belonged to
+ * calorie cycling — retired with the day-type field, so there is one target to mark.
  */
 export function Track({
   value,
-  targets,
+  target,
   color,
   height,
 }: {
   value: number;
-  targets: TrackTargets;
+  target: number | null;
   color: string;
   height: number;
 }) {
-  const pos = scaleFor(value, targets);
-  const dual = targets.rest != null && targets.train != null && targets.rest !== targets.train;
+  const pos = scaleFor(value, target);
   const valuePos = pos(value);
 
   return (
@@ -32,28 +30,6 @@ export function Track({
         overflow: "hidden",
       }}
     >
-      {dual &&
-        (() => {
-          const lo = Math.min(targets.rest!, targets.train!);
-          const hi = Math.max(targets.rest!, targets.train!);
-          const left = pos(lo);
-          const width = pos(hi) - left;
-          return (
-            <div
-              style={{
-                position: "absolute",
-                left: `${left}%`,
-                width: `${width}%`,
-                top: 0,
-                bottom: 0,
-                background: "var(--band)",
-                borderLeft: "1px solid var(--color-accent)",
-                borderRight: "1px solid var(--color-accent)",
-              }}
-            />
-          );
-        })()}
-
       {/* value fill */}
       <div
         style={{
@@ -67,12 +43,12 @@ export function Track({
         }}
       />
 
-      {/* single target tick */}
-      {!dual && targets.single != null && (
+      {/* target tick */}
+      {target != null && (
         <div
           style={{
             position: "absolute",
-            left: `${pos(targets.single)}%`,
+            left: `${pos(target)}%`,
             top: 0,
             bottom: 0,
             width: 2,

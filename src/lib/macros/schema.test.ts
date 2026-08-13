@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   batchCreateSchema,
   batchPatchSchema,
-  dayTagCreateSchema,
   entryCreateSchema,
   entryPatchSchema,
   foodCreateSchema,
@@ -76,17 +75,18 @@ describe("food provenance + category (ingredient registry)", () => {
 
 describe("calendar dates", () => {
   it("accepts YYYY-MM-DD, rejects datetimes", () => {
-    expect(dayTagCreateSchema.safeParse({ day: "2026-07-05", kind: "training" }).success).toBe(true);
-    expect(dayTagCreateSchema.safeParse({ day: "2026-07-05T00:00:00Z", kind: "training" }).success).toBe(false);
+    expect(targetProfileCreateSchema.safeParse({ effectiveFrom: "2026-01-01", calories: 2300 }).success).toBe(true);
+    expect(targetProfileCreateSchema.safeParse({ effectiveFrom: "2026-01-01T00:00:00Z", calories: 2300 }).success).toBe(
+      false
+    );
   });
 });
 
 describe("enums", () => {
-  it("rejects unknown confidence / kind", () => {
+  it("rejects unknown confidence", () => {
     expect(
       entryCreateSchema.safeParse({ consumedOn: "2026-07-05", quantityGrams: 10, confidence: "guessed" }).success
     ).toBe(false);
-    expect(dayTagCreateSchema.safeParse({ day: "2026-07-05", kind: "recovery" }).success).toBe(false);
   });
 });
 
@@ -173,8 +173,11 @@ describe("patch schemas allow partial input", () => {
     expect(entryPatchSchema.safeParse({ proteinContent: 50 }).success).toBe(true);
   });
   it("target profile create validates", () => {
+    expect(targetProfileCreateSchema.safeParse({ effectiveFrom: "2026-01-01", calories: 2300 }).success).toBe(true);
+  });
+  it("target profile create rejects a day-type `kind` (retired)", () => {
     expect(
-      targetProfileCreateSchema.safeParse({ kind: "training", effectiveFrom: "2026-01-01", calories: 2800 }).success
-    ).toBe(true);
+      targetProfileCreateSchema.safeParse({ kind: "training", effectiveFrom: "2026-01-01", calories: 2300 }).success
+    ).toBe(false);
   });
 });

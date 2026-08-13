@@ -1,10 +1,7 @@
 /** Macros domain + rollup-contract types (UI-CONTRACT §4). Consumed by both the repo/lib layer
  *  (e.g. `week.ts`) and the UI — hence they live in `lib/macros`, never in `components`. */
 
-export type Kind = "training" | "rest" | "unspecified";
 export type Confidence = "measured" | "estimated" | "logged_serving";
-
-export type WeekDay = { date: string; kind: Kind };
 
 export type MacroSet = {
   calories: number | null;
@@ -31,9 +28,10 @@ export type RollupEntry = {
 };
 
 export type DayRollupData = {
-  day: { date: string; kind: Kind };
+  day: { date: string };
   totals: MacroSet;
   estimation: { estimatedFraction: number; entryCount: number; estimatedCount: number };
-  targets: Partial<Record<"training" | "rest", MacroSet>>;
+  /** The one target in effect on the day, or null when no profile applies yet. */
+  target: MacroSet | null;
   entries: RollupEntry[];
 };

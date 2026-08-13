@@ -7,8 +7,8 @@ import { addItem, getItemById, hardDeleteItem } from "@/lib/shopping/repo";
 import { POST } from "./route";
 
 /** Integration: the panel's check/uncheck endpoint. Isolated temp item; tokens cleaned up after.
- *  (The day-type endpoint is smoke-verified out of band — a durable test there would mutate today's
- *  real day tag on every run, which is too intrusive for this personal-data system.) */
+ *  (Check-off is the panel's only write path; the day-type endpoint it once shared this note with
+ *  was removed when day-type was deprecated.) */
 const TOKENS = ["test-check"];
 const created: string[] = [];
 

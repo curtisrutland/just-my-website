@@ -1,4 +1,4 @@
-import { barState, resolveTargets, scaleFor, trackSummary, type TrackTargets } from "./macro-state";
+import { barState, scaleFor, targetFor, trackSummary } from "./macro-state";
 import { MacroBar } from "./MacroBar";
 import { TargetProfileBadge } from "./TargetProfileBadge";
 import { Track } from "./Track";
@@ -6,28 +6,20 @@ import type { DayRollupData } from "@/lib/macros/types";
 
 const fmt = (n: number) => Math.round(n).toLocaleString("en-US");
 
-/** The elevated calorie hero: big total, the honest-corridor Track, tick labels, summary line. */
-function CalorieHero({ value, targets }: { value: number; targets: TrackTargets }) {
-  const state = barState(value, targets);
-  const pos = scaleFor(value, targets);
-  const dual = targets.rest != null && targets.train != null && targets.rest !== targets.train;
+/** The elevated calorie hero: big total, the Track, target tick label, summary line. */
+function CalorieHero({ value, target }: { value: number; target: number | null }) {
+  const state = barState(value, target);
+  const pos = scaleFor(value, target);
 
   return (
     <div style={{ marginTop: 22, marginBottom: 26 }}>
-      <Track value={value} targets={targets} color={state.color} height={16} />
-      {/* tick labels */}
+      <Track value={value} target={target} color={state.color} height={16} />
+      {/* tick label */}
       <div style={{ position: "relative", height: 16, marginTop: 6 }}>
-        {dual ? (
-          <>
-            <Tick left={pos(targets.rest!)} label={`REST ${fmt(targets.rest!)}`} />
-            <Tick left={pos(targets.train!)} label={`TRAIN ${fmt(targets.train!)}`} />
-          </>
-        ) : (
-          targets.single != null && <Tick left={pos(targets.single)} label={`TARGET ${fmt(targets.single)}`} />
-        )}
+        {target != null && <Tick left={pos(target)} label={`TARGET ${fmt(target)}`} />}
       </div>
       <div style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: state.color, marginTop: 6 }}>
-        {trackSummary(value, targets, "kcal")}
+        {trackSummary(value, target)}
       </div>
     </div>
   );
@@ -74,8 +66,7 @@ function EstimationSurface({ fraction, count, estimated }: { fraction: number; c
 }
 
 export function DayRollup({ rollup }: { rollup: DayRollupData }) {
-  const { totals, estimation, targets, day } = rollup;
-  const calorieTargets = resolveTargets(targets, "calories");
+  const { totals, estimation, target } = rollup;
 
   const macros: Array<{ label: string; key: "proteinContent" | "fatContent" | "carbohydrateContent" }> = [
     { label: "protein", key: "proteinContent" },
@@ -128,11 +119,11 @@ export function DayRollup({ rollup }: { rollup: DayRollupData }) {
             estimated={estimation.estimatedCount}
           />
         </div>
-        <TargetProfileBadge kind={day.kind} training={targets.training} rest={targets.rest} />
+        <TargetProfileBadge target={target} />
       </div>
 
       {/* signature calorie band — the hero */}
-      <CalorieHero value={totals.calories ?? 0} targets={calorieTargets} />
+      <CalorieHero value={totals.calories ?? 0} target={targetFor(target, "calories")} />
 
       {/* macro grid */}
       <div className="macro-grid" style={{ display: "grid" }}>
@@ -141,7 +132,7 @@ export function DayRollup({ rollup }: { rollup: DayRollupData }) {
             key={m.key}
             label={m.label}
             value={totals[m.key] ?? 0}
-            targets={resolveTargets(targets, m.key)}
+            target={targetFor(target, m.key)}
             unit="g"
           />
         ))}
