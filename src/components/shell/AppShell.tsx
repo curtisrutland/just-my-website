@@ -9,7 +9,7 @@ import { todayISO } from "@/lib/date";
 /**
  * The shell chrome (UI-CONTRACT §2 / DESIGN-HANDOFF §2): a 210px nav rail, a fixed terminal header
  * with the shell-path breadcrumb, and a single content slot. The page fills the module-specific
- * `headerRight` (day-kind control) and `navFooter` (e.g. Clerk UserButton) slots. Only the content
+ * `headerRight` (e.g. weight's TREND readout) and `navFooter` (e.g. Clerk UserButton) slots. Only the content
  * slot scrolls — the chrome is a fixed frame.
  */
 export function AppShell({

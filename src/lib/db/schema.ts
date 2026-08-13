@@ -196,9 +196,10 @@ export const macroDayTag = pgTable(
 );
 
 /**
- * `macro_target_profile` — dated target records. A day's `kind` points at the profile of that
- * kind in effect on that date (latest effectiveFrom <= day); change the profile once and all
- * days of that kind follow, without editing any day.
+ * `macro_target_profile` — dated target records. ONE target applies to every day: the profile in
+ * effect on that date (latest effectiveFrom <= day) wins outright, since the day-type split that
+ * once selected between a training and a rest profile is retired. Change the profile once and
+ * every day from then on follows, without editing any day.
  */
 export const macroTargetProfile = pgTable(
   "macro_target_profile",

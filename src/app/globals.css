@@ -266,9 +266,11 @@
   min-width: 0;
   min-height: 0;
 }
-/* Standardize the terminal-header height across modules to the taller control
- * (macros' day-kind segmented control); shorter headerRight (weight's TREND
- * readout) centers in the same height, so switching modules never shifts. */
+/* Standardize the terminal-header height across modules to a fixed 55px. Any
+ * headerRight (weight's TREND readout, rides' controls) centers in the same
+ * height, so switching modules never shifts. The height was originally sized to
+ * macros' day-kind segmented control; that control is retired, but the constant
+ * stays — lowering it would shift every other module's header. */
 .topbar {
   flex: none;
   display: flex;
