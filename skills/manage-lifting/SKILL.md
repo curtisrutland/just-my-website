@@ -151,6 +151,10 @@ pound") — just never print raw kg or a decimal in the prose.
   `e1rmKg` is null and no spurious "0 lb" appears. A **timed/cardio** set has only `durationSeconds`
   (or `distanceMeters`), no weight/reps (`e1rmKg` null there too). `rpe` is always null.
   `e1rmUnreliable: true` means the best set was high-rep (>12) — treat that e1RM as soft.
+- **Dumbbell weights are logged as total weight moved**, per Hevy's own guidance. A two-dumbbell
+  exercise logged at 40 lb means two 20s, not two 40s. Single-implement movements (suitcase hold,
+  single-arm rows) are the actual weight of the one implement. Never re-derive per-hand loads from a
+  logged number without checking whether the movement is one implement or two.
 - Instants (`startedAt`) are ISO strings; `focus`/`interpretation` are null until you write them.
 
 ## Catch up from Hevy
