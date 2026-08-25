@@ -457,5 +457,6 @@ Per `CONVENTIONS §8` + the runbook (the last three are the never-auto-generated
   (and anything else in `recordMesgs`) can join `data` via reprocess.
 - **Per-lap HR zones** — only the session-level `timeInHrZone` is kept; the per-lap variant
   stays in the Blob with the rest of the lap data.
-- **Cross-module tie-ins** (a ride suggesting a macros `training` day-kind) — deliberately
-  agent-side judgment across skills, not platform automation.
+- **Cross-module tie-ins** (a ride feeding anything back into macros) — deliberately
+  agent-side judgment across skills, not platform automation. Macros' day-type field is
+  retired outright; rides answers "did training happen" only when a skill asks.

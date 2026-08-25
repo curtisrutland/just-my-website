@@ -83,8 +83,9 @@ The day's entries.
   invitation to log, not a blank panel (per frontend-design copy guidance).
 
 ### `TargetProfileBadge`
-Small display of which target profile is in effect and its kind.
-- **Props:** `kind`, `target: MacroSet | null`.
+Small display of which target profile is in effect.
+- **Props:** `target: MacroSet | null` — renders the profile's headline numbers, or an
+  explicit "none in effect" when `null`.
 
 ### `MacroBar` / `MacroValue`
 Primitive: a single macro's value and its bar toward a target. Composed by `DayRollup`.

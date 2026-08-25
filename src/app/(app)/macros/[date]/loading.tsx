@@ -14,7 +14,6 @@ export default function MacrosDayLoading() {
       activeModule="macros"
       loading
       navFooter={<Skeleton width={28} height={28} radius={9999} />}
-      headerRight={<Skeleton width={150} height={26} />}
     >
       <div style={{ display: "grid", gap: 22 }}>
         <div className="day-nav" style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>

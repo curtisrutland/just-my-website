@@ -67,7 +67,7 @@ view = h.weekly("2026-07-21") # the week containing that date
 ```
 
 Weeks are **Monday-start**, matching the rides weekly rollup — "this week" means the same thing
-everywhere. Returns `weekStart`/`weekEnd`, `macros` (one `{date, kind, totals, targets}` per day —
+everywhere. Returns `weekStart`/`weekEnd`, `macros` (one `{date, totals, target}` per day —
 empty days come back **zeroed, never missing**), `weight` (`days`: one series point per **elapsed** day with
 `weight` null when unweighed, plus `trend`), `lifting`, `rides`, and `gaps` (computed over
 **elapsed days only** — a week isn't missing its Friday on Tuesday).
