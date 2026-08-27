@@ -30,27 +30,46 @@ runs off those tokens.
 
 ## 2. Install on the Upboard
 
-```bash
-sudo useradd -r -s /usr/sbin/nologin jmw
-sudo mkdir -p /opt/jmw-garmin && sudo chown jmw:jmw /opt/jmw-garmin
+Runs as your own login user under a **systemd user service** — the daemon needs no privileges and
+owns nothing outside `$HOME`, so this avoids a service account and needs **no sudo at all**.
 
-# copy garmin_daemon.py, requirements.txt and tokenstore/ into /opt/jmw-garmin
-sudo -u jmw python3 -m venv /opt/jmw-garmin/venv
-sudo -u jmw /opt/jmw-garmin/venv/bin/pip install -r /opt/jmw-garmin/requirements.txt
+> **Ubuntu 26.04 ships no `pip` and no `ensurepip`**, so `python3 -m venv` fails outright. Build the
+> venv `--without-pip` and bootstrap pip into it:
+
+```bash
+mkdir -p ~/jmw-garmin
+python3 -m venv --without-pip ~/jmw-garmin/venv
+curl -sS https://bootstrap.pypa.io/get-pip.py | ~/jmw-garmin/venv/bin/python -
 ```
 
-The publisher token goes in an environment file, **not** on the command line (where `ps` would
-expose it to every user on the box):
+Copy `garmin_daemon.py`, `requirements.txt` and `tokenstore/` into `~/jmw-garmin`, then:
 
 ```bash
-printf 'JMW_PUBLISHER_TOKEN=%s\n' "$TOKEN" | sudo tee /etc/jmw-garmin.env >/dev/null
-sudo chown jmw:jmw /etc/jmw-garmin.env && sudo chmod 600 /etc/jmw-garmin.env
+chmod 700 ~/jmw-garmin/tokenstore && chmod 600 ~/jmw-garmin/tokenstore/*
+~/jmw-garmin/venv/bin/pip install -r ~/jmw-garmin/requirements.txt
+```
+
+The publisher token goes in an environment file, **piped over stdin** — never as a command-line
+argument, where `ps` would expose it to every user on the box:
+
+```bash
+printf 'JMW_PUBLISHER_TOKEN=%s\n' "$TOKEN" > ~/.config/jmw-garmin.env
+chmod 600 ~/.config/jmw-garmin.env
 ```
 
 ```bash
-sudo cp systemd/jmw-garmin.service /etc/systemd/system/
-sudo systemctl daemon-reload && sudo systemctl enable --now jmw-garmin
-journalctl -u jmw-garmin -f
+mkdir -p ~/.config/systemd/user
+cp systemd/jmw-garmin.service ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable --now jmw-garmin
+journalctl --user -u jmw-garmin -f
+```
+
+**Enable lingering, or the daemon dies when your session ends** — without it systemd stops the
+user manager at logout and the service does not come back on reboot:
+
+```bash
+loginctl enable-linger          # no sudo needed; verify with: loginctl show-user "$USER" | grep -i Linger
 ```
 
 ## Configuration
