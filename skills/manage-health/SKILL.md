@@ -61,12 +61,13 @@ How to speak it:
 - **Macros: totals against the day's resolved target — which is not four bars.** It is one goal
   (calories), one floor (protein), and two levers (carbs and fat, the dials you move to land the
   calorie goal). Carbs and fat *are* calories, so a day that ran under on carbs and over on fat
-  while landing calories and clearing protein is the plan working, not two misses. **Hard findings:**
-  calories missed the goal in either direction, or protein short of the floor. **Soft findings** (a
-  sentence, not an alarm): protein well past the floor — not "over target", but calories that could
-  have gone to carbs or fat. When protein overshoots and calories still land, the levers had to
-  give: that's the same observation, so report it once. See manage-macros for the full framing. One
-  target applies to every day; macros no longer records whether a day was training or rest.
+  while landing calories and clearing protein is the plan working, not two misses. **Hard findings —
+  report these from here:** calories missed the goal in either direction, or protein short of the
+  floor. **The soft findings, the thresholds for them, and the rule for collapsing a shape into one
+  finding are deliberately not reproduced here** — they live in manage-macros. Report the hard
+  findings, and read manage-macros before characterizing the *shape* of a day (a lever out of
+  proportion, protein past the floor) or you will under-report it. One target applies to every day;
+  macros no longer records whether a day was training or rest.
 - Mention training (a lift, a ride) as part of the day's story — it's context for the eating,
   and vice versa, and since the day-type field was retired, `lifting`/`rides` are the only record
   that training happened at all.
@@ -85,8 +86,10 @@ empty days come back **zeroed, never missing**), `weight` (`days`: one series po
 measurement rows, plus `trend`), and `gaps` (computed over
 **elapsed days only** — a week isn't missing its Friday on Tuesday).
 
-Aggregate in plain terms as the question needs (days on/off target, total riding time, sessions
-lifted). Don't manufacture a composite "week score".
+Aggregate in plain terms as the question needs (days that landed the calorie goal, how often
+protein cleared its floor, total riding time, sessions lifted). Macros aggregate along the grain
+of the target, not as four over/under tallies — see manage-macros. Don't manufacture a composite
+"week score".
 
 ## Units — how Curtis speaks
 
@@ -108,6 +111,7 @@ for them the moment the conversation narrows:
 | When the conversation turns to… | Use |
 |---|---|
 | what he ate, logging food, correcting an entry, batches | **manage-macros** |
+| the shape of a day's or week's eating — a lever out of proportion, protein past the floor | **manage-macros** |
 | logging a weigh-in, correcting one, the long trend | **manage-weight** |
 | reading/interpreting a workout, a lift's progression, the goal | **manage-lifting** |
 | a specific ride, naming/annotating one, the riding block | **manage-rides** |
