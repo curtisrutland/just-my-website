@@ -21,7 +21,7 @@ export function AppShell({
   children,
 }: {
   routeSegment: string;
-  activeModule?: "macros" | "weight" | "shopping" | "lifting" | "rides";
+  activeModule?: "macros" | "weight" | "shopping" | "lifting" | "rides" | "vitals";
   headerRight?: ReactNode;
   navFooter?: ReactNode;
   /** Rendered by a module's `loading.tsx`: pulses the active nav marker so the clicked module
@@ -44,6 +44,7 @@ export function AppShell({
           <NavItem label="weight" href="/weight" active={activeModule === "weight"} loading={loading} />
           <NavItem label="lifting" href="/lifting" active={activeModule === "lifting"} loading={loading} />
           <NavItem label="rides" href="/rides" active={activeModule === "rides"} loading={loading} />
+          <NavItem label="vitals" href="/vitals" active={activeModule === "vitals"} loading={loading} />
           <NavItem label="shopping" href="/shopping" active={activeModule === "shopping"} loading={loading} />
           <RecipesNavLink />
           <GithubNavLink />

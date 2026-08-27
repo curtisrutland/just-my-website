@@ -17,6 +17,7 @@ import {
 import { liftingAnnotationPatchSchema, liftingGoalCreateSchema, liftingGoalPatchSchema } from "../src/lib/lifting/schema";
 import { ridePatchSchema } from "../src/lib/rides/schema";
 import { shoppingCreateSchema, shoppingPatchSchema } from "../src/lib/shopping/schema";
+import { vitalsDaySchema, vitalsIngestSchema } from "../src/lib/vitals/schema";
 import { weightCreateSchema, weightPatchSchema } from "../src/lib/weight/schema";
 
 /**
@@ -845,12 +846,93 @@ const ridesSpec = {
   },
 };
 
+const vitalsSpec = {
+  openapi: "3.0.3",
+  info: {
+    title: "justmy.website — vitals",
+    version: "0.1.0",
+    description:
+      "Token API for the vitals module (daily Garmin measurements). Generated from Zod schemas; do not hand-edit. " +
+      "Principle: MEASUREMENTS, NOT VERDICTS — no readiness score, Body Battery, stress, VO2max, FTP or sleep grade " +
+      "is modelled here; they survive only inside the write-only rawPayload archive. " +
+      "There is no human write path and therefore no PATCH: the sole writer is the Garmin daemon, and a wrong value " +
+      "is corrected by reprocessing the stored payload.",
+  },
+  security: [{ bearerAuth: [] }],
+  components: {
+    securitySchemes: {
+      ...securitySchemes,
+      publisherToken: {
+        type: "http",
+        scheme: "bearer",
+        description:
+          "JMW_PUBLISHER_TOKEN — the Garmin daemon's scoped credential. Accepted by exactly two routes across the " +
+          "whole API (POST /api/vitals and POST /api/rides/upload) and by nothing else: it can never read, PATCH, or DELETE.",
+      },
+    },
+    schemas: {
+      VitalsIngest: js(vitalsIngestSchema),
+      VitalsDay: js(vitalsDaySchema),
+      Error: errorSchema,
+    },
+  },
+  paths: {
+    "/api/vitals": {
+      get: {
+        summary: "List days of measurements (same shape as the detail read)",
+        parameters: [
+          ...pageParams,
+          { name: "from", in: "query", schema: { type: "string", format: "date" } },
+          { name: "to", in: "query", schema: { type: "string", format: "date" } },
+        ],
+        responses: { ...okList("VitalsDay"), ...errorResponses },
+      },
+      post: {
+        summary: "Push one day of Garmin measurements (upsert; the daemon re-polls a trailing window)",
+        description:
+          "Body carries Garmin's responses VERBATIM; the server normalizes, validates, then upserts. 201 the first " +
+          "time a day is seen, 200 on every later re-push — re-pushing is the normal case, not an error.",
+        security: [{ publisherToken: [] }, { bearerAuth: [] }],
+        requestBody: jsonBody("VitalsIngest"),
+        responses: { ...created("Day created"), ...ok("Day replaced"), ...errorResponses },
+      },
+    },
+    "/api/vitals/{date}": {
+      get: { summary: "Get one day", parameters: [pathParam("date")], responses: { ...ok("Day of measurements"), ...errorResponses } },
+      delete: {
+        summary: "Soft/hard delete a day (the daemon's next poll can re-create it)",
+        parameters: [pathParam("date"), hardParam],
+        responses: { ...noContent, ...errorResponses },
+      },
+    },
+    "/api/vitals/{date}/reprocess": {
+      post: {
+        summary: "Re-derive a day's columns from its stored rawPayload",
+        description: "The correction lever, mirroring rides: re-parse the archive rather than re-poll Garmin or hand-edit.",
+        parameters: [pathParam("date")],
+        responses: { ...ok("Reprocessed day"), ...errorResponses },
+      },
+    },
+    "/api/vitals/summary": {
+      get: {
+        summary: "Derived rollup: 7-day trailing averages, week-over-week deltas, and the gap list",
+        parameters: [
+          { name: "window", in: "query", schema: { type: "integer", default: 30, minimum: 1, maximum: 365 }, description: "Days back from `end`" },
+          { name: "end", in: "query", schema: { type: "string", format: "date" }, description: "Last day of the window (default the latest day)" },
+        ],
+        responses: { ...ok("Rollup (trends + gaps)"), ...errorResponses },
+      },
+    },
+  },
+};
+
 const fragments = [
   ["macros", macrosSpec],
   ["weight", weightSpec],
   ["shopping", shoppingSpec],
   ["lifting", liftingSpec],
   ["rides", ridesSpec],
+  ["vitals", vitalsSpec],
 ] as const;
 
 mkdirSync("openapi", { recursive: true });

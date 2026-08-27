@@ -61,7 +61,7 @@ Tables live in `src/lib/db/schema.ts`, namespaced by module (`macro_food`, `macr
 `macro_day_tag` (retired — history only), `macro_target_profile`, `weight_entry`, `shopping_item`, `lifting_session`,
 `lifting_exercise`, `lifting_set`, `lifting_session_note`, `lifting_goal`, `ride`, `ride_stream`).
 Each module's OpenAPI fragment is **generated** from its Zod schemas (`openapi/macros.json`,
-`openapi/weight.json`, `openapi/lifting.json`, `openapi/rides.json`), never hand-written.
+`openapi/weight.json`, `openapi/lifting.json`, `openapi/rides.json`, `openapi/vitals.json`), never hand-written.
 
 ## Getting started
 
@@ -113,18 +113,21 @@ the Neon and Clerk Marketplace integrations. The rest:
 | [`docs/weight-model.md`](docs/weight-model.md) | The weight module's data model + trend/rollup math |
 | [`docs/lifting-model.md`](docs/lifting-model.md) | The lifting module's data model — Hevy ingestion + the annotation layer, derived e1RM/tonnage/PRs |
 | [`docs/rides-model.md`](docs/rides-model.md) | The rides module's data model — FIT ingestion, the raw-file Blob store, streams, the publisher token |
+| [`docs/vitals-model.md`](docs/vitals-model.md) | The vitals module's data model — daily Garmin measurements, and the measurement-vs-verdict line it draws |
+| [`docs/garmin-daemon.md`](docs/garmin-daemon.md) | The Garmin daemon on Curtis's Upboard — what it polls, its token lifecycle, and what it may not do |
 | [`docs/UI-CONTRACT.md`](docs/UI-CONTRACT.md) | Design tokens, component inventory, layout slots |
 | [`docs/archive/`](docs/archive/) | Historical briefs, handoffs, and the pre-issues backlog (see its README) |
 | [GitHub Issues](https://github.com/curtisrutland/just-my-website/issues) | Outstanding work + deferred decisions (the tracker) |
 
 ## Status
 
-Live in production at [justmy.website](https://justmy.website). All five modules — **macros**,
-**weight**, **shopping**, **lifting**, and **rides** — are deployed, each with its schema, repo,
+Live in production at [justmy.website](https://justmy.website). All six modules — **macros**,
+**weight**, **shopping**, **lifting**, **rides**, and **vitals** — are deployed, each with its schema, repo,
 token API routes, Clerk-gated UI, generated OpenAPI fragment, and a Python skill
-(`manage-macros`, `manage-weight`, `manage-shopping`, `manage-lifting`, `manage-rides`). A sixth
+(`manage-macros`, `manage-weight`, `manage-shopping`, `manage-lifting`, `manage-rides`,
+`manage-vitals`). A seventh
 skill, **`manage-health`**, is the one sanctioned cross-cut (`docs/CONVENTIONS.md` §9): a
-read-only unified daily/weekly view over the four health modules, assembled at the skill layer
+read-only unified daily/weekly view over the five health modules, assembled at the skill layer
 from their existing read endpoints — no server-side aggregation.
 Auth currently runs on the Clerk **dev** instance (the production-instance switch is an open issue).
 Outstanding work and deferred decisions are tracked as

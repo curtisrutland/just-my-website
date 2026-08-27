@@ -1,18 +1,18 @@
 ---
 name: manage-health
 description: >-
-  The unified view of Curtis's health data in justmy.website — macros, body weight, lifting, and
-  rides in one daily or weekly snapshot. Use for check-ins and cross-domain questions: "how am I
+  The unified view of Curtis's health data in justmy.website — macros, body weight, lifting,
+  rides, and daily watch measurements in one daily or weekly snapshot. Use for check-ins and cross-domain questions: "how am I
   doing", "how's the week going", a morning/evening review, "am I eating enough for how much I'm
   training", or to see what's unlogged or pending. Read-only: it assembles what the per-module
   skills manage; every write belongs to manage-macros / manage-weight / manage-lifting /
-  manage-rides.
+  manage-rides. (manage-vitals is read-only everywhere — nothing writes a measurement.)
 ---
 
 # manage-health
 
 One skill, the whole picture. The health modules are deliberately separate — food, weight,
-lifting, rides each with its own skill — but Curtis's actual question is often about the person,
+lifting, rides, vitals each with its own skill — but Curtis's actual question is often about the person,
 not a module: *how am I doing?* This skill answers that with one call instead of four.
 
 The signature: **assemble, never invent.** Every number in the view is a module's own number under
@@ -46,11 +46,16 @@ view = h.daily("2026-07-28") # any day
 Returns one dict: `macros` (the day rollup — totals, estimation, the resolved target —
 without the entry list), `weight` (`entry` for the day or None, plus `trend` — the rollup summary
 as of that day), `lifting` (`sessions` started that local day, the current `goal`, and
-`uninterpretedCount` across all days), `rides` (that day's activities, **all sports**, not just
+`uninterpretedCount` across all days), `vitals` (`day` — the watch measurements for that date or
+None — plus `trend`: standing 7-day averages for resting heart rate, HRV and sleep), `rides` (that day's activities, **all sports**, not just
 cycling), and `gaps`.
 
 How to speak it:
 - **Lead with what happened**, not with what's missing. Gaps come last, gently.
+- **Vitals: measurements, never verdicts.** Lead with `trend.*.currentAvg`, not `current` — one
+  night's HRV is noise the same way one morning's weight is. Garmin's scores (readiness, Body
+  Battery, stress, VO2max) are deliberately not in the data; do not reconstruct them, and do not
+  turn a low HRV into "you should rest". `null` means NOT MEASURED — say so, never render it 0.
 - **Weight: the 7-day average (`trend.currentAvg`) is the truth** — a single day's weight is
   noise. Lead with the trend, mention the day's number second if at all.
 - **Macros: totals against the day's resolved target.** One target applies to every day; macros
@@ -69,7 +74,8 @@ view = h.weekly("2026-07-21") # the week containing that date
 Weeks are **Monday-start**, matching the rides weekly rollup — "this week" means the same thing
 everywhere. Returns `weekStart`/`weekEnd`, `macros` (one `{date, totals, target}` per day —
 empty days come back **zeroed, never missing**), `weight` (`days`: one series point per **elapsed** day with
-`weight` null when unweighed, plus `trend`), `lifting`, `rides`, and `gaps` (computed over
+`weight` null when unweighed, plus `trend`), `lifting`, `rides`, `vitals` (`days`: the week's
+measurement rows, plus `trend`), and `gaps` (computed over
 **elapsed days only** — a week isn't missing its Friday on Tuesday).
 
 Aggregate in plain terms as the question needs (days on/off target, total riding time, sessions

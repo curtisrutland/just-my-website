@@ -51,6 +51,14 @@ const MODULES: Module[] = [
   },
   {
     glyph: "▸",
+    name: "vitals",
+    badge: "LIVE",
+    href: "/vitals",
+    active: true,
+    desc: "Daily measurements off the watch — sleep, resting heart rate, HRV, blood oxygen. Measurements, not verdicts: no readiness score, no Body Battery, no grade for last night.",
+  },
+  {
+    glyph: "▸",
     name: "shopping",
     badge: "LIVE",
     href: "/shopping",

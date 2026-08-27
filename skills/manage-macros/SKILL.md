@@ -337,6 +337,9 @@ avg_fat = sum(d["totals"]["fatContent"] for d in days) / len(days)
 Macros are one lens on the same person. When you're missing context, it usually lives in a
 sibling skill — reach across instead of guessing:
 
+- **manage-vitals** — the daily measurements off the watch (sleep, resting heart rate, HRV,
+  blood oxygen). Measurements only, never Garmin's scores. Useful context for a flat session,
+  a hard week, or a body that is not recovering — but read it as data, not a verdict.
 - **manage-health** — the unified daily/weekly view (macros + weight + lifting + rides in one
   call). Use it when Curtis asks how the day or week is going overall, or for a check-in that's
   bigger than food.

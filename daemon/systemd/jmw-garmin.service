@@ -1,0 +1,27 @@
+[Unit]
+Description=justmy.website Garmin daemon
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=jmw
+WorkingDirectory=/opt/jmw-garmin
+# Holds JMW_PUBLISHER_TOKEN. Mode 0600, owned by the service user — the token must never
+# reach the command line, where it would be world-readable in `ps`.
+EnvironmentFile=/etc/jmw-garmin.env
+ExecStart=/opt/jmw-garmin/venv/bin/python /opt/jmw-garmin/garmin_daemon.py
+Restart=on-failure
+RestartSec=60
+StandardOutput=journal
+StandardError=journal
+
+# The daemon needs its own directory and the network. Nothing else.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/jmw-garmin
+
+[Install]
+WantedBy=multi-user.target

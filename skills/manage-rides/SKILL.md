@@ -99,6 +99,9 @@ to edit around it.
 
 A ride is also a training day. When the conversation widens past the ride itself:
 
+- **manage-vitals** — the daily measurements off the watch (sleep, resting heart rate, HRV,
+  blood oxygen). Measurements only, never Garmin's scores. Useful context for a flat session,
+  a hard week, or a body that is not recovering — but read it as data, not a verdict.
 - **manage-health** — the unified daily/weekly view (rides + lifting + macros + weight in one
   call) for "how's the week going" and check-ins.
 - **manage-lifting** — the other half of training. The goal statement lives there and names the

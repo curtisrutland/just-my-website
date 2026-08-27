@@ -68,6 +68,9 @@ try to correct the date — `log_weight()` on the correct day (it replaces that 
 The scale is an outcome, not a cause. When the conversation asks *why* the trend moved, the
 inputs live in the sibling skills:
 
+- **manage-vitals** — the daily measurements off the watch (sleep, resting heart rate, HRV,
+  blood oxygen). Measurements only, never Garmin's scores. Useful context for a flat session,
+  a hard week, or a body that is not recovering — but read it as data, not a verdict.
 - **manage-health** — the unified daily/weekly view; use it for "how am I doing" check-ins that
   are bigger than weight.
 - **manage-macros** — the eating side; totals vs target are the first place to look when the

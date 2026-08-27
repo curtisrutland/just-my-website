@@ -178,5 +178,8 @@ siblings:
 - **manage-macros / manage-weight** — fueling and body weight. A sustained deficit or a moving
   weight trend is context for stalled numbers, and bodyweight movements read differently as the
   bodyweight changes.
+- **manage-vitals** — the daily measurements off the watch (sleep, resting heart rate, HRV,
+  blood oxygen). Measurements only, never Garmin's scores. Useful context for a flat session,
+  a hard week, or a body that is not recovering — but read it as data, not a verdict.
 - **manage-health** — the unified daily/weekly view; the fastest way to see a week of training +
   eating + weight at once before you interpret.

@@ -1,0 +1,3 @@
+# garminconnect ONLY. Deliberately NOT `garth`: it is deprecated and unmaintained
+# (https://github.com/matin/garth/discussions/222), and garminconnect has already moved off it.
+garminconnect==0.3.11

@@ -656,3 +656,71 @@
     order: 4;
   }
 }
+
+/* ============================================================================
+ * Vitals module (VitalsTable.tsx). 14 measurement columns is a spreadsheet on a
+ * phone, so at <=768px the table stops being a table: each row becomes a card
+ * and each cell a label/value line, driven by the data-label attributes the
+ * component already emits. Desktop keeps the grid and scrolls it horizontally
+ * rather than squeezing the columns.
+ * ==========================================================================*/
+.vitals-row:hover td {
+  background: var(--color-surface);
+}
+@media (max-width: 768px) {
+  .vitals-scroll {
+    overflow-x: visible;
+  }
+  .vitals-table thead {
+    display: none;
+  }
+  .vitals-table,
+  .vitals-table tbody,
+  .vitals-table tr,
+  .vitals-table td {
+    display: block;
+    width: 100%;
+  }
+  .vitals-table tr {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    margin-bottom: 10px;
+    padding: 4px 0;
+  }
+  .vitals-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    border-bottom: none !important;
+    padding: 4px 12px !important;
+    text-align: right;
+  }
+  /* The day cell is the card's header, not another label/value line. */
+  .vitals-table td:first-child {
+    border-bottom: 1px solid var(--color-border) !important;
+    padding-bottom: 7px !important;
+    margin-bottom: 3px;
+  }
+  .vitals-table td:not(:first-child)::before {
+    content: attr(data-label);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-text-muted);
+    opacity: 0.8;
+  }
+  .vitals-trend-row {
+    grid-template-columns: 1fr auto !important;
+    row-gap: 8px !important;
+  }
+  /* The sparkline spans both columns beneath the value + delta. */
+  .vitals-trend-row > svg {
+    grid-column: 1 / -1;
+    width: 100% !important;
+  }
+  .vitals-chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+}
