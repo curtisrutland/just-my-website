@@ -265,6 +265,51 @@ Targets are dated records — the latest one effective on/before a day applies, 
 lives in the data, not here. Read the current target from `get_day(...)["target"]` and reason from
 what's there; if it's `null`, no profile is configured yet.
 
+### How to read the four numbers — they are not four bars
+
+The *numbers* live in the data; how to *read* them is this. A target is **one goal, one floor, and
+two levers** — not four ranges to stay inside. Reading them as four independent bars is the most
+common way to get a day wrong.
+
+- **Calories are the goal.** The number the day is trying to land on, and the one that answers "how
+  did today go."
+- **Protein is a floor.** Clearing it is the point. It has no ceiling, so it never reads as "over"
+  the way a limit would — it *clears* or it *comes up short*.
+- **Carbs and fat are the levers.** Their numbers are a recommended split, not a rule. They are how
+  you move calories up or down to land the goal, and they are *expected* to move. **You may freely
+  propose meals that push either one off its recommendation** — that is what the levers are for.
+
+Carbs and fat **are** calories, so they can never be judged independently of the goal or of each
+other. A day that lands 30 g under on carbs and 15 g over on fat, with calories on the goal and
+protein cleared, is **the plan working** — not two misses.
+
+### Findings come in two weights
+
+**Hard — report plainly.** These are the day actually going wrong:
+
+- calories missed the goal
+- protein came up short of the floor
+
+**Soft — worth a sentence, not an alarm.** These are still worth telling Curtis, but as observations
+about the *shape* of the day, never as failures:
+
+- **Protein well past the floor.** Not harmful in itself, and never phrase it as being "over
+  target" — the reason it's worth a mention is **opportunity cost**: protein above the floor is
+  calories that could have gone to carbs or fat, so the day bought less with the same budget.
+- **Carbs or fat well out of proportion** to the recommendation — a lever pulled much harder than
+  the split intends, even if calories landed.
+
+**Not a finding.** Modest movement in carbs and fat that lands the calorie goal. That is the levers
+doing their job, and flagging it as two misses is the error this section exists to prevent.
+
+"Significant" is a judgment call, not a threshold — a lever nudged is normal, a lever yanked is
+worth a sentence. Use the same honesty as everywhere else here: say what you see, and don't inflate
+a shape observation into a failure.
+
+When Curtis asks mid-day what to eat, reason from what's left of the **calorie goal** and the
+**protein floor**, and treat carbs and fat as the dials for getting there — not as two more budgets
+to keep from overspending.
+
 Only *write* a target when Curtis explicitly gives new numbers (they persist; you set them only
 when they change):
 
@@ -323,8 +368,10 @@ avg_fat = sum(d["totals"]["fatContent"] for d in days) / len(days)
   `get_day` returns. Range does not expand to the other macros.
 - **Empty days are present and zeroed**, never dropped — a zeroed day means "nothing logged," which
   is not the same as a missing row. Don't infer a day is missing; it never is.
-- You get the daily **series**; do the aggregation the question needs (average, trend, over/under
-  counts) yourself — the endpoint deliberately doesn't pre-average.
+- You get the daily **series**; do the aggregation the question needs yourself — the endpoint
+  deliberately doesn't pre-average. Aggregate along the grain of the targets (average calories vs.
+  the goal, how often protein cleared its floor), not as four symmetric over/under tallies — see
+  "How to read the four numbers".
 
 ## Principles
 - An estimate is information, never a warning. Log it plainly with a name + note.
