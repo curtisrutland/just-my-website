@@ -1,7 +1,7 @@
 import { and, asc, count, desc, eq, gte, isNull, lte, max, min } from "drizzle-orm";
 import { addDays, dateRange } from "@/lib/date";
 import { db } from "@/lib/db";
-import { vitalsDay, type VitalsDay } from "@/lib/db/schema";
+import { vitalsDay, type NewVitalsDay, type VitalsDay } from "@/lib/db/schema";
 import type { VitalsDayInput } from "./schema";
 import type { VitalsDayView, VitalsPoint, VitalsRollup, VitalsTrend } from "./types";
 
@@ -53,12 +53,54 @@ function hasAnyMeasurement(row: Pick<VitalsDay, (typeof MEASUREMENTS)[number]>):
  * Deliberately a full replace, not a merge: a merge would let a stale field from an earlier poll
  * survive a later one that legitimately cleared it, and there'd be no way to tell the two apart.
  */
-export async function upsertDay(input: VitalsDayInput): Promise<{ row: VitalsDay; created: boolean }> {
-  const values = {
-    ...input,
+/**
+ * Explicitly project the validated input onto EVERY column, defaulting absent to null.
+ *
+ * This is load-bearing and not merely tidy: the schema's measurement fields are `.nullish()`, so a
+ * field the daemon omits is *absent* from the parsed object — and Drizzle's `.set()` only writes
+ * the keys it is given. Spreading the input would silently MERGE, letting a stale value from an
+ * earlier poll survive a later poll that legitimately cleared it, with no way to tell the two
+ * apart. Listing the columns makes the full-replace contract real, and makes a newly added column
+ * a compile error here rather than a field that quietly never updates.
+ */
+function toColumns(input: VitalsDayInput): NewVitalsDay {
+  return {
+    measuredOn: input.measuredOn,
+    sleepTotalSeconds: input.sleepTotalSeconds ?? null,
+    sleepDeepSeconds: input.sleepDeepSeconds ?? null,
+    sleepLightSeconds: input.sleepLightSeconds ?? null,
+    sleepRemSeconds: input.sleepRemSeconds ?? null,
+    sleepAwakeSeconds: input.sleepAwakeSeconds ?? null,
+    napSeconds: input.napSeconds ?? null,
     sleepStartAt: input.sleepStartAt ? new Date(input.sleepStartAt) : null,
     sleepEndAt: input.sleepEndAt ? new Date(input.sleepEndAt) : null,
+    sleepSpo2Avg: input.sleepSpo2Avg ?? null,
+    sleepSpo2Low: input.sleepSpo2Low ?? null,
+    sleepRespirationAvg: input.sleepRespirationAvg ?? null,
+    hrvLastNightMs: input.hrvLastNightMs ?? null,
+    hrvLastNight5MinHighMs: input.hrvLastNight5MinHighMs ?? null,
+    restingHeartRate: input.restingHeartRate ?? null,
+    minHeartRate: input.minHeartRate ?? null,
+    maxHeartRate: input.maxHeartRate ?? null,
+    spo2Avg: input.spo2Avg ?? null,
+    spo2Low: input.spo2Low ?? null,
+    respirationWakingAvg: input.respirationWakingAvg ?? null,
+    respirationLow: input.respirationLow ?? null,
+    respirationHigh: input.respirationHigh ?? null,
+    steps: input.steps ?? null,
+    floorsAscended: input.floorsAscended ?? null,
+    intensityMinutesModerate: input.intensityMinutesModerate ?? null,
+    intensityMinutesVigorous: input.intensityMinutesVigorous ?? null,
+    rawPayload: input.rawPayload,
   };
+}
+
+/**
+ * Upsert one day. Garmin REVISES a day after the fact — sleep finalizes in the morning, resting HR
+ * updates late — so the daemon re-polls a trailing window and the newest poll wins WHOLESALE.
+ */
+export async function upsertDay(input: VitalsDayInput): Promise<{ row: VitalsDay; created: boolean }> {
+  const values = toColumns(input);
   const existing = await getDay(input.measuredOn);
   if (existing) {
     const [row] = await db

@@ -178,7 +178,7 @@ the raw itself is wrong, soft-delete the day and let the daemon re-poll it.
 | `GET /api/vitals` | standard bearer | paginated list, `from`/`to` date range |
 | `GET /api/vitals/summary` | standard bearer | derived rollup + series + gaps |
 | `GET /api/vitals/{date}` | standard bearer | one day, `rawPayload` excluded by default |
-| `POST /api/vitals` | **publisher token** (+ standard) | upsert one day. `201` on create, `200` on update |
+| `POST /api/vitals` | **publisher token** (+ standard) | upsert one day; body is `{ measuredOn, raw }`. `201` on create, `200` on update |
 | `POST /api/vitals/{date}/reprocess` | standard bearer | re-parse the stored raw, rewrite fact columns |
 | `DELETE /api/vitals/{date}` | soft by default; hard requires `JMW_API_KEY` | agent token structurally barred from hard delete |
 
@@ -206,19 +206,43 @@ publisher token is rejected by a vitals **read**.
 
 ## Zod schema (`src/lib/vitals/schema.ts`) — single source of truth
 
-One `vitalsDaySchema` for the daemon's write: `measuredOn` (ISO date), every measurement optional and
-nullable, `rawPayload` passthrough. Normalization happens here, not in the daemon:
+**Refined during build (2026-08-27), and worth a look at approval time.** The daemon posts Garmin's
+responses **verbatim** and the *server* normalizes — rather than the daemon sending pre-mapped
+fields. Two schemas, one pipeline:
 
-- Epoch-millisecond sleep timestamps → instants.
+```
+POST body -> vitalsIngestSchema.parse   { measuredOn, raw }
+          -> normalizeGarminDay(...)    the ONE place a Garmin field acquires meaning
+          -> vitalsDaySchema.parse      the validated measurement shape
+          -> repo.upsertDay
+```
+
+This is the rides pipeline exactly (`decode(bytes) → fitRideSchema.parse → repo`), and it buys three
+things the original sketch did not:
+
+1. **The daemon stays a dumb pipe**, which `docs/garmin-daemon.md` already promised it would be.
+2. **Reprocess is exact.** `POST /api/vitals/{date}/reprocess` replays the *same* normalizer over
+   the stored payload, so a re-parse cannot drift from a fresh ingest.
+3. **`rawPayload` cannot be forgotten** — it is the input, not an extra field the daemon must
+   remember to attach.
+
+`vitalsDaySchema` is `.strict()`, and that is what enforces the module's principle at the boundary:
+if a future change ever tries to push a readiness score or Body Battery, the write **fails loudly**
+instead of the schema quietly growing a verdict column. There is no patch schema — there is no human
+write path to need one.
+
+Normalization rules, all in `src/lib/vitals/normalize.ts`:
+
+- Sleep timestamps come from the **GMT** epoch-ms fields, never the `Local` ones (those are the same
+  moment shifted by the offset, which would store a fake instant in a `timestamptz`).
 - Seconds stay **seconds** and milliseconds stay **milliseconds** (numbers, never strings, per the
   numeric contract) — the UI formats "6h 16m", the data does not.
+- Anything absent or unparseable becomes `null` ("not measured"), never `0`.
 - Stage seconds are **not** rebalanced to sum to `sleepTotalSeconds`. If Garmin's numbers disagree, we
   store what it said; inventing consistency is a verdict.
-- A view schema shared by list and detail, so #40 cannot recur.
+- One view schema shared by list and detail, so #40 cannot recur.
 
 The OpenAPI fragment is generated from this file — it is **not** hand-written.
-
----
 
 ## UI contract — component inventory
 

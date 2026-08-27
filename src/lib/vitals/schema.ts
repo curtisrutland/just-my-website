@@ -80,3 +80,20 @@ export const vitalsDaySchema = z
   .strict();
 
 export type VitalsDayInput = z.infer<typeof vitalsDaySchema>;
+
+/**
+ * What the daemon actually POSTs: a date plus Garmin's responses VERBATIM.
+ *
+ * The daemon is a dumb pipe by design (docs/garmin-daemon.md § "What the daemon may NOT do") — it
+ * does not decide what a field means. The server normalizes (`normalizeGarminDay`) and then parses
+ * with `vitalsDaySchema`, the same shape rides uses: `decode(bytes) -> schema.parse -> repo`. That
+ * also makes reprocess exact, because it replays the identical normalizer over the stored payload.
+ */
+export const vitalsIngestSchema = z
+  .object({
+    measuredOn: calendarDate,
+    raw: z.record(z.string(), z.unknown()),
+  })
+  .strict();
+
+export type VitalsIngest = z.infer<typeof vitalsIngestSchema>;
