@@ -54,17 +54,23 @@ export function requirePrimary(request: Request): AuthOk | AuthFail {
 }
 
 /**
- * The scoped third token (rides module, documented kernel departure — docs/rides-model.md):
- * `JMW_PUBLISHER_TOKEN` is the v2 daemon's credential and is accepted by EXACTLY ONE route,
- * `POST /api/rides/upload` — which calls this instead of `requireBearer`. It is deliberately
- * NOT added to `identify()`: the publisher token can never pass `requireBearer`/`requirePrimary`,
- * so it can't read, patch, or delete anything, anywhere. Least privilege: a leaked daemon box
- * can push FIT files and nothing else.
+ * The scoped third token (documented kernel departure — docs/rides-model.md §2,
+ * docs/vitals-model.md § "Kernel departure"): `JMW_PUBLISHER_TOKEN` is the Garmin daemon's
+ * credential, accepted by EXACTLY TWO routes, both of which call this instead of `requireBearer`:
+ *
+ *   - `POST /api/rides/upload`  — push a FIT file
+ *   - `POST /api/vitals`        — push one day of measurements
+ *
+ * Both are pushes of machine-collected facts from the box in Curtis's house. The token is
+ * deliberately NOT added to `identify()`, so it can never pass `requireBearer`/`requirePrimary`:
+ * no reads, no PATCH, no DELETE, anywhere, in any module. Least privilege — a leaked daemon box
+ * can push facts and nothing else. Widening this list is a kernel change: it needs a model-doc
+ * entry and a test, not just a call site.
  */
-export type UploadTokenKind = TokenKind | "publisher";
-type UploadAuthOk = { ok: true; kind: UploadTokenKind };
+export type PublisherTokenKind = TokenKind | "publisher";
+type PublisherAuthOk = { ok: true; kind: PublisherTokenKind };
 
-export function requireUploadToken(request: Request): UploadAuthOk | AuthFail {
+export function requirePublisherToken(request: Request): PublisherAuthOk | AuthFail {
   const token = extractBearer(request);
   if (!token) return { ok: false, response: unauthorized("Missing bearer token") };
   const publisher = process.env.JMW_PUBLISHER_TOKEN;

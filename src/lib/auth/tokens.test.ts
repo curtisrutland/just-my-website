@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { requireBearer, requirePrimary, requireUploadToken } from "./tokens";
+import { requireBearer, requirePrimary, requirePublisherToken } from "./tokens";
 
 // Tokens loaded from .env.local by vitest.setup.ts.
 const primary = process.env.JMW_API_KEY!;
@@ -40,22 +40,30 @@ describe("requirePrimary (primary key only)", () => {
   });
 });
 
-describe("requireUploadToken (the one publisher-accepting check — rides upload only)", () => {
+describe("requirePublisherToken (the one publisher-accepting check — rides upload + vitals push)", () => {
   it("accepts the publisher token", () => {
-    const r = requireUploadToken(req(`Bearer ${publisher}`));
+    const r = requirePublisherToken(req(`Bearer ${publisher}`));
     expect(r.ok && r.kind).toBe("publisher");
   });
   it("still accepts both JMW tokens", () => {
-    expect(requireUploadToken(req(`Bearer ${primary}`)).ok).toBe(true);
-    expect(requireUploadToken(req(`Bearer ${agent}`)).ok).toBe(true);
+    expect(requirePublisherToken(req(`Bearer ${primary}`)).ok).toBe(true);
+    expect(requirePublisherToken(req(`Bearer ${agent}`)).ok).toBe(true);
   });
   it("rejects a missing/unknown token", () => {
-    expect(requireUploadToken(req()).ok).toBe(false);
-    expect(requireUploadToken(req("Bearer nope")).ok).toBe(false);
+    expect(requirePublisherToken(req()).ok).toBe(false);
+    expect(requirePublisherToken(req("Bearer nope")).ok).toBe(false);
   });
   it("the publisher token is structurally rejected EVERYWHERE else", () => {
-    // Least privilege: the daemon credential can push files and do nothing else, anywhere.
+    // Least privilege: the daemon credential can push facts and do nothing else, anywhere.
     expect(requireBearer(req(`Bearer ${publisher}`)).ok).toBe(false);
     expect(requirePrimary(req(`Bearer ${publisher}`)).ok).toBe(false);
+  });
+
+  it("cannot READ vitals — the routes it can reach are pushes only", () => {
+    // The scope grew from one route to two (docs/vitals-model.md). Pushing a day of vitals is
+    // allowed; reading one back is not, and that asymmetry is the whole point of the token.
+    const read = new Request("https://x/api/vitals", { headers: { authorization: `Bearer ${publisher}` } });
+    expect(requireBearer(read).ok).toBe(false);
+    expect(requirePrimary(read).ok).toBe(false);
   });
 });

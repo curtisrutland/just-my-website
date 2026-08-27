@@ -582,6 +582,75 @@ export type MacroFood = typeof macroFood.$inferSelect;
 export type NewMacroFood = typeof macroFood.$inferInsert;
 export type MacroEntry = typeof macroEntry.$inferSelect;
 export type NewMacroEntry = typeof macroEntry.$inferInsert;
+/**
+ * `vitals_day` — one row per calendar day of Garmin measurements (vitals module,
+ * docs/vitals-model.md). The module's principle is **measurements, not verdicts**: no score
+ * column exists here by design (no training readiness, Body Battery, stress, VO2max, FTP, sleep
+ * grade). Those arrive in the payload and stay buried in `rawPayload`, which nothing reads.
+ *
+ * ONE WRITER: the Garmin daemon, via `POST /api/vitals` with the scoped publisher token. There is
+ * no human write path — an HRV cannot be hand-typed — so there is no PATCH; corrections happen by
+ * REPROCESSING `rawPayload`, exactly as a ride is reprocessed from its stored FIT file.
+ *
+ * Every measurement column is NULLABLE and that is load-bearing: null means "not measured" (watch
+ * off, no sleep recorded, never synced) and must never render as 0.
+ */
+export const vitalsDay = pgTable(
+  "vitals_day",
+  {
+    ...auditColumns(),
+    // The local calendar date. ONE live row per day (partial-unique below) with upsert semantics:
+    // Garmin REVISES a day after the fact — sleep is finalized in the morning, resting HR updates
+    // late — so the daemon re-polls a trailing window and the newest poll wins.
+    measuredOn: date("measured_on", { mode: "string" }).notNull(),
+
+    // Sleep. Stage seconds are Garmin's classification, not a measurement (see the model doc);
+    // stored as given and never rebalanced to sum to the total.
+    sleepTotalSeconds: integer("sleep_total_seconds"),
+    sleepDeepSeconds: integer("sleep_deep_seconds"),
+    sleepLightSeconds: integer("sleep_light_seconds"),
+    sleepRemSeconds: integer("sleep_rem_seconds"),
+    sleepAwakeSeconds: integer("sleep_awake_seconds"),
+    napSeconds: integer("nap_seconds"),
+    sleepStartAt: timestamp("sleep_start_at", { withTimezone: true }),
+    sleepEndAt: timestamp("sleep_end_at", { withTimezone: true }),
+    sleepSpo2Avg: real("sleep_spo2_avg"),
+    sleepSpo2Low: real("sleep_spo2_low"),
+    sleepRespirationAvg: real("sleep_respiration_avg"),
+
+    // HRV in MILLISECONDS — a measurement, unlike Garmin's "HRV status" verdict which is dropped.
+    hrvLastNightMs: integer("hrv_last_night_ms"),
+    hrvLastNight5MinHighMs: integer("hrv_last_night_5min_high_ms"),
+
+    restingHeartRate: integer("resting_heart_rate"),
+    minHeartRate: integer("min_heart_rate"),
+    maxHeartRate: integer("max_heart_rate"),
+
+    spo2Avg: real("spo2_avg"),
+    spo2Low: real("spo2_low"),
+    respirationWakingAvg: real("respiration_waking_avg"),
+    respirationLow: real("respiration_low"),
+    respirationHigh: real("respiration_high"),
+
+    // Steps and floors are measured. Distance is NOT stored (steps x estimated stride). Intensity
+    // minutes are HR-zone-counted, kept on the same reasoning as the rides HR-zone histogram.
+    steps: integer("steps"),
+    floorsAscended: real("floors_ascended"),
+    intensityMinutesModerate: integer("intensity_minutes_moderate"),
+    intensityMinutesVigorous: integer("intensity_minutes_vigorous"),
+
+    // The lossless source (as the FIT file is for rides, rawPayload for lifting): verbatim Garmin
+    // responses, so dropped fields can be back-filled later without re-polling a rate-limited API.
+    rawPayload: jsonb("raw_payload").notNull(),
+  },
+  (t) => [
+    index("vitals_day_measured_on_idx").on(t.measuredOn),
+    uniqueIndex("vitals_day_measured_on_key")
+      .on(t.measuredOn)
+      .where(sql`${t.deletedAt} is null`),
+  ]
+);
+
 export type MacroBatch = typeof macroBatch.$inferSelect;
 export type NewMacroBatch = typeof macroBatch.$inferInsert;
 export type MacroDayTag = typeof macroDayTag.$inferSelect;
@@ -610,3 +679,5 @@ export type Ride = typeof ride.$inferSelect;
 export type NewRide = typeof ride.$inferInsert;
 export type RideStream = typeof rideStream.$inferSelect;
 export type NewRideStream = typeof rideStream.$inferInsert;
+export type VitalsDay = typeof vitalsDay.$inferSelect;
+export type NewVitalsDay = typeof vitalsDay.$inferInsert;

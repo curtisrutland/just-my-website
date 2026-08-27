@@ -1,0 +1,36 @@
+CREATE TABLE "vitals_day" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"deleted_at" timestamp with time zone,
+	"measured_on" date NOT NULL,
+	"sleep_total_seconds" integer,
+	"sleep_deep_seconds" integer,
+	"sleep_light_seconds" integer,
+	"sleep_rem_seconds" integer,
+	"sleep_awake_seconds" integer,
+	"nap_seconds" integer,
+	"sleep_start_at" timestamp with time zone,
+	"sleep_end_at" timestamp with time zone,
+	"sleep_spo2_avg" real,
+	"sleep_spo2_low" real,
+	"sleep_respiration_avg" real,
+	"hrv_last_night_ms" integer,
+	"hrv_last_night_5min_high_ms" integer,
+	"resting_heart_rate" integer,
+	"min_heart_rate" integer,
+	"max_heart_rate" integer,
+	"spo2_avg" real,
+	"spo2_low" real,
+	"respiration_waking_avg" real,
+	"respiration_low" real,
+	"respiration_high" real,
+	"steps" integer,
+	"floors_ascended" real,
+	"intensity_minutes_moderate" integer,
+	"intensity_minutes_vigorous" integer,
+	"raw_payload" jsonb NOT NULL
+);
+--> statement-breakpoint
+CREATE INDEX "vitals_day_measured_on_idx" ON "vitals_day" USING btree ("measured_on");--> statement-breakpoint
+CREATE UNIQUE INDEX "vitals_day_measured_on_key" ON "vitals_day" USING btree ("measured_on") WHERE "vitals_day"."deleted_at" is null;

@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import * as z from "zod";
-import { requireUploadToken } from "@/lib/auth/tokens";
+import { requirePublisherToken } from "@/lib/auth/tokens";
 import { errorResponse, validationError } from "@/lib/http/errors";
 import { created, ok } from "@/lib/http/responses";
 import { FitDecodeError } from "@/lib/rides/fit";
@@ -11,8 +11,9 @@ import { ingestFitFile } from "@/lib/rides/ingest";
  * (`application/octet-stream`), not JSON and not multipart — simplest possible contract for
  * the v2 daemon (`curl --data-binary @ride.fit`).
  *
- * AUTH: the one route that accepts `JMW_PUBLISHER_TOKEN` (via `requireUploadToken`), alongside
- * the normal JMW tokens. The publisher token works nowhere else.
+ * AUTH: one of the two routes that accept `JMW_PUBLISHER_TOKEN` (via `requirePublisherToken`),
+ * alongside the normal JMW tokens. The other is `POST /api/vitals`; the publisher token works
+ * nowhere else, and can never read, PATCH, or DELETE.
  *
  * Idempotent by design: re-uploading known bytes (or the same activity re-exported) returns
  * `200` + the existing ride with `deduped: true` — the daemon re-sends files forever and that
@@ -23,7 +24,7 @@ import { ingestFitFile } from "@/lib/rides/ingest";
 const MAX_BYTES = 15 * 1024 * 1024;
 
 export async function POST(request: NextRequest) {
-  const auth = requireUploadToken(request);
+  const auth = requirePublisherToken(request);
   if (!auth.ok) return auth.response;
 
   const bytes = Buffer.from(await request.arrayBuffer());
