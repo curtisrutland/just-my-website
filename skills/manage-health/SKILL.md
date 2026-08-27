@@ -62,11 +62,11 @@ How to speak it:
   (calories), one floor (protein), and two levers (carbs and fat, the dials you move to land the
   calorie goal). Carbs and fat *are* calories, so a day that ran under on carbs and over on fat
   while landing calories and clearing protein is the plan working, not two misses. **Hard findings:**
-  calories missed, or protein short of the floor. **Soft findings** (a sentence, not an alarm):
-  protein well past the floor — not "over target", but calories that could have gone to carbs or
-  fat — or a lever pulled much harder than the split intends. See manage-macros for the full
-  framing. One target applies to every day; macros no longer records whether a day was training
-  or rest.
+  calories missed the goal in either direction, or protein short of the floor. **Soft findings** (a
+  sentence, not an alarm): protein well past the floor — not "over target", but calories that could
+  have gone to carbs or fat. When protein overshoots and calories still land, the levers had to
+  give: that's the same observation, so report it once. See manage-macros for the full framing. One
+  target applies to every day; macros no longer records whether a day was training or rest.
 - Mention training (a lift, a ride) as part of the day's story — it's context for the eating,
   and vice versa, and since the day-type field was retired, `lifting`/`rides` are the only record
   that training happened at all.

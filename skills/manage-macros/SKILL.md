@@ -283,11 +283,19 @@ Carbs and fat **are** calories, so they can never be judged independently of the
 other. A day that lands 30 g under on carbs and 15 g over on fat, with calories on the goal and
 protein cleared, is **the plan working** — not two misses.
 
+**The split is not required to sum to the calorie goal, and usually won't.** Protein floor + carb
+and fat recommendations are a suggested shape for the day, not a decomposition of the budget; a gap
+of a hundred-odd calories between the two is normal and is not a misconfigured target. Never
+"reconcile" the split to the goal, and never report the gap as a finding.
+
 ### Findings come in two weights
 
 **Hard — report plainly.** These are the day actually going wrong:
 
-- calories missed the goal
+- calories missed the goal — **in either direction**. A day well under the goal is as much a
+  finding as a day well over it; the goal is a number to land on, not a ceiling to stay beneath.
+  Report the size and the direction and leave the interpretation to Curtis — don't infer from the
+  numbers whether the plan is a deficit and quietly excuse an undershoot.
 - protein came up short of the floor
 
 **Soft — worth a sentence, not an alarm.** These are still worth telling Curtis, but as observations
@@ -299,12 +307,18 @@ about the *shape* of the day, never as failures:
 - **Carbs or fat well out of proportion** to the recommendation — a lever pulled much harder than
   the split intends, even if calories landed.
 
+**Report the shape once.** When protein overshoots the floor and calories still land, the levers
+*had* to give — that is the same fact, not a second one. Name the opportunity cost and stop; don't
+also flag the carbs and fat that moved to absorb it.
+
 **Not a finding.** Modest movement in carbs and fat that lands the calorie goal. That is the levers
 doing their job, and flagging it as two misses is the error this section exists to prevent.
 
 "Significant" is a judgment call, not a threshold — a lever nudged is normal, a lever yanked is
-worth a sentence. Use the same honesty as everywhere else here: say what you see, and don't inflate
-a shape observation into a failure.
+worth a sentence. As a reference point, not a rule: a lever inside roughly 20% of its
+recommendation is a nudge and not worth mentioning. The point of the anchor is that the same day
+reads the same way twice, not that 20% is a line anything fails at. Use the same honesty as
+everywhere else here: say what you see, and don't inflate a shape observation into a failure.
 
 When Curtis asks mid-day what to eat, reason from what's left of the **calorie goal** and the
 **protein floor**, and treat carbs and fat as the dials for getting there — not as two more budgets
