@@ -5,7 +5,7 @@ https://justmy.website. Base URL and agent token are injected at build time (or 
 JMW_AGENT_TOKEN env vars for local dev).
 
 This client is deliberately a READER. It calls the same per-module read endpoints the dedicated
-skills use (macros, weight, lifting, rides) and assembles their answers into one daily or weekly
+skills use (macros, weight, lifting, rides, vitals) and assembles their answers into one daily or weekly
 view — it computes NO new metrics, renames NO fields, and has NO write methods. Every number in
 the assembled view is a module's own number, under the module's own field names. The only thing
 added is `gaps`: a list of factual absences (nothing logged, nothing interpreted) — observations,
@@ -106,6 +106,10 @@ class HealthClient:
              "lifting": {"sessions": sessions STARTED on this local date, "goal": current goal
                          statement or None, "uninterpretedCount": pending reads across ALL days},
              "rides":   activities on this local date (ALL sports, not just cycling),
+             "vitals":  {"day": the day's measurements or None, "trend": the summary rollup
+                         {restingHeartRate, hrvLastNightMs, sleepTotalSeconds} — each
+                         {current, currentAvg, deltaPerWeek}; lead with the averages, a single
+                         night is noise},
              "gaps":    factual absences — see SKILL.md}
         """
         day = date or self.today()
@@ -122,6 +126,14 @@ class HealthClient:
 
         rides = self._get("/api/rides", {"from": day, "to": day, "limit": 20}).get("items", [])
 
+        vitals_day = self._get_or_none(f"/api/vitals/{day}")
+        # Series dropped: the daily view wants the standing averages, not 30 days of points.
+        vitals_trend = {
+            k: {m: v.get(m) for m in ("current", "currentAvg", "deltaPerWeek")}
+            for k, v in self._get("/api/vitals/summary", {"window": 30, "end": day}).items()
+            if k in ("restingHeartRate", "hrvLastNightMs", "sleepTotalSeconds")
+        }
+
         gaps: list[str] = []
         entry_count = macros.get("estimation", {}).get("entryCount", 0)
         if entry_count == 0:
@@ -130,6 +142,8 @@ class HealthClient:
             gaps.append(f"no weight logged for {day}")
         if uninterpreted > 0:
             gaps.append(f"{uninterpreted} lifting session(s) awaiting interpretation")
+        if vitals_day is None:
+            gaps.append(f"no watch measurements for {day}")
 
         return {
             "date": day,
@@ -137,6 +151,7 @@ class HealthClient:
             "weight": {"entry": weight_entry, "trend": weight_trend},
             "lifting": {"sessions": sessions, "goal": lifting.get("goal"), "uninterpretedCount": uninterpreted},
             "rides": rides,
+            "vitals": {"day": vitals_day, "trend": vitals_trend},
             "gaps": gaps,
         }
 
@@ -152,6 +167,8 @@ class HealthClient:
                          days ending at the week's end (clamped to today)},
              "lifting": {"sessions": sessions started this local week, "goal", "uninterpretedCount"},
              "rides":   activities this week (ALL sports),
+             "vitals":  {"days": the week's measurement rows (one per day that has one),
+                         "trend": summary rollup over the 30 days ending at the week's end},
              "gaps":    factual absences over the ELAPSED days only — see SKILL.md}
         """
         anchor = _date.fromisoformat(end or self.today())
@@ -174,6 +191,10 @@ class HealthClient:
 
         rides = self._get("/api/rides", {"from": start_s, "to": end_s, "limit": 50}).get("items", [])
 
+        vitals_days = self._get("/api/vitals", {"from": start_s, "to": end_s, "limit": 7}).get("items", [])
+        vitals_trend = self._get("/api/vitals/summary", {"window": 30, "end": min(end_s, today_s)})
+        vitals_trend.pop("gaps", None)  # the week's own gap list is assembled below
+
         # Gaps only over days that have actually happened — a week isn't missing its Friday on Tuesday.
         elapsed = [d for d in (day.get("date") for day in macros_days) if d and d <= today_s]
         unlogged_food = [d for d in macros_days if d.get("date") in elapsed and not d.get("totals", {}).get("calories")]
@@ -188,6 +209,10 @@ class HealthClient:
             gaps.append("no weight logged: " + ", ".join(unweighed))
         if uninterpreted > 0:
             gaps.append(f"{uninterpreted} lifting session(s) awaiting interpretation")
+        measured = {d.get("measuredOn") for d in vitals_days}
+        unmeasured = [d for d in elapsed if d not in measured]
+        if unmeasured:
+            gaps.append("no watch measurements: " + ", ".join(unmeasured))
 
         return {
             "weekStart": start_s,
@@ -196,5 +221,6 @@ class HealthClient:
             "weight": {"days": weight_days, "trend": rollup.get("summary")},
             "lifting": {"sessions": sessions, "goal": lifting.get("goal"), "uninterpretedCount": uninterpreted},
             "rides": rides,
+            "vitals": {"days": vitals_days, "trend": vitals_trend},
             "gaps": gaps,
         }
