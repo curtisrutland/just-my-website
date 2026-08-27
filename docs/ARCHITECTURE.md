@@ -33,7 +33,8 @@ Five feature modules are live today:
 | **weight** | One body-weight measurement per day | A single day's number is noise; the **7-day rolling average is the truth.** The trend leads, the raw weigh-in is subordinate. |
 | **shopping** | A single flat list of items, one category level deep | Restraint: a plain working utility, not a dashboard. No quantities (the words carry it), no normalization, no history beyond a 7-day "recently bought". Its web UI is a **full editor** (add/check/edit/delete), not just review. |
 | **lifting** | Hevy workouts (read-only facts) + a thin annotation layer | *The numbers are Hevy's; the meaning is ours.* The first **ingestion** module — sets/reps/weights are pulled from Hevy and immutable; what it owns is the annotation (session notes + quality are Curtis's; the interpretation + focus are Claude's). Derived e1RM/tonnage/PRs, never stored. A dated **goal statement** sits above the sessions — freeform prose, written by both surfaces — and rides along on every session read, so an interpretation is never written goal-blind. Bends the kernel twice, deliberately: ingested-not-authored data, and a Hevy-webhook route with a dedicated secret. |
-| **rides** | Garmin FIT activities (rides first; any sport lands here) — summary facts + a downsampled stream per ride, the raw file kept forever in private Vercel Blob | *The log is the value.* The second ingestion module and the first with a **binary** input: decode → `fitRideSchema.parse` → repo, so the no-unvalidated-writes rule survives the file. Every parsed column is immutable from the surfaces (`name`/`note` are the only writable fields; corrections happen by **reprocessing** the stored file). No fitness scores, ever — device-computed training-load numbers stay unexposed in `rawSession`; the HR-zone **histogram** (self-describing, boundaries included) is kept because it's a measurement, not a model. Bends the kernel once more: a third bearer token, `JMW_PUBLISHER_TOKEN`, accepted by exactly one route (`POST /api/rides/upload`) — the future upload daemon's least-privilege credential. |
+| **rides** | Garmin FIT activities (rides first; any sport lands here) — summary facts + a downsampled stream per ride, the raw file kept forever in private Vercel Blob | *The log is the value.* The second ingestion module and the first with a **binary** input: decode → `fitRideSchema.parse` → repo, so the no-unvalidated-writes rule survives the file. Every parsed column is immutable from the surfaces (`name`/`note` are the only writable fields; corrections happen by **reprocessing** the stored file). No fitness scores, ever — device-computed training-load numbers stay unexposed in `rawSession`; the HR-zone **histogram** (self-describing, boundaries included) is kept because it's a measurement, not a model. Bends the kernel once more: a third bearer token, `JMW_PUBLISHER_TOKEN`, accepted by exactly one route (`POST /api/rides/upload`) — the upload daemon's least-privilege credential (the vitals module later widened it to exactly two push routes). |
+| **vitals** | One row per calendar day of Garmin measurements — sleep, resting HR, HRV, SpO₂, respiration, steps — with the raw responses kept forever in `rawPayload` | *Measurements, not verdicts.* The third ingestion module, and the first with **no human write path at all**: the sole writer is a daemon on Curtis's own hardware, so there is no PATCH and corrections happen by **reprocessing** the stored payload. Inherits rides' no-fitness-scores rule and pushes it further — training readiness, Body Battery, stress, VO2max, FTP, race predictions and sleep scores are simply not modelled (the schema is `.strict()`, so pushing one fails loudly). The evidence was decisive: VO2max never populates for an MTB rider, and the API returned two contradictory FTP figures, one derived from body weight. Sleep **stages** are kept with an explicit call-out — they are Garmin's classification, not a measurement — on the same footing as the rides HR-zone histogram. |
 | **panel** | Device/service tokens + the panel's one active recipe; a KV-backed version stamp per section | Does less on purpose. A glanceable kitchen appliance, not an app — read-mostly, no text entry, anything better on a phone stays there. A distinct surface (device-token-scoped API + kiosk UI), not a skill module. See `docs/panel-contract.md`. |
 
 Those two "honesty" principles aren't decoration — they're the reason the data model
@@ -163,8 +164,9 @@ The web UI never presents a token; it authenticates via Clerk session and never 
 accidentally authorize an API call.
 
 Two later, deliberately-scoped additions bend this without weakening it:
-`JMW_PUBLISHER_TOKEN` is a third bearer token accepted by exactly one route
-(`POST /api/rides/upload` — least privilege for a future upload daemon), and the panel
+`JMW_PUBLISHER_TOKEN` is a third bearer token accepted by exactly two routes
+(`POST /api/rides/upload` and `POST /api/vitals` — least privilege for the Garmin daemon,
+which pushes facts and can never read, PATCH or DELETE anywhere), and the panel
 surface has its own hashed/revocable `device_tokens` guarding `/api/panel/**` only (that
 surface also accepts a Clerk session, a documented exception for the no-hardware dev path —
 see `panel-contract.md`).
@@ -259,7 +261,7 @@ conversation.
 
 Modules never touch each other server-side, but the skill layer carries one deliberate
 exception: **`manage-health`** is a read-only aggregator that assembles a unified daily/weekly
-view over the four health modules (macros, weight, lifting, rides) by calling their existing
+view over the five health modules (macros, weight, lifting, rides, vitals) by calling their existing
 token-API read endpoints — module field names verbatim, no new metrics, no writes, plus a
 `gaps` list of factual absences. The cross-cut lives entirely in the replaceable adapter layer,
 so the "modules are self-contained" rule stays true everywhere it's expensive to break (schema,
@@ -318,7 +320,7 @@ Read top-to-bottom, here is the system as it stands:
 - **A small shared kernel** carries auth (`src/lib/auth/`), the HTTP helpers
   (`src/lib/http/` — error envelope, pagination, param parsing, success responses), the pure
   date utility (`src/lib/date.ts`), and the app-shell chrome (`src/components/shell/`). By
-  design it stays small — five modules later, it has grown only by documented exceptions.
+  design it stays small — six modules later, it has grown only by documented exceptions.
 - **Five complete modules** (the §1 table), each a full vertical slice (schema → repo →
   token API → Clerk-gated UI → generated OpenAPI fragment → Python skill): **macros** (with
   the ingredient registry and first-class cooked **batches**), **weight**, **shopping**,

@@ -53,3 +53,9 @@ __pycache__/
 .vscode
 .env*
 src/lib/rides/fixtures/*.fit
+
+# Garmin daemon secrets/state (docs/garmin-daemon.md)
+/daemon/tokenstore
+/daemon/state.json
+/daemon/venv
+/daemon/__pycache__
