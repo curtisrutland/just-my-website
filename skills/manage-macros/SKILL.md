@@ -301,15 +301,24 @@ of a hundred-odd calories between the two is normal and is not a misconfigured t
 **Soft — worth a sentence, not an alarm.** These are still worth telling Curtis, but as observations
 about the *shape* of the day, never as failures:
 
-- **Protein well past the floor.** Not harmful in itself, and never phrase it as being "over
-  target" — the reason it's worth a mention is **opportunity cost**: protein above the floor is
-  calories that could have gone to carbs or fat, so the day bought less with the same budget.
-- **Carbs or fat well out of proportion** to the recommendation — a lever pulled much harder than
-  the split intends, even if calories landed.
+- **Protein well past the floor, on a day that spent its calorie budget.** Not harmful in itself,
+  and never phrase it as being "over target" — the reason it's worth a mention is **opportunity
+  cost**: protein above the floor is calories that could have gone to carbs or fat, so the day
+  bought less with the same budget. **The precondition matters: if the day closed under the calorie
+  goal, nothing was crowded out** — the calorie miss is the finding and the protein is just where
+  some of the smaller total went. Same rough anchor as the levers: inside ~20% of the floor is
+  clearing it, not overshooting it.
+- **Carbs or fat well out of proportion** to the recommendation, **on a day whose calories
+  landed** — a lever pulled much harder than the split intends, which a clean calorie number
+  doesn't excuse.
 
-**Report the shape once.** When protein overshoots the floor and calories still land, the levers
-*had* to give — that is the same fact, not a second one. Name the opportunity cost and stop; don't
-also flag the carbs and fat that moved to absorb it.
+**Report the shape once.** When a macro's position is arithmetically the same fact as another
+finding, it is one finding, not two. Two directions of this: when protein overshoots the floor and
+calories still land, the levers *had* to give — name the opportunity cost and stop, don't also flag
+the carbs and fat that moved to absorb it. And when calories missed the goal — **in either
+direction** — the levers sitting low or high **are** that miss expressed in grams: report the
+calorie miss, say where it sits as texture inside it, and don't also file the lever as a separate
+soft finding. A lever is only its own finding when it moved *against* a calorie result that landed.
 
 **Not a finding.** Modest movement in carbs and fat that lands the calorie goal. That is the levers
 doing their job, and flagging it as two misses is the error this section exists to prevent.
