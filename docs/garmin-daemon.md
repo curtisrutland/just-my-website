@@ -143,12 +143,21 @@ the web UI remaining as a permanent fallback.
 
 ## Deployment
 
-`systemd` unit, `Restart=on-failure`, `EnvironmentFile` holding `JMW_PUBLISHER_TOKEN` at mode `0600`,
-running as an unprivileged user. Single long-lived process with internal sleeps — simpler than two
-cron entries, and it keeps one authenticated client in memory instead of re-authenticating per run
-(which finding #2 makes important). `daemon/README.md` carries the exact install steps.
+A **systemd user service** running as Curtis's own login user (`~/jmw-garmin`, unit in
+`~/.config/systemd/user/`). Deliberately not a system service with a dedicated account: the daemon
+needs no privileges and owns nothing outside `$HOME`, so a user service removes the service account,
+removes sudo from the install entirely, and keeps its journal under `journalctl --user`. Boot
+persistence comes from `loginctl enable-linger` (which needed no sudo), because without lingering
+systemd tears the user manager down at logout.
 
----
+`Restart=on-failure`, `EnvironmentFile` holding `JMW_PUBLISHER_TOKEN` at mode `0600`. A single
+long-lived process with internal sleeps — simpler than two cron entries, and it keeps one
+authenticated client in memory rather than re-authenticating per run, which finding #2 makes
+important. `daemon/README.md` carries the exact install steps.
+
+**Deployed 2026-08-27** on the Upboard (Ubuntu 26.04, Python 3.14). One wrinkle worth recording:
+Ubuntu 26.04 ships neither `pip` nor `ensurepip`, so `python3 -m venv` fails and the venv has to be
+built `--without-pip` with pip bootstrapped in afterwards.
 
 ## Open / deferred
 
