@@ -6,12 +6,17 @@ import "leaflet/dist/leaflet.css";
 import type { RideStreamView } from "@/lib/rides/types";
 import type { PlayheadPosition } from "./playback";
 
+// CARTO requires a key on tile requests (keyless tiles come back watermarked "API KEY REQUIRED").
+// It is public by nature — every tile URL carries it — hence NEXT_PUBLIC_, inlined at build time.
+const CARTO_KEY = process.env.NEXT_PUBLIC_CARTO_BASEMAP_KEY;
+
 /**
  * The route map (Rides.dc.html §ROUTE): the GPS polyline in the accent color over muted CARTO
  * raster tiles (dark/light follows the site theme live). Leaflet is loaded dynamically at mount
  * — it touches `window` at import time, so it can never run during SSR. Rides without GPS never
  * render this component at all (the page omits the section).
  */
+
 export function RideMap({
   stream,
   playhead = null,
@@ -33,7 +38,8 @@ export function RideMap({
 
     const tileUrl = () => {
       const theme = document.documentElement.dataset.theme === "light" ? "light_all" : "dark_all";
-      return `https://{s}.basemaps.cartocdn.com/${theme}/{z}/{x}/{y}{r}.png`;
+      const key = CARTO_KEY ? `?key=${encodeURIComponent(CARTO_KEY)}` : "";
+      return `https://{s}.basemaps.cartocdn.com/${theme}/{z}/{x}/{y}{r}.png${key}`;
     };
 
     (async () => {
