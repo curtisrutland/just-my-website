@@ -37,6 +37,14 @@ Security schemes (OpenAPI):
 - `bearerAuth` — either token. Used for reads and non-destructive writes.
 - `primaryKey` — `JMW_API_KEY` only. Required for hard DELETE.
 
+Scoped device tokens (documented kernel departures — never in `identify()`, so they can never
+pass `bearerAuth`/`primaryKey`; each is accepted only by its named routes, and widening a list
+needs a model-doc entry and a test):
+- `JMW_PUBLISHER_TOKEN` — the Garmin daemon; push-only: `POST /api/rides/upload`,
+  `POST /api/vitals` (`docs/rides-model.md` §2, `docs/vitals-model.md`).
+- `JMW_DISPLAY_TOKEN` — the ESP32 round display; read-only: `GET /api/macros/days/{date}`
+  (`docs/macro-model.md` § "Kernel departure").
+
 The web UI authenticates via Clerk session and never presents a bearer token; it does not
 call `/api`. Clerk gates `/` entirely.
 

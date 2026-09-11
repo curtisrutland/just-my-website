@@ -142,3 +142,27 @@ tie on date; resolution breaks the tie by `createdAt` desc so it is deterministi
 on/after 2026-07-14 the tied rows are identical, so the resolved numbers are unambiguous.
 For days *before* that, the pair differed (2800 vs 2200) and the resolved historical target
 is now whichever row is newest — a deliberate consequence of collapsing to one target.
+
+## Kernel departure: the display token
+
+An ESP32 with a round display polls the day rollup and renders it with its own logic — a raw
+HTTP client, unlike the kitchen panel (a web view of `/panel` with its own device-token model,
+panel-contract §3). Neither JMW token belongs on it: `JMW_API_KEY` can hard-DELETE, and
+`JMW_AGENT_TOKEN` can write every module. Firmware is the most extractable secret in the system
+(plaintext in a binary, flashable over USB), so it gets its own scoped token — the publisher token
+(`docs/rides-model.md` §2) inverted: **read-only, macros-only.**
+
+- `JMW_DISPLAY_TOKEN`, checked by `requireDisplayToken` in `src/lib/auth/tokens.ts`, mirroring
+  `requirePublisherToken`: the display token, else fall through to `requireBearer`.
+- Accepted by **exactly one** route: `GET /api/macros/days/{date}`. The range read, every write
+  (macros included), hard DELETE, other modules, and the publisher's routes all reject it.
+- Deliberately **not** in `identify()`, so it can never pass `requireBearer`/`requirePrimary`.
+  Widening the route list is a kernel change: a line here and a test, not just a call site.
+- Tested against the real handlers in `src/app/api/macros/days/[date]/route.test.ts`.
+
+**Device notes.** The rollup is ~5–6 KB for a typical day, almost all of it `entries` (totals,
+target, and estimation are under 300 B); ArduinoJson's filter drops `entries` while parsing, so no
+compact projection is needed. The date is the device's to compute, in Curtis's timezone
+(`America/Chicago` — NTP plus the POSIX TZ `CST6CDT,M3.2.0,M11.1.0`). Poll every few minutes, not
+seconds: each poll is a Neon query. Vercel is HTTPS-only, so the firmware needs `WiFiClientSecure`
+with a pinned root CA — the token travels in that request.
