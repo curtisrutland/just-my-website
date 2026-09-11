@@ -95,7 +95,15 @@ const macrosSpec = {
   },
   security: [{ bearerAuth: [] }],
   components: {
-    securitySchemes,
+    securitySchemes: {
+      ...securitySchemes,
+      displayToken: {
+        type: "http",
+        scheme: "bearer",
+        description:
+          "JMW_DISPLAY_TOKEN — the ESP32 round display's credential. Accepted ONLY by GET /api/macros/days/{date}; structurally rejected everywhere else (least privilege: it lives in firmware, so it can read one day's rollup and nothing more — no writes, no other read, no other module).",
+      },
+    },
     schemas: {
       FoodCreate: js(foodCreateSchema),
       FoodPatch: js(foodPatchSchema),
@@ -269,6 +277,8 @@ const macrosSpec = {
     "/api/macros/days/{date}": {
       get: {
         summary: "Day rollup (totals, estimation, target, entries)",
+        description: "The one macros route that also accepts the display token (the ESP32 round display).",
+        security: [{ bearerAuth: [] }, { displayToken: [] }],
         parameters: [pathParam("date")],
         responses: {
           "200": { description: "Day rollup", content: { "application/json": { schema: { $ref: "#/components/schemas/DayRollup" } } } },

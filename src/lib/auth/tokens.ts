@@ -77,3 +77,27 @@ export function requirePublisherToken(request: Request): PublisherAuthOk | AuthF
   if (publisher && safeEqual(token, publisher)) return { ok: true, kind: "publisher" };
   return requireBearer(request);
 }
+
+/**
+ * The scoped fourth token (documented kernel departure — docs/macro-model.md § "Kernel departure"):
+ * `JMW_DISPLAY_TOKEN` is the ESP32 round display's credential, accepted by EXACTLY ONE route, which
+ * calls this instead of `requireBearer`:
+ *
+ *   - `GET /api/macros/days/{date}` — the day rollup
+ *
+ * The publisher token inverted: read-only, macros-only. It lives in firmware — the most extractable
+ * secret in the system — so it is deliberately NOT added to `identify()`, and can never pass
+ * `requireBearer`/`requirePrimary`: no writes (macros included), no other macros read, no other
+ * module. A recovered device can read one day's totals and nothing else. Widening this list is a
+ * kernel change: it needs a model-doc entry and a test, not just a call site.
+ */
+export type DisplayTokenKind = TokenKind | "display";
+type DisplayAuthOk = { ok: true; kind: DisplayTokenKind };
+
+export function requireDisplayToken(request: Request): DisplayAuthOk | AuthFail {
+  const token = extractBearer(request);
+  if (!token) return { ok: false, response: unauthorized("Missing bearer token") };
+  const display = process.env.JMW_DISPLAY_TOKEN;
+  if (display && safeEqual(token, display)) return { ok: true, kind: "display" };
+  return requireBearer(request);
+}

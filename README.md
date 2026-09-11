@@ -85,6 +85,7 @@ the Neon and Clerk Marketplace integrations. The rest:
 |---|---|
 | `JMW_API_KEY` | Full-access API token (incl. hard delete) |
 | `JMW_AGENT_TOKEN` | Claude's token — barred from hard delete |
+| `JMW_DISPLAY_TOKEN` | ESP32 round display — read-only, `GET /api/macros/days/{date}` only |
 | `USDA_FDC_API_KEY` | FoodData Central lookups (foods cache into `macro_food` on first resolve) |
 
 ## Scripts
