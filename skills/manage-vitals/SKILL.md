@@ -37,6 +37,9 @@ from client import VitalsClient, hm
 v = VitalsClient()   # base URL + Curtis's agent token are baked in
 ```
 
+Dropped connections are retried for you (a `jmw: retry …` line on stderr is that working). If a call
+still fails after three tries it raises `TransportError`: say it didn't go through; running it again is safe.
+
 ## The main read
 
 ```python

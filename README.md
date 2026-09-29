@@ -102,6 +102,7 @@ the Neon and Clerk Marketplace integrations. The rest:
 | `npm run db:studio` | Drizzle Studio |
 | `npm run openapi:build` | Generate the per-module OpenAPI fragments from the Zod schemas |
 | `npm run skills:build` | Build the Claude skill(s) with the agent token injected |
+| `npm run skills:test` | Test the skills' shared Python transport (retry, error mapping) and its wiring into every client |
 
 ## Documentation
 
