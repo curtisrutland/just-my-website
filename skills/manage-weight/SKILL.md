@@ -15,6 +15,9 @@ truth.** When you report progress, lead with the trend, not a single number.
 ## Requirements
 - **No install needed.** `client.py` uses only the Python standard library.
 - **Network egress:** the skill talks to **`https://justmy.website`** — that host must be reachable.
+- **Dropped connections are retried for you.** A `jmw: retry …` line on stderr is that working. If a call
+  still fails after three tries it raises `TransportError`: tell Curtis it didn't go through; running it
+  again later is safe.
 
 ## Setup
 

@@ -1,7 +1,7 @@
 import { config } from "dotenv";
 import { execSync } from "node:child_process";
-import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { basename, join } from "node:path";
 
 // Injects the agent token + API base URL into the skill's placeholders, producing a built copy
 // under skills/dist/ (gitignored — it contains the secret). The zips are for UPLOAD to claude.ai,
@@ -30,16 +30,29 @@ rmSync(distRoot, { recursive: true, force: true });
 // otherwise the copy loop crashes on a dir and/or that junk gets bundled into the upload zip.
 const isIgnored = (fileName) => fileName.startsWith(".") || fileName.endsWith(".pyc");
 
+// Shared modules every skill imports as a sibling of its client.py. One source copy in
+// skills/_shared/, copied into each built skill — never hand-copied into a skill's own folder.
+const SHARED = ["jmw_transport.py"];
+
 for (const name of SKILLS) {
   const srcDir = join("skills", name);
   const outDir = join(distRoot, name);
   mkdirSync(outDir, { recursive: true });
-  for (const entry of readdirSync(srcDir, { withFileTypes: true })) {
-    if (!entry.isFile() || isIgnored(entry.name)) continue;
-    const content = readFileSync(join(srcDir, entry.name), "utf8")
+  const sources = readdirSync(srcDir, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && !isIgnored(entry.name))
+    .map((entry) => join(srcDir, entry.name));
+  for (const file of SHARED) {
+    if (existsSync(join(srcDir, file))) {
+      console.error(`${srcDir}/${file} shadows skills/_shared/${file} — delete the per-skill copy.`);
+      process.exit(1);
+    }
+    sources.push(join("skills/_shared", file));
+  }
+  for (const src of sources) {
+    const content = readFileSync(src, "utf8")
       .replaceAll("__JMW_BASE_URL__", baseUrl)
       .replaceAll("__JMW_AGENT_TOKEN__", token);
-    writeFileSync(join(outDir, entry.name), content);
+    writeFileSync(join(outDir, basename(src)), content);
   }
   // Package the skill folder into a zip for upload to claude.ai (SKILL.md at manage-macros/ root).
   execSync(`zip -r -q "${name}.zip" "${name}"`, { cwd: distRoot });

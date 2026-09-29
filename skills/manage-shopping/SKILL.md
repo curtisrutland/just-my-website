@@ -17,6 +17,11 @@ until checked off (`bought`); removing is a soft-delete for mistakes.
 ## Requirements
 - **No install needed.** `client.py` uses only the Python standard library.
 - **Network egress:** the skill talks to **`https://justmy.website`** — that host must be reachable.
+- **Dropped connections are retried for you.** A `jmw: retry …` line on stderr is that working. If a call
+  still fails after three tries it raises `TransportError`: tell Curtis it didn't go through; running it
+  again later is safe.
+- **Except `add_item`.** If it fails in transit it raises `WriteOutcomeUnknown` instead: the item may or
+  may not have been added. **Don't re-add blind** — `get_list()` first, then add only what's missing.
 
 ## Setup
 

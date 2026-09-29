@@ -16,12 +16,16 @@ a raw m/s or meter value.
 
 from __future__ import annotations
 
-import json
 import os
-import urllib.error
-import urllib.parse
-import urllib.request
+import sys
 from typing import Any, Optional
+
+try:
+    import jmw_transport
+except ImportError:  # running from the source tree — the skill build copies it next to this file
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "_shared"))
+    import jmw_transport
+from jmw_transport import TransportError, WriteOutcomeUnknown  # noqa: F401 — re-exported for callers
 
 BASE_URL = (os.environ.get("JMW_BASE_URL") or "__JMW_BASE_URL__").rstrip("/")
 TOKEN = os.environ.get("JMW_AGENT_TOKEN") or "__JMW_AGENT_TOKEN__"
@@ -72,32 +76,18 @@ class RidesClient:
         self._base = f"{base_url}/api/rides"
         self._headers = {"authorization": f"Bearer {token}", "content-type": "application/json"}
 
-    def _request(self, method: str, path: str, *, body: Any = None, params: Any = None) -> Any:
-        url = self._base + path
-        if params:
-            query = urllib.parse.urlencode({k: v for k, v in params.items() if v is not None})
-            if query:
-                url = f"{url}?{query}"
-        data = json.dumps(body).encode("utf-8") if body is not None else None
-        req = urllib.request.Request(url, data=data, method=method, headers=self._headers)
-        try:
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                if resp.status == 204:
-                    return None
-                payload = resp.read()
-                return json.loads(payload) if payload else None
-        except urllib.error.HTTPError as exc:
-            raw = exc.read()
-            try:
-                parsed = json.loads(raw) if raw else {}
-            except json.JSONDecodeError:
-                parsed = {}
-            err = parsed.get("error", {}) if isinstance(parsed, dict) else {}
-            message = err.get("message") or raw.decode("utf-8", "replace")
-            details = err.get("details") if isinstance(err, dict) else None
-            if details:
-                message = f"{message} ({details})"
-            raise RidesError(f"{exc.code} {err.get('code', 'error')}: {message}") from None
+    def _request(
+        self, method: str, path: str, *, body: Any = None, params: Any = None, idempotent: Optional[bool] = None
+    ) -> Any:
+        return jmw_transport.request(
+            method,
+            self._base + path,
+            self._headers,
+            error_cls=RidesError,
+            body=body,
+            params=params,
+            idempotent=idempotent,
+        )
 
     # -- reads ------------------------------------------------------------------
 

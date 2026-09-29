@@ -241,6 +241,13 @@ parts:
   `scripts/build-skills.mjs`, which replaces `__JMW_BASE_URL__` / `__JMW_AGENT_TOKEN__`
   placeholders and zips the result under `skills/dist/` (git-ignored, because it contains the
   secret).
+- **`jmw_transport.py`** — the HTTP layer every `client.py` calls, kept once in `skills/_shared/`
+  and copied into each skill by the build. It maps the API's error envelope to the skill's own
+  error class and retries dropped connections (Claude's cloud sandbox loses a few percent of TLS
+  handshakes at its outbound proxy). Reads, PATCHes, soft DELETEs, and POSTs the server upserts
+  are retried; a create POST that fails in transit raises `WriteOutcomeUnknown` instead, so the
+  agent reads back before writing again rather than risking a duplicate. Tests:
+  `npm run skills:test`.
 
 So the flow for "I had a chicken thigh" is: Claude reads the conversation → the `manage-macros`
 skill fires → it optionally looks the food up in USDA FoodData Central, scales the macros,

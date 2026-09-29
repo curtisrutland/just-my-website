@@ -20,6 +20,13 @@ record an estimate as if it were a measured fact.
 ## Requirements
 - **No install needed.** `client.py` uses only the Python standard library.
 - **Network egress:** the skill talks to **`https://justmy.website`** — that host must be reachable.
+- **Dropped connections are retried for you.** A `jmw: retry …` line on stderr is that working. If a call
+  still fails after three tries it raises `TransportError`: tell Curtis it didn't go through; running it
+  again later is safe.
+- **Except a create.** If `log_entry`, `log_entries`, `create_food`, `register_ingredient`,
+  `register_batch` or `set_target` fails in transit, it raises `WriteOutcomeUnknown` instead: the write
+  may or may not have landed. **Don't re-log blind** — read back first (`get_day(date)` for entries and
+  the target, `search_ingredient` / `search_batches` for the rest), then write only what's missing.
 
 ## Setup
 

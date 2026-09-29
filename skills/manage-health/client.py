@@ -14,13 +14,17 @@ not judgments. All writes belong to the per-module skills.
 
 from __future__ import annotations
 
-import json
 import os
-import urllib.error
-import urllib.parse
-import urllib.request
+import sys
 from datetime import date as _date, datetime, timedelta
 from typing import Any, Optional
+
+try:
+    import jmw_transport
+except ImportError:  # running from the source tree — the skill build copies it next to this file
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "_shared"))
+    import jmw_transport
+from jmw_transport import TransportError, WriteOutcomeUnknown  # noqa: F401 — re-exported for callers
 from zoneinfo import ZoneInfo
 
 BASE_URL = (os.environ.get("JMW_BASE_URL") or "__JMW_BASE_URL__").rstrip("/")
@@ -44,25 +48,7 @@ class HealthClient:
         self._headers = {"authorization": f"Bearer {token}", "content-type": "application/json"}
 
     def _get(self, path: str, params: Any = None) -> Any:
-        url = self._base + path
-        if params:
-            query = urllib.parse.urlencode({k: v for k, v in params.items() if v is not None})
-            if query:
-                url = f"{url}?{query}"
-        req = urllib.request.Request(url, method="GET", headers=self._headers)
-        try:
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                payload = resp.read()
-                return json.loads(payload) if payload else None
-        except urllib.error.HTTPError as exc:
-            raw = exc.read()
-            try:
-                parsed = json.loads(raw) if raw else {}
-            except json.JSONDecodeError:
-                parsed = {}
-            err = parsed.get("error", {}) if isinstance(parsed, dict) else {}
-            message = err.get("message") or raw.decode("utf-8", "replace")
-            raise HealthError(f"{exc.code} {err.get('code', 'error')}: {message}") from None
+        return jmw_transport.request("GET", self._base + path, self._headers, error_cls=HealthError, params=params)
 
     def _get_or_none(self, path: str) -> Optional[dict]:
         try:

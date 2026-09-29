@@ -8,6 +8,7 @@
     "build": "next build",
     "openapi:build": "tsx scripts/build-openapi.ts",
     "skills:build": "node scripts/build-skills.mjs",
+    "skills:test": "python3 -B -m unittest discover -s skills/tests",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
