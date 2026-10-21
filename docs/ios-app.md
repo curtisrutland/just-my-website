@@ -1,7 +1,11 @@
 # Native iOS app — spec
 
-> **Status: DRAFT for approval** (scoped with Curtis 2026-10-21). Nothing is built until Curtis
-> approves this doc. Tracking epic: #66 (sub-issues #67–#74).
+> Status: **Approved (Curtis, 2026-10-21)** — merged in #75; the conventions amendment (CONVENTIONS
+> §1/§2, AGENTS.md, ARCHITECTURE.md) landed right after it. Tracking epic: #66.
+>
+> **Sequencing (Curtis, 2026-10-21): parity first.** v1 (§6) and then phase 2 (§6.1) together cover
+> everything the web UI does. Native-only features (§9) aren't scoped until the app has reached
+> that parity.
 
 A SwiftUI app for Curtis's iPhone that shows the same six modules as the web UI (macros, weight,
 lifting, rides, vitals, shopping) with native iOS navigation, plus the few writes a phone is
@@ -51,8 +55,8 @@ What does **not** change:
   number the API doesn't expose, the fix is to expose it from `src/lib/{module}` (§7), never to
   reimplement the math in Swift.
 
-On approval, CONVENTIONS §1 (the table) and §2 (the device-token rule), AGENTS.md ("Two tokens") and
-ARCHITECTURE.md (surfaces) are amended to match. Those edits ride in the same PR as this doc.
+CONVENTIONS §1 (the table) and §2 (the device-token rule), AGENTS.md ("Two tokens") and
+ARCHITECTURE.md (surfaces) are amended to match, in the PR that follows this doc's approval.
 
 ---
 
@@ -93,6 +97,9 @@ tokens: **an explicit allowlist of routes, a model-doc entry (this doc), and a t
    | `macros:read` · `weight:read` · `lifting:read` · `rides:read` · `vitals:read` · `shopping:read` | The module's `GET` routes listed in §3.4 |
    | `weight:write` | `POST /api/weight/entries` |
    | `shopping:write` | `POST /api/shopping/items`, `PATCH /api/shopping/items/{id}` |
+
+   Phase 2 (§6.1) widens `weight:write` and `shopping:write` and adds `macros:write`,
+   `lifting:write` and `rides:write`.
 
    A `PHONE_SCOPES` preset (all six `:read` + the two `:write`) sits beside `KITCHEN_PANEL_SCOPES`.
    Module-qualified scopes cost nothing now and mean a second device (an iPad on the kitchen wall,
@@ -153,7 +160,8 @@ Write:
 | `shopping:write` | `POST /api/shopping/items`, `PATCH /api/shopping/items/{id}` |
 
 Deliberately **not** on the list in v1: every `DELETE` (including soft-delete), every other
-`PATCH`, ingestion (`/api/rides/upload`, `POST /api/vitals`, `/api/lifting/pull`, webhooks),
+`PATCH`. Phase 2 (§6.1) adds the web's remaining writes, including soft-deletes, but never hard
+deletes. Also off the list in v1: ingestion (`/api/rides/upload`, `POST /api/vitals`, `/api/lifting/pull`, webhooks),
 `/api/macros/usda/*`, foods and batches. Food logging stays Claude's job (the `manage-macros`
 skill), where estimation and pinned ingredients live.
 
@@ -296,12 +304,48 @@ recommendation; it's a one-file change either way.
   unpaired/revoked and returns to the pair screen; network failure keeps the last data on screen
   with a banner.
 
-### Out of v1 (named so the seams stay open)
+### 6.1 Phase 2 — write parity (#76, before anything in §9)
 
-- **Food logging / editing macros** — stays with the `manage-macros` skill.
-- **Edit or delete** anything, including weight entries and shopping items (soft-delete stays off
-  the allowlist).
-- **Lifting goals, ride names/notes** — editable on the web or via skills.
+The web UI has 16 server actions (`src/app/(app)/*/actions.ts`). v1 covers 3 of them: setting a
+weight, adding a shopping item, and patching a shopping item. Phase 2 covers the other 13, so the
+app does everything the PWA does.
+
+Every one of these already has a token-API route that runs the same schema and repo function as
+the web action. Phase 2 widens the allowlist (§3.4); it adds no routes.
+
+| Module | Web action(s) | Route | Scope |
+|---|---|---|---|
+| macros | `patchEntryAction` (grams, kcal, P/F/C) | `PATCH /api/macros/entries/{id}` | `macros:write` |
+| macros | `deleteEntryAction` | `DELETE /api/macros/entries/{id}` (soft) | `macros:write` |
+| weight | `patchWeightAction` | `PATCH /api/weight/entries/{id}` | `weight:write` |
+| weight | `deleteWeightAction` | `DELETE /api/weight/entries/{id}` (soft) | `weight:write` |
+| shopping | `patchItemAction` (edit text/category — same route as check-off) | `PATCH /api/shopping/items/{id}` | `shopping:write` |
+| shopping | `deleteItemAction` | `DELETE /api/shopping/items/{id}` (soft) | `shopping:write` |
+| lifting | `saveNotesAction`, `setQualityAction` | `PATCH /api/lifting/sessions/{id}` | `lifting:write` |
+| lifting | `saveGoalAction` | `POST /api/lifting/goal` | `lifting:write` |
+| lifting | `catchUpAction` (pull from Hevy) | `POST /api/lifting/pull` | `lifting:write` |
+| rides | `saveNameAction`, `saveNoteAction` | `PATCH /api/rides/{id}` | `rides:write` |
+| rides | `deleteRideAction` | `DELETE /api/rides/{id}` (soft) | `rides:write` |
+| rides | `uploadFitAction` | `POST /api/rides/upload` (FIT file from the Files picker) | `rides:write` |
+
+Three rules on top of §3:
+
+- **Soft-delete only, structurally.** Every web delete is a soft-delete, and so is every app delete.
+  The handlers keep `?hard=true` on `requirePrimary`; only the soft branch accepts `requireScope`. A
+  device token can't hard-delete for the same reason the agent token can't: the auth layer rejects it.
+- **`rides/upload` keeps its publisher token.** The route takes `requirePublisherToken` *or*
+  `requireScope("rides:write")`. Its publisher-token comment and the CONVENTIONS §2 entry are
+  updated in the same PR.
+- **The phone re-pairs for phase 2.** `PHONE_SCOPES` gains the five `{module}:write` scopes. The
+  existing phone token keeps its v1 scopes, so Curtis mints a new token on `/settings/devices` and
+  revokes the old one. There's no scope-editing UI; re-pairing takes ten seconds.
+
+Vitals has no writes on any surface, so it gets no `:write` scope. No web action creates a macro
+entry, so food logging isn't a parity item. It stays with `manage-macros`.
+
+### Out of v1 and phase 2 (named so the seams stay open)
+
+- **Food logging** — the web can't do it either; it stays with the `manage-macros` skill.
 - **Offline mode / on-disk cache / queued writes.**
 - **iPad, Mac, Watch layouts.** iPhone only; iPad runs it as a phone app.
 - **App Store distribution.** It's a one-person app (§8).
@@ -413,9 +457,10 @@ ios/
 
 ---
 
-## 9. Later — native-only (not v1)
+## 9. Later — native-only (after parity)
 
-The reason to go native at all. Not scoped; listed so v1 doesn't paint them into a corner.
+The reason to go native at all. **Not scoped until v1 and phase 2 (§6.1) ship** (Curtis,
+2026-10-21). They're listed here so v1 doesn't paint them into a corner.
 
 - **Widgets** (Home Screen / Lock Screen): today's macros remaining, the weight trend. Needs the
   token readable by an extension, so the Keychain item moves to a shared access group then.
