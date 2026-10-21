@@ -1,0 +1,6 @@
+# Shared by every module target (ios/scripts/generate-client.sh). Public so the app target can use it.
+generate:
+  - types
+  - client
+accessModifier: public
+namingStrategy: idiomatic
