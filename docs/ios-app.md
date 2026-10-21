@@ -283,8 +283,7 @@ pattern as the module design briefs. The split:
 
 The brief has to be settled before the read views (§10).
 
-**Open for Curtis:** grouping into four tabs vs. six flat tabs (five + More). The grouping is the
-recommendation; it's a one-file change either way.
+**Decided (Curtis, 2026-10-21):** four grouped tabs, as above.
 
 ---
 
@@ -379,7 +378,7 @@ The line between "presentation" (fine to do in Swift) and "domain" (must come fr
 
 | Module | What | Where today | Fix |
 |---|---|---|---|
-| macros | `barState`, `trackSummary`, `targetCaption` — the under/in/over state and wording of each macro against its target | `src/components/macros/macro-state.ts` | Move to `src/lib/macros/` and expose the per-macro state on `GET /api/macros/days/{date}` (exposure of existing logic, the same move as panel-contract 1.1). **Coordinate with #49**, which is redesigning exactly this goal/floor/lever presentation. If #49 is still open when the app reaches macros, v1 shows numbers vs. target without a state color rather than copy logic that's about to change. |
+| macros | `barState`, `trackSummary`, `targetCaption` — the under/in/over state and wording of each macro against its target | `src/components/macros/macro-state.ts` | Move to `src/lib/macros/` and expose the per-macro state on `GET /api/macros/days/{date}` (exposure of existing logic, the same move as panel-contract 1.1). **Coordinate with #49**, which is redesigning exactly this goal/floor/lever presentation. **Decided (Curtis, 2026-10-21):** if #49 is still open when the app reaches macros, v1 shows numbers vs. target without a state color rather than copy logic that's about to change. |
 | shopping | Blank category becomes `"Uncategorized"` | `ShoppingBoard.tsx:89` (the API rejects a blank category) | Move the default into `shoppingCreateSchema`, so web, API and app share it. |
 | rides | The weekly strip's aggregate (cycling only, Monday-start weeks) | `src/app/(app)/rides/page.tsx`, computed over the 200 rides it loads | Have the page use the repo function behind `GET /api/rides/weekly`, and confirm the numbers match. Then app and web can't drift. |
 | vitals | Sleep total = max(`sleepTotalSeconds`, sum of stages) | `SleepStages.tsx:24` | Small. Move to `src/lib/vitals/` and expose it on the day view, or decide the raw total is right. |
@@ -475,7 +474,6 @@ The reason to go native at all. **Not scoped until v1 and phase 2 (§6.1) ship**
 
 ## 10. Open / deferred
 
-- **Tab grouping** (§5) — four grouped tabs recommended; six flat is the alternative.
 - **Native design brief** (§5.1) — written: `docs/ios-design-brief.md` (#71). The read views (#73) build to
   the design Claude Design returns from it.
 - **Paid Developer Program** — not needed for v1; revisit if a "Later" item needs it.
