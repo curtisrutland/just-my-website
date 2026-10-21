@@ -1,13 +1,14 @@
 import { createHash, randomBytes } from "node:crypto";
 import { and, eq, isNull } from "drizzle-orm";
+import { after } from "next/server";
 import { db } from "@/lib/db";
 import { deviceToken } from "@/lib/db/schema";
-import { kv } from "./kv";
-import type { PanelScope } from "./scopes";
+import { kv } from "@/lib/kv";
+import type { DeviceScope } from "./scopes";
 
 /**
- * Device/service tokens for the panel (panel-contract §3). This is the ONLY place the
- * `device_tokens` table is touched. High-entropy random tokens: we store only sha256(raw), so a
+ * Device/service tokens (CONVENTIONS §2): the panel and its recipes sender (panel-contract §3) and the
+ * iOS app (`docs/ios-app.md` §3). This is the ONLY place the `device_tokens` table is touched. High-entropy random tokens: we store only sha256(raw), so a
  * plain indexed hash lookup is both the auth check and safe at rest (the hash is not reversible and
  * the raw never lands in the DB). No bcrypt/argon needed — there is nothing low-entropy to stretch.
  */
@@ -25,7 +26,7 @@ export function generateRawToken(): string {
 export type DeviceTokenIdentity = {
   id: string;
   name: string;
-  scopes: PanelScope[];
+  scopes: DeviceScope[];
 };
 
 /**
@@ -46,7 +47,7 @@ export async function findLiveTokenByRaw(raw: string): Promise<DeviceTokenIdenti
     )
     .limit(1);
   if (!row) return null;
-  return { id: row.id, name: row.name, scopes: row.scopes as PanelScope[] };
+  return { id: row.id, name: row.name, scopes: row.scopes as DeviceScope[] };
 }
 
 /**
@@ -57,7 +58,7 @@ export async function findLiveTokenByRaw(raw: string): Promise<DeviceTokenIdenti
  *
  * Tradeoff: revocation lags on THIS path by up to the TTL — acceptable because the only thing it
  * guards is the three-integer version read, and every write/section route uses the DIRECT
- * (immediate-revocation) `findLiveTokenByRaw`. A future revoke path should also DEL the cache key.
+ * (immediate-revocation) `findLiveTokenByRaw`. `revokeDeviceToken` DELs the cache key, so revocation doesn't wait out the TTL.
  */
 const TOKEN_CACHE_TTL_SECONDS = 24 * 60 * 60; // 24h backstop
 const tokenCacheKey = (hash: string) => `panel:tok:${hash}`;
@@ -90,12 +91,57 @@ export async function findLiveTokenByRawCached(raw: string): Promise<DeviceToken
  */
 export async function createDeviceToken(opts: {
   name: string;
-  scopes: PanelScope[];
-}): Promise<{ raw: string; id: string; name: string; scopes: PanelScope[] }> {
+  scopes: DeviceScope[];
+}): Promise<{ raw: string; id: string; name: string; scopes: DeviceScope[] }> {
   const raw = generateRawToken();
   const [row] = await db
     .insert(deviceToken)
     .values({ name: opts.name, tokenHash: hashToken(raw), scopes: opts.scopes })
     .returning();
-  return { raw, id: row.id, name: row.name, scopes: row.scopes as PanelScope[] };
+  return { raw, id: row.id, name: row.name, scopes: row.scopes as DeviceScope[] };
+}
+
+/**
+ * Revoke a device. Sets `revoked_at` (the audit row stays) and drops the version-poll cache entry, so
+ * revocation is immediate on every path — the direct lookup never sees the token again, and the cached
+ * one can't serve it from KV for up to a day. Returns false if no live token has that id.
+ */
+export async function revokeDeviceToken(id: string): Promise<boolean> {
+  const [row] = await db
+    .update(deviceToken)
+    .set({ revokedAt: new Date() })
+    .where(and(eq(deviceToken.id, id), isNull(deviceToken.revokedAt), isNull(deviceToken.deletedAt)))
+    .returning();
+  if (!row) return false;
+  const client = kv();
+  if (client) {
+    try {
+      await client.del(tokenCacheKey(row.tokenHash));
+    } catch {
+      // KV unavailable → the cached entry ages out at its TTL; the direct lookup already rejects
+    }
+  }
+  return true;
+}
+
+/**
+ * Best-effort "last used" stamp, run after the response so auth never waits on it. Outside a request
+ * scope (scripts, tests) `after` throws, so it falls back to a detached write. NEVER called from the
+ * version-poll path (that would keep Neon awake — panel-contract §4.1).
+ */
+export function touchLastSeen(id: string): void {
+  const stamp = () =>
+    db
+      .update(deviceToken)
+      .set({ lastSeenAt: new Date() })
+      .where(eq(deviceToken.id, id))
+      .then(
+        () => undefined,
+        () => undefined
+      );
+  try {
+    after(stamp);
+  } catch {
+    void stamp();
+  }
 }

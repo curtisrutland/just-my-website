@@ -1,5 +1,7 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { unauthorized } from "@/lib/http/errors";
+import { findLiveTokenByRaw, touchLastSeen } from "./device-tokens";
+import type { ModuleScope } from "./scopes";
 
 /**
  * Token auth at the `/api` boundary (CONVENTIONS §2). Two bearer tokens, no anonymous/session path:
@@ -100,4 +102,36 @@ export function requireDisplayToken(request: Request): DisplayAuthOk | AuthFail 
   const display = process.env.JMW_DISPLAY_TOKEN;
   if (display && safeEqual(token, display)) return { ok: true, kind: "display" };
   return requireBearer(request);
+}
+
+/**
+ * The DB-backed device tokens on module routes (documented kernel departure — CONVENTIONS §2,
+ * `docs/ios-app.md` §3): the iOS app's credential. Each allowlisted route calls this instead of
+ * `requireBearer`, naming the scope it needs (`weight:read`, `shopping:write`, …):
+ *
+ *  1. `JMW_API_KEY` / `JMW_AGENT_TOKEN` pass exactly as they do under `requireBearer` — switching a
+ *     route to this changes nothing for the skills.
+ *  2. Otherwise the token must resolve to a LIVE device token (not revoked, not deleted) that holds
+ *     `scope`. A present-but-bad token is a 401; there is no fallback.
+ *
+ * Device tokens are deliberately NOT in `identify()`, so they can never pass `requireBearer` or
+ * `requirePrimary`: a route accepts one only if its handler asks for a scope here, and hard DELETE
+ * stays on `requirePrimary`. Widening the allowlist is a kernel change: it needs a model-doc entry
+ * (`docs/ios-app.md` §3.4) and a test, not just a call site.
+ */
+export type ScopeTokenKind = TokenKind | "device";
+type ScopeAuthOk = { ok: true; kind: ScopeTokenKind; tokenId?: string };
+
+export async function requireScope(request: Request, scope: ModuleScope): Promise<ScopeAuthOk | AuthFail> {
+  const token = extractBearer(request);
+  if (!token) return { ok: false, response: unauthorized("Missing bearer token") };
+  const kind = identify(token);
+  if (kind) return { ok: true, kind };
+  const device = await findLiveTokenByRaw(token);
+  if (!device) return { ok: false, response: unauthorized("Invalid token") };
+  if (!device.scopes.includes(scope)) {
+    return { ok: false, response: unauthorized(`Token lacks required scope: ${scope}`) };
+  }
+  touchLastSeen(device.id);
+  return { ok: true, kind: "device", tokenId: device.id };
 }

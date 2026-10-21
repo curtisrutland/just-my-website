@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { PanelTabBar } from "@/components/panel/PanelTabBar";
 import { VersionPoller } from "@/components/panel/VersionPoller";
-import { findLiveTokenByRawCached } from "@/lib/panel/tokens";
+import { findLiveTokenByRawCached } from "@/lib/auth/device-tokens";
 import "./panel.css";
 
 /**

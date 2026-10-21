@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { requireBearer } from "@/lib/auth/tokens";
+import { requireBearer, requireScope } from "@/lib/auth/tokens";
 import { parseJson } from "@/lib/http/errors";
 import { paginated, parsePagination } from "@/lib/http/pagination";
 import { created, ok } from "@/lib/http/responses";
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = requireBearer(request);
+  const auth = await requireScope(request, "shopping:write");
   if (!auth.ok) return auth.response;
   const parsed = await parseJson(request, shoppingCreateSchema);
   if (!parsed.ok) return parsed.response;

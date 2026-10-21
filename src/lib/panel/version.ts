@@ -1,4 +1,4 @@
-import { kv } from "./kv";
+import { kv } from "@/lib/kv";
 
 /**
  * Section version stamps (panel-contract §4). The panel polls `/api/panel/version`, compares each

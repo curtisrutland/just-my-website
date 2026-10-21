@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { requireBearer } from "@/lib/auth/tokens";
+import { requireScope } from "@/lib/auth/tokens";
 import { validationError } from "@/lib/http/errors";
 import { paginated, parsePagination } from "@/lib/http/pagination";
 import { ok } from "@/lib/http/responses";
@@ -15,7 +15,7 @@ import { rideListQuerySchema } from "@/lib/rides/schema";
  * There is no POST here — rides are never authored, only ingested (see /api/rides/upload).
  */
 export async function GET(request: NextRequest) {
-  const auth = requireBearer(request);
+  const auth = await requireScope(request, "rides:read");
   if (!auth.ok) return auth.response;
 
   const sp = request.nextUrl.searchParams;

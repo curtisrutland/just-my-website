@@ -391,11 +391,12 @@ ios/
 ```
 
 - **Generated client.** `swift-openapi-generator` (Apple's) produces one client per module from the
-  checked-in `openapi/{module}.json` (OpenAPI 3.0.3, which it supports). The spec stays downstream of
+  generated `openapi/{module}.json` (OpenAPI 3.0.3, which it supports). Those files are build output,
+  gitignored and written by `npm run openapi:build`, so the scaffold (#72) needs a step that runs it
+  and copies the specs into the package before a Swift build. The spec stays downstream of
   Zod, and the Swift client stays downstream of the spec. Field names arrive verbatim — the same
-  schema.org names the skills use (`proteinContent`, `calories`, …), no aliases. Whether the
-  generator's build plugin can read the specs via a symlink into each target, or needs a copy step
-  added to `npm run openapi:build`, is settled during the scaffold.
+  schema.org names the skills use (`proteinContent`, `calories`, …), no aliases. How that copy
+  is wired (a script in `ios/`, or an extra output of `openapi:build`) is settled during the scaffold.
 - **Dependencies:** `swift-openapi-generator`, `swift-openapi-runtime`,
   `swift-openapi-urlsession`. Nothing else third-party; Charts, MapKit, VisionKit,
   LocalAuthentication and Security are system frameworks.

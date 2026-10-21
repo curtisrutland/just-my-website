@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { requireBearer, requirePrimary } from "@/lib/auth/tokens";
+import { requireBearer, requirePrimary, requireScope } from "@/lib/auth/tokens";
 import { notFound, parseJson } from "@/lib/http/errors";
 import { noContent, ok } from "@/lib/http/responses";
 import { deleteRideFile } from "@/lib/rides/blob";
@@ -11,7 +11,7 @@ type Ctx = { params: Promise<{ id: string }> };
 /** GET — the full ride. `?streams=1` includes the downsampled arrays (heavy; off by default —
  *  the agent wants the summary, not 1,800-point arrays). */
 export async function GET(request: NextRequest, { params }: Ctx) {
-  const auth = requireBearer(request);
+  const auth = await requireScope(request, "rides:read");
   if (!auth.ok) return auth.response;
   const includeStream = request.nextUrl.searchParams.get("streams") === "1";
   const ride = await getRide((await params).id, { includeStream });

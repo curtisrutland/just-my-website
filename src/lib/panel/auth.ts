@@ -1,7 +1,7 @@
 import { auth as clerkAuth } from "@clerk/nextjs/server";
 import { unauthorized } from "@/lib/http/errors";
-import type { PanelScope } from "./scopes";
-import { type DeviceTokenIdentity, findLiveTokenByRaw, findLiveTokenByRawCached } from "./tokens";
+import type { DeviceScope, PanelScope } from "@/lib/auth/scopes";
+import { type DeviceTokenIdentity, findLiveTokenByRaw, findLiveTokenByRawCached } from "@/lib/auth/device-tokens";
 
 /**
  * Panel auth (panel-contract §3). Every `/api/panel/**` route calls this. Two credential paths,
@@ -34,7 +34,7 @@ function extractToken(request: Request): string | null {
 }
 
 export type PanelAuthOk =
-  | { ok: true; via: "token"; tokenId: string; name: string; scopes: PanelScope[] }
+  | { ok: true; via: "token"; tokenId: string; name: string; scopes: DeviceScope[] }
   | { ok: true; via: "clerk"; userId: string };
 
 export type PanelAuthResult = PanelAuthOk | { ok: false; response: Response };

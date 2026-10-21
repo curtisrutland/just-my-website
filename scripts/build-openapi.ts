@@ -73,7 +73,15 @@ const hardParam = { name: "hard", in: "query", schema: { type: "boolean" }, desc
 const securitySchemes = {
   bearerAuth: { type: "http", scheme: "bearer", description: "JMW_API_KEY or JMW_AGENT_TOKEN" },
   primaryKey: { type: "http", scheme: "bearer", description: "JMW_API_KEY only — required for hard DELETE" },
+  deviceToken: {
+    type: "http",
+    scheme: "bearer",
+    description:
+      "A DB-backed device token (the iOS app), checked against the scope the operation names ({module}:read or {module}:write). Accepted ONLY by the operations that list it (docs/ios-app.md §3.4); never for hard DELETE.",
+  },
 };
+// The iOS app's allowlisted operations: either env token, or a device token holding the scope.
+const deviceSecurity = [{ bearerAuth: [] }, { deviceToken: [] }];
 const errorSchema = {
   type: "object",
   required: ["error"],
@@ -277,8 +285,8 @@ const macrosSpec = {
     "/api/macros/days/{date}": {
       get: {
         summary: "Day rollup (totals, estimation, target, entries)",
-        description: "The one macros route that also accepts the display token (the ESP32 round display).",
-        security: [{ bearerAuth: [] }, { displayToken: [] }],
+        description: "The one macros route that also accepts the display token (the ESP32 round display), and a device token holding `macros:read` (the iOS app).",
+        security: [{ bearerAuth: [] }, { displayToken: [] }, { deviceToken: [] }],
         parameters: [pathParam("date")],
         responses: {
           "200": { description: "Day rollup", content: { "application/json": { schema: { $ref: "#/components/schemas/DayRollup" } } } },
@@ -329,8 +337,8 @@ const weightSpec = {
   },
   paths: {
     "/api/weight/entries": {
-      get: { summary: "List weigh-ins", parameters: [...pageParams], responses: { ...okList("WeightCreate"), ...errorResponses } },
-      post: { summary: "Upsert a day's weight (one per day; re-logging replaces it)", requestBody: jsonBody("WeightCreate"), responses: { ...ok("Weigh-in (created or replaced) + Location"), ...errorResponses } },
+      get: { security: deviceSecurity, summary: "List weigh-ins", parameters: [...pageParams], responses: { ...okList("WeightCreate"), ...errorResponses } },
+      post: { security: deviceSecurity, summary: "Upsert a day's weight (one per day; re-logging replaces it)", requestBody: jsonBody("WeightCreate"), responses: { ...ok("Weigh-in (created or replaced) + Location"), ...errorResponses } },
     },
     "/api/weight/entries/{id}": {
       get: { summary: "Get a weigh-in", parameters: [pathParam("id")], responses: { ...ok("Weigh-in"), ...errorResponses } },
@@ -338,10 +346,11 @@ const weightSpec = {
       delete: { summary: "Soft/hard delete a weigh-in", parameters: [pathParam("id"), hardParam], responses: { ...noContent, ...errorResponses } },
     },
     "/api/weight/days/{date}": {
-      get: { summary: "Get a day's weigh-in", parameters: [pathParam("date")], responses: { ...ok("Weigh-in"), ...errorResponses } },
+      get: { security: deviceSecurity, summary: "Get a day's weigh-in", parameters: [pathParam("date")], responses: { ...ok("Weigh-in"), ...errorResponses } },
     },
     "/api/weight/rollup": {
       get: {
+        security: deviceSecurity,
         summary: "Trend rollup: per-day series (raw + 7-day average) + summary stats",
         parameters: [
           { name: "window", in: "query", schema: { type: "integer", default: 90, minimum: 7, maximum: 3650 }, description: "Days back from `end`" },
@@ -372,15 +381,16 @@ const shoppingSpec = {
   paths: {
     "/api/shopping/items": {
       get: { summary: "List items", parameters: [...pageParams], responses: { ...okList("ShoppingCreate"), ...errorResponses } },
-      post: { summary: "Add an item", requestBody: jsonBody("ShoppingCreate"), responses: { ...created("Created item"), ...errorResponses } },
+      post: { security: deviceSecurity, summary: "Add an item", requestBody: jsonBody("ShoppingCreate"), responses: { ...created("Created item"), ...errorResponses } },
     },
     "/api/shopping/items/{id}": {
       get: { summary: "Get an item", parameters: [pathParam("id")], responses: { ...ok("Item"), ...errorResponses } },
-      patch: { summary: "Edit or check/un-check an item", parameters: [pathParam("id")], requestBody: jsonBody("ShoppingPatch"), responses: { ...ok("Updated item"), ...errorResponses } },
+      patch: { security: deviceSecurity, summary: "Edit or check/un-check an item", parameters: [pathParam("id")], requestBody: jsonBody("ShoppingPatch"), responses: { ...ok("Updated item"), ...errorResponses } },
       delete: { summary: "Soft/hard delete an item", parameters: [pathParam("id"), hardParam], responses: { ...noContent, ...errorResponses } },
     },
     "/api/shopping/list": {
       get: {
+        security: deviceSecurity,
         summary: "The two-section list view (active grouped by category + recently bought + activeCount)",
         parameters: [{ name: "boughtWithinDays", in: "query", schema: { type: "integer", default: 7, minimum: 1, maximum: 365 }, description: "Recently-bought window (days)" }],
         responses: { ...ok("Two-section list"), ...errorResponses },
@@ -536,6 +546,7 @@ const liftingSpec = {
   paths: {
     "/api/lifting/sessions": {
       get: {
+        security: deviceSecurity,
         summary: "List sessions (the journal)",
         description: "Paginated session summaries, newest first. Filter by interpreted state, focus, and a startedAt range.",
         parameters: [
@@ -570,6 +581,7 @@ const liftingSpec = {
     },
     "/api/lifting/sessions/{id}": {
       get: {
+        security: deviceSecurity,
         summary: "Get a full session (exercises + sets + derived + annotation)",
         parameters: [pathParam("id")],
         responses: { "200": { description: "Session detail", content: { "application/json": { schema: { $ref: "#/components/schemas/SessionDetail" } } } }, ...errorResponses },
@@ -585,6 +597,7 @@ const liftingSpec = {
     },
     "/api/lifting/lifts/{templateId}": {
       get: {
+        security: deviceSecurity,
         summary: "Progression series for one lift identity (best e1RM + top-set per session)",
         parameters: [pathParam("templateId")],
         responses: { "200": { description: "Progression", content: { "application/json": { schema: { $ref: "#/components/schemas/LiftProgression" } } } }, ...errorResponses },
@@ -800,6 +813,7 @@ const ridesSpec = {
     },
     "/api/rides": {
       get: {
+        security: deviceSecurity,
         summary: "List rides (the log)",
         description: "Summaries only (never streams), newest startedAt first. There is no POST here — rides are never authored, only ingested.",
         parameters: [
@@ -814,6 +828,7 @@ const ridesSpec = {
     },
     "/api/rides/{id}": {
       get: {
+        security: deviceSecurity,
         summary: "Get one ride",
         parameters: [pathParam("id"), { name: "streams", in: "query", schema: { type: "string", enum: ["1"] }, description: "include the downsampled stream arrays (heavy; off by default)" }],
         responses: { "200": { description: "Ride detail", content: { "application/json": { schema: { $ref: "#/components/schemas/RideDetail" } } } }, ...errorResponses },
@@ -845,6 +860,7 @@ const ridesSpec = {
     },
     "/api/rides/weekly": {
       get: {
+        security: deviceSecurity,
         summary: "Weekly rollup (per ISO week: rides / distance / moving time / ascent / avg power)",
         parameters: [
           { name: "weeks", in: "query", schema: { type: "integer", default: 8, minimum: 1, maximum: 104 }, description: "max buckets returned, newest first" },
@@ -889,6 +905,7 @@ const vitalsSpec = {
   paths: {
     "/api/vitals": {
       get: {
+        security: deviceSecurity,
         summary: "List days of measurements (same shape as the detail read)",
         parameters: [
           ...pageParams,
@@ -908,7 +925,7 @@ const vitalsSpec = {
       },
     },
     "/api/vitals/{date}": {
-      get: { summary: "Get one day", parameters: [pathParam("date")], responses: { ...ok("Day of measurements"), ...errorResponses } },
+      get: { security: deviceSecurity, summary: "Get one day", parameters: [pathParam("date")], responses: { ...ok("Day of measurements"), ...errorResponses } },
       delete: {
         summary: "Soft/hard delete a day (the daemon's next poll can re-create it)",
         parameters: [pathParam("date"), hardParam],
@@ -925,6 +942,7 @@ const vitalsSpec = {
     },
     "/api/vitals/summary": {
       get: {
+        security: deviceSecurity,
         summary: "Derived rollup: 7-day trailing averages, week-over-week deltas, and the gap list",
         parameters: [
           { name: "window", in: "query", schema: { type: "integer", default: 30, minimum: 1, maximum: 365 }, description: "Days back from `end`" },

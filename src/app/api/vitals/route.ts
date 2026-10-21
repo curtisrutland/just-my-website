@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { requireBearer, requirePublisherToken } from "@/lib/auth/tokens";
+import { requirePublisherToken, requireScope } from "@/lib/auth/tokens";
 import { parseJson } from "@/lib/http/errors";
 import { paginated, parsePagination } from "@/lib/http/pagination";
 import { created, ok } from "@/lib/http/responses";
@@ -10,7 +10,7 @@ import { normalizeGarminDay } from "@/lib/vitals/normalize";
 
 /** GET — the day list. `from`/`to` narrow the range; same view shape as the detail read (#40). */
 export async function GET(request: NextRequest) {
-  const auth = requireBearer(request);
+  const auth = await requireScope(request, "vitals:read");
   if (!auth.ok) return auth.response;
   const sp = request.nextUrl.searchParams;
   const { limit, offset } = parsePagination(sp);

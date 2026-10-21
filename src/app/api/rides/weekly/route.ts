@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { requireBearer } from "@/lib/auth/tokens";
+import { requireScope } from "@/lib/auth/tokens";
 import { ok } from "@/lib/http/responses";
 import { weeklyStats } from "@/lib/rides/repo";
 
@@ -11,7 +11,7 @@ import { weeklyStats } from "@/lib/rides/repo";
  *              every activity, or any Garmin sport string verbatim.
  */
 export async function GET(request: NextRequest) {
-  const auth = requireBearer(request);
+  const auth = await requireScope(request, "rides:read");
   if (!auth.ok) return auth.response;
 
   const sp = request.nextUrl.searchParams;

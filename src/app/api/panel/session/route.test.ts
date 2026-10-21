@@ -2,7 +2,7 @@ import { inArray } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 import { db } from "@/lib/db";
 import { deviceToken } from "@/lib/db/schema";
-import { createDeviceToken } from "@/lib/panel/tokens";
+import { createDeviceToken } from "@/lib/auth/device-tokens";
 import { GET } from "./route";
 
 /** Integration: the one-time kiosk session route. Sets the panel_token cookie for a valid device

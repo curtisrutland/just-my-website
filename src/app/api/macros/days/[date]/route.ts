@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { requireDisplayToken } from "@/lib/auth/tokens";
+import { requireDisplayToken, requireScope } from "@/lib/auth/tokens";
 import { errorResponse } from "@/lib/http/errors";
 import { ok } from "@/lib/http/responses";
 import { isValidDate } from "@/lib/http/params";
@@ -9,10 +9,12 @@ type Ctx = { params: Promise<{ date: string }> };
 
 /**
  * The day-rollup (HANDOFF-CODE): totals, estimation, the resolved target, and the day's entries.
- * AUTH: the one route that accepts `JMW_DISPLAY_TOKEN` (the ESP32 display), via `requireDisplayToken`.
+ * AUTH: the one route that accepts `JMW_DISPLAY_TOKEN` (the ESP32 display), via `requireDisplayToken`;
+ * also a device token holding `macros:read` (the iOS app), via `requireScope`.
  */
 export async function GET(request: NextRequest, { params }: Ctx) {
-  const auth = requireDisplayToken(request);
+  const display = requireDisplayToken(request);
+  const auth = display.ok ? display : await requireScope(request, "macros:read");
   if (!auth.ok) return auth.response;
   const { date } = await params;
   if (!isValidDate(date)) {
