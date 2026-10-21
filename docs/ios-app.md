@@ -1,7 +1,7 @@
 # Native iOS app — spec
 
 > **Status: DRAFT for approval** (scoped with Curtis 2026-10-21). Nothing is built until Curtis
-> approves this doc. Tracking epic: _filed with this doc_.
+> approves this doc. Tracking epic: #66 (sub-issues #67–#74).
 
 A SwiftUI app for Curtis's iPhone that shows the same six modules as the web UI (macros, weight,
 lifting, rides, vitals, shopping) with native iOS navigation, plus the few writes a phone is
@@ -247,8 +247,33 @@ Within each tab, a `NavigationStack`:
 - **Shopping** — the list; swipe or tap to check off; an add field pinned at the bottom (§6).
 
 Everywhere: pull-to-refresh; refetch when the app returns to the foreground; skeletons while loading.
-The visual language follows `docs/UI-CONTRACT.md` where it carries over — monospaced numbers,
-estimates always marked as estimates, the same color semantics — rendered with native controls.
+
+### 5.1 Design — a native pass, not a port
+
+The web design language doesn't map one-to-one onto iOS, so the app gets its own design pass before
+the read views are built: `docs/ios-design-brief.md`, for Claude Design, following the same Phase 2
+pattern as the module design briefs. The split:
+
+- **Carries over (the meaning).** These are product rules, not styling:
+  - the semantic color roles from `docs/UI-CONTRACT.md` §1: one restrained accent, and
+    success / warning / over;
+  - tabular monospaced numbers, since this is a numbers instrument;
+  - estimates always marked as estimates;
+  - "glanceable first, detail on tap".
+  The token *names* survive as named colors in the asset catalog (light and dark), so web and app
+  talk about the same roles.
+- **Goes native (the structure):**
+  - the tab bar and navigation stacks instead of the nav rail;
+  - grouped lists and system materials (Liquid Glass) instead of custom card surfaces;
+  - SF Pro and SF Mono instead of the web fonts, with Dynamic Type;
+  - SF Symbols;
+  - swipe actions, sheets, and pull-to-refresh.
+  The display font and the web's custom chrome don't come along.
+- **New to design:** the hero treatment of each tab's top screen (the macros day, the weight trend);
+  chart styling in Swift Charts; the MapKit ride route over the stream charts; the lock and pair
+  screens; the app icon.
+
+The brief has to be settled before the read views (§10).
 
 **Open for Curtis:** grouping into four tabs vs. six flat tabs (five + More). The grouping is the
 recommendation; it's a one-file change either way.
@@ -404,5 +429,6 @@ The reason to go native at all. Not scoped; listed so v1 doesn't paint them into
 ## 10. Open / deferred
 
 - **Tab grouping** (§5) — four grouped tabs recommended; six flat is the alternative.
+- **Native design brief** (§5.1) — written after this spec is approved, before the read views.
 - **Paid Developer Program** — not needed for v1; revisit if a "Later" item needs it.
 - **#23 (Clerk production instance)** — independent of this app, which never talks to Clerk.
