@@ -1,4 +1,5 @@
 import * as z from "zod";
+import { auditView, calendarDate as viewDate } from "@/lib/http/view-schemas";
 
 /**
  * Weight module — Zod schemas. Single source of truth for validation; both write surfaces (web
@@ -20,16 +21,27 @@ export const weightPatchSchema = weightCreateSchema.partial();
 export type WeightCreate = z.infer<typeof weightCreateSchema>;
 export type WeightPatch = z.infer<typeof weightPatchSchema>;
 
+// --- Response views (the JSON the routes send; OpenAPI + the contract test read these) ---
+
+/** One weigh-in as every read and the upsert return it: the row, audit columns included. */
+export const weightEntryViewSchema = z.object({
+  ...auditView,
+  measuredOn: viewDate,
+  weight: z.number(),
+  note: z.string().nullable(),
+});
+
 /** The derived summary + series returned by the rollup (UI-facing). */
-export type WeightPoint = { date: string; weight: number | null; avg: number | null };
-export type WeightSummary = {
-  currentAvg: number | null;
-  current: number | null;
-  trendPerWeek: number | null;
-  range: { min: number; max: number } | null;
-  window: number;
-};
-export type WeightRollup = {
-  summary: WeightSummary;
-  series: WeightPoint[];
-};
+export const weightPointSchema = z.object({ date: viewDate, weight: z.number().nullable(), avg: z.number().nullable() });
+export const weightSummarySchema = z.object({
+  currentAvg: z.number().nullable(),
+  current: z.number().nullable(),
+  trendPerWeek: z.number().nullable(),
+  range: z.object({ min: z.number(), max: z.number() }).nullable(),
+  window: z.number().int(),
+});
+export const weightRollupSchema = z.object({ summary: weightSummarySchema, series: z.array(weightPointSchema) });
+
+export type WeightPoint = z.infer<typeof weightPointSchema>;
+export type WeightSummary = z.infer<typeof weightSummarySchema>;
+export type WeightRollup = z.infer<typeof weightRollupSchema>;

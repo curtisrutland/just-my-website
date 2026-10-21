@@ -98,6 +98,170 @@ extension Components {
                 ])
             }
         }
+        /// - Remark: Generated from `#/components/schemas/ShoppingItemView`.
+        public struct ShoppingItemView: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/ShoppingItemView/id`.
+            public var id: Swift.String
+            /// - Remark: Generated from `#/components/schemas/ShoppingItemView/category`.
+            public var category: Swift.String
+            /// - Remark: Generated from `#/components/schemas/ShoppingItemView/text`.
+            public var text: Swift.String
+            /// - Remark: Generated from `#/components/schemas/ShoppingItemView/status`.
+            @frozen public enum StatusPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                case needed = "needed"
+                case bought = "bought"
+            }
+            /// - Remark: Generated from `#/components/schemas/ShoppingItemView/status`.
+            public var status: Components.Schemas.ShoppingItemView.StatusPayload
+            /// - Remark: Generated from `#/components/schemas/ShoppingItemView/checkedAt`.
+            public var checkedAt: Foundation.Date?
+            /// Creates a new `ShoppingItemView`.
+            ///
+            /// - Parameters:
+            ///   - id:
+            ///   - category:
+            ///   - text:
+            ///   - status:
+            ///   - checkedAt:
+            public init(
+                id: Swift.String,
+                category: Swift.String,
+                text: Swift.String,
+                status: Components.Schemas.ShoppingItemView.StatusPayload,
+                checkedAt: Foundation.Date? = nil
+            ) {
+                self.id = id
+                self.category = category
+                self.text = text
+                self.status = status
+                self.checkedAt = checkedAt
+            }
+            public enum CodingKeys: String, CodingKey {
+                case id
+                case category
+                case text
+                case status
+                case checkedAt
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/ShoppingItemRow`.
+        public struct ShoppingItemRow: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/ShoppingItemRow/id`.
+            public var id: Swift.String
+            /// - Remark: Generated from `#/components/schemas/ShoppingItemRow/category`.
+            public var category: Swift.String
+            /// - Remark: Generated from `#/components/schemas/ShoppingItemRow/text`.
+            public var text: Swift.String
+            /// - Remark: Generated from `#/components/schemas/ShoppingItemRow/status`.
+            @frozen public enum StatusPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                case needed = "needed"
+                case bought = "bought"
+            }
+            /// - Remark: Generated from `#/components/schemas/ShoppingItemRow/status`.
+            public var status: Components.Schemas.ShoppingItemRow.StatusPayload
+            /// - Remark: Generated from `#/components/schemas/ShoppingItemRow/checkedAt`.
+            public var checkedAt: Foundation.Date?
+            /// - Remark: Generated from `#/components/schemas/ShoppingItemRow/createdAt`.
+            public var createdAt: Foundation.Date
+            /// - Remark: Generated from `#/components/schemas/ShoppingItemRow/updatedAt`.
+            public var updatedAt: Foundation.Date
+            /// - Remark: Generated from `#/components/schemas/ShoppingItemRow/deletedAt`.
+            public var deletedAt: Foundation.Date?
+            /// Creates a new `ShoppingItemRow`.
+            ///
+            /// - Parameters:
+            ///   - id:
+            ///   - category:
+            ///   - text:
+            ///   - status:
+            ///   - checkedAt:
+            ///   - createdAt:
+            ///   - updatedAt:
+            ///   - deletedAt:
+            public init(
+                id: Swift.String,
+                category: Swift.String,
+                text: Swift.String,
+                status: Components.Schemas.ShoppingItemRow.StatusPayload,
+                checkedAt: Foundation.Date? = nil,
+                createdAt: Foundation.Date,
+                updatedAt: Foundation.Date,
+                deletedAt: Foundation.Date? = nil
+            ) {
+                self.id = id
+                self.category = category
+                self.text = text
+                self.status = status
+                self.checkedAt = checkedAt
+                self.createdAt = createdAt
+                self.updatedAt = updatedAt
+                self.deletedAt = deletedAt
+            }
+            public enum CodingKeys: String, CodingKey {
+                case id
+                case category
+                case text
+                case status
+                case checkedAt
+                case createdAt
+                case updatedAt
+                case deletedAt
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/ShoppingList`.
+        public struct ShoppingList: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/ShoppingList/ActivePayload`.
+            public struct ActivePayloadPayload: Codable, Hashable, Sendable {
+                /// - Remark: Generated from `#/components/schemas/ShoppingList/ActivePayload/category`.
+                public var category: Swift.String
+                /// - Remark: Generated from `#/components/schemas/ShoppingList/ActivePayload/items`.
+                public var items: [Components.Schemas.ShoppingItemView]
+                /// Creates a new `ActivePayloadPayload`.
+                ///
+                /// - Parameters:
+                ///   - category:
+                ///   - items:
+                public init(
+                    category: Swift.String,
+                    items: [Components.Schemas.ShoppingItemView]
+                ) {
+                    self.category = category
+                    self.items = items
+                }
+                public enum CodingKeys: String, CodingKey {
+                    case category
+                    case items
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/ShoppingList/active`.
+            public typealias ActivePayload = [Components.Schemas.ShoppingList.ActivePayloadPayload]
+            /// - Remark: Generated from `#/components/schemas/ShoppingList/active`.
+            public var active: Components.Schemas.ShoppingList.ActivePayload
+            /// - Remark: Generated from `#/components/schemas/ShoppingList/recentlyBought`.
+            public var recentlyBought: [Components.Schemas.ShoppingItemView]
+            /// - Remark: Generated from `#/components/schemas/ShoppingList/activeCount`.
+            public var activeCount: Swift.Int
+            /// Creates a new `ShoppingList`.
+            ///
+            /// - Parameters:
+            ///   - active:
+            ///   - recentlyBought:
+            ///   - activeCount:
+            public init(
+                active: Components.Schemas.ShoppingList.ActivePayload,
+                recentlyBought: [Components.Schemas.ShoppingItemView],
+                activeCount: Swift.Int
+            ) {
+                self.active = active
+                self.recentlyBought = recentlyBought
+                self.activeCount = activeCount
+            }
+            public enum CodingKeys: String, CodingKey {
+                case active
+                case recentlyBought
+                case activeCount
+            }
+        }
         /// - Remark: Generated from `#/components/schemas/Error`.
         public struct _Error: Codable, Hashable, Sendable {
             /// - Remark: Generated from `#/components/schemas/Error/error`.

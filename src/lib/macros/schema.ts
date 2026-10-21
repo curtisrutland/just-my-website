@@ -287,6 +287,8 @@ export const entryCreateBatchSchema = z.array(entryCreateSchema).min(1).max(100)
  * knowledge of a field name transfers between endpoints (this is the fix for the get_day/
  * list_entries `foodName`-vs-`name` split). `name` is the resolved label: the entry's own label,
  * falling back to the linked food's name. Every macro key is always present (null when unknown).
+ * A response view, so not `.strict()`: the published OpenAPI stays open to additive fields, and the
+ * contract test (`src/lib/http/contract.test.ts`) is what fails on an undeclared one.
  */
 export const entryViewSchema = z
   .object({
@@ -306,8 +308,30 @@ export const entryViewSchema = z
     sugarContent: macroRead,
     sodiumContent: macroRead,
     saturatedFatContent: macroRead,
-  })
-  .strict();
+  });
+
+/** The four headline macros — a day's totals or its target. Null = unknown, never zero. */
+export const macroSetSchema = z.object({
+  calories: macroRead,
+  proteinContent: macroRead,
+  fatContent: macroRead,
+  carbohydrateContent: macroRead,
+});
+
+/** `GET /api/macros/days/{date}`: the day's totals, how much of it is estimated, its target, and its entries. */
+export const dayRollupSchema = z.object({
+  day: z.object({ date: calendarDate }),
+  totals: macroSetSchema,
+  estimation: z.object({
+    estimatedFraction: z.number().min(0).max(1),
+    entryCount: z.number().int(),
+    estimatedCount: z.number().int(),
+  }),
+  /** The one target in effect on the day, or null when no profile applies yet. */
+  target: macroSetSchema.nullable(),
+  // The day's entries use the SAME shape `GET /entries` returns (`EntryView`).
+  entries: z.array(entryViewSchema),
+});
 
 // --- Target profile (dated target records) ---
 
@@ -345,9 +369,5 @@ export type EntryView = z.infer<typeof entryViewSchema>;
 export type EntryCreateBatch = z.infer<typeof entryCreateBatchSchema>;
 export type TargetProfileCreate = z.infer<typeof targetProfileCreateSchema>;
 export type TargetProfilePatch = z.infer<typeof targetProfilePatchSchema>;
-export type MacroSet = {
-  calories: number | null;
-  proteinContent: number | null;
-  fatContent: number | null;
-  carbohydrateContent: number | null;
-};
+export type MacroSet = z.infer<typeof macroSetSchema>;
+export type DayRollup = z.infer<typeof dayRollupSchema>;

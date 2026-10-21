@@ -1283,204 +1283,6 @@ extension Components {
                 ])
             }
         }
-        /// - Remark: Generated from `#/components/schemas/EntryView`.
-        public struct EntryView: Codable, Hashable, Sendable {
-            /// - Remark: Generated from `#/components/schemas/EntryView/id`.
-            public var id: Swift.String
-            /// - Remark: Generated from `#/components/schemas/EntryView/name`.
-            public var name: Swift.String?
-            /// - Remark: Generated from `#/components/schemas/EntryView/consumedOn`.
-            public var consumedOn: Swift.String
-            /// - Remark: Generated from `#/components/schemas/EntryView/foodId`.
-            public var foodId: Swift.String?
-            /// - Remark: Generated from `#/components/schemas/EntryView/batchId`.
-            public var batchId: Swift.String?
-            /// - Remark: Generated from `#/components/schemas/EntryView/quantityGrams`.
-            public var quantityGrams: Swift.Double
-            /// - Remark: Generated from `#/components/schemas/EntryView/confidence`.
-            @frozen public enum ConfidencePayload: String, Codable, Hashable, Sendable, CaseIterable {
-                case measured = "measured"
-                case estimated = "estimated"
-                case loggedServing = "logged_serving"
-            }
-            /// - Remark: Generated from `#/components/schemas/EntryView/confidence`.
-            public var confidence: Components.Schemas.EntryView.ConfidencePayload
-            /// - Remark: Generated from `#/components/schemas/EntryView/note`.
-            public var note: Swift.String?
-            /// - Remark: Generated from `#/components/schemas/EntryView/calories`.
-            public var calories: Swift.Double?
-            /// - Remark: Generated from `#/components/schemas/EntryView/proteinContent`.
-            public var proteinContent: Swift.Double?
-            /// - Remark: Generated from `#/components/schemas/EntryView/fatContent`.
-            public var fatContent: Swift.Double?
-            /// - Remark: Generated from `#/components/schemas/EntryView/carbohydrateContent`.
-            public var carbohydrateContent: Swift.Double?
-            /// - Remark: Generated from `#/components/schemas/EntryView/fiberContent`.
-            public var fiberContent: Swift.Double?
-            /// - Remark: Generated from `#/components/schemas/EntryView/sugarContent`.
-            public var sugarContent: Swift.Double?
-            /// - Remark: Generated from `#/components/schemas/EntryView/sodiumContent`.
-            public var sodiumContent: Swift.Double?
-            /// - Remark: Generated from `#/components/schemas/EntryView/saturatedFatContent`.
-            public var saturatedFatContent: Swift.Double?
-            /// Creates a new `EntryView`.
-            ///
-            /// - Parameters:
-            ///   - id:
-            ///   - name:
-            ///   - consumedOn:
-            ///   - foodId:
-            ///   - batchId:
-            ///   - quantityGrams:
-            ///   - confidence:
-            ///   - note:
-            ///   - calories:
-            ///   - proteinContent:
-            ///   - fatContent:
-            ///   - carbohydrateContent:
-            ///   - fiberContent:
-            ///   - sugarContent:
-            ///   - sodiumContent:
-            ///   - saturatedFatContent:
-            public init(
-                id: Swift.String,
-                name: Swift.String? = nil,
-                consumedOn: Swift.String,
-                foodId: Swift.String? = nil,
-                batchId: Swift.String? = nil,
-                quantityGrams: Swift.Double,
-                confidence: Components.Schemas.EntryView.ConfidencePayload,
-                note: Swift.String? = nil,
-                calories: Swift.Double? = nil,
-                proteinContent: Swift.Double? = nil,
-                fatContent: Swift.Double? = nil,
-                carbohydrateContent: Swift.Double? = nil,
-                fiberContent: Swift.Double? = nil,
-                sugarContent: Swift.Double? = nil,
-                sodiumContent: Swift.Double? = nil,
-                saturatedFatContent: Swift.Double? = nil
-            ) {
-                self.id = id
-                self.name = name
-                self.consumedOn = consumedOn
-                self.foodId = foodId
-                self.batchId = batchId
-                self.quantityGrams = quantityGrams
-                self.confidence = confidence
-                self.note = note
-                self.calories = calories
-                self.proteinContent = proteinContent
-                self.fatContent = fatContent
-                self.carbohydrateContent = carbohydrateContent
-                self.fiberContent = fiberContent
-                self.sugarContent = sugarContent
-                self.sodiumContent = sodiumContent
-                self.saturatedFatContent = saturatedFatContent
-            }
-            public enum CodingKeys: String, CodingKey {
-                case id
-                case name
-                case consumedOn
-                case foodId
-                case batchId
-                case quantityGrams
-                case confidence
-                case note
-                case calories
-                case proteinContent
-                case fatContent
-                case carbohydrateContent
-                case fiberContent
-                case sugarContent
-                case sodiumContent
-                case saturatedFatContent
-            }
-            public init(from decoder: any Swift.Decoder) throws {
-                let container = try decoder.container(keyedBy: CodingKeys.self)
-                self.id = try container.decode(
-                    Swift.String.self,
-                    forKey: .id
-                )
-                self.name = try container.decodeIfPresent(
-                    Swift.String.self,
-                    forKey: .name
-                )
-                self.consumedOn = try container.decode(
-                    Swift.String.self,
-                    forKey: .consumedOn
-                )
-                self.foodId = try container.decodeIfPresent(
-                    Swift.String.self,
-                    forKey: .foodId
-                )
-                self.batchId = try container.decodeIfPresent(
-                    Swift.String.self,
-                    forKey: .batchId
-                )
-                self.quantityGrams = try container.decode(
-                    Swift.Double.self,
-                    forKey: .quantityGrams
-                )
-                self.confidence = try container.decode(
-                    Components.Schemas.EntryView.ConfidencePayload.self,
-                    forKey: .confidence
-                )
-                self.note = try container.decodeIfPresent(
-                    Swift.String.self,
-                    forKey: .note
-                )
-                self.calories = try container.decodeIfPresent(
-                    Swift.Double.self,
-                    forKey: .calories
-                )
-                self.proteinContent = try container.decodeIfPresent(
-                    Swift.Double.self,
-                    forKey: .proteinContent
-                )
-                self.fatContent = try container.decodeIfPresent(
-                    Swift.Double.self,
-                    forKey: .fatContent
-                )
-                self.carbohydrateContent = try container.decodeIfPresent(
-                    Swift.Double.self,
-                    forKey: .carbohydrateContent
-                )
-                self.fiberContent = try container.decodeIfPresent(
-                    Swift.Double.self,
-                    forKey: .fiberContent
-                )
-                self.sugarContent = try container.decodeIfPresent(
-                    Swift.Double.self,
-                    forKey: .sugarContent
-                )
-                self.sodiumContent = try container.decodeIfPresent(
-                    Swift.Double.self,
-                    forKey: .sodiumContent
-                )
-                self.saturatedFatContent = try container.decodeIfPresent(
-                    Swift.Double.self,
-                    forKey: .saturatedFatContent
-                )
-                try decoder.ensureNoAdditionalProperties(knownKeys: [
-                    "id",
-                    "name",
-                    "consumedOn",
-                    "foodId",
-                    "batchId",
-                    "quantityGrams",
-                    "confidence",
-                    "note",
-                    "calories",
-                    "proteinContent",
-                    "fatContent",
-                    "carbohydrateContent",
-                    "fiberContent",
-                    "sugarContent",
-                    "sodiumContent",
-                    "saturatedFatContent"
-                ])
-            }
-        }
         /// - Remark: Generated from `#/components/schemas/RangeDay`.
         public struct RangeDay: Codable, Hashable, Sendable {
             /// - Remark: Generated from `#/components/schemas/RangeDay/date`.
@@ -1526,144 +1328,6 @@ extension Components {
                 case date
                 case totals
                 case target
-            }
-        }
-        /// - Remark: Generated from `#/components/schemas/DayRollup`.
-        public struct DayRollup: Codable, Hashable, Sendable {
-            /// - Remark: Generated from `#/components/schemas/DayRollup/day`.
-            public struct DayPayload: Codable, Hashable, Sendable {
-                /// - Remark: Generated from `#/components/schemas/DayRollup/day/date`.
-                public var date: Swift.String
-                /// Creates a new `DayPayload`.
-                ///
-                /// - Parameters:
-                ///   - date:
-                public init(date: Swift.String) {
-                    self.date = date
-                }
-                public enum CodingKeys: String, CodingKey {
-                    case date
-                }
-            }
-            /// - Remark: Generated from `#/components/schemas/DayRollup/day`.
-            public var day: Components.Schemas.DayRollup.DayPayload
-            /// - Remark: Generated from `#/components/schemas/DayRollup/totals`.
-            public var totals: Components.Schemas.MacroTotals
-            /// - Remark: Generated from `#/components/schemas/DayRollup/estimation`.
-            public struct EstimationPayload: Codable, Hashable, Sendable {
-                /// - Remark: Generated from `#/components/schemas/DayRollup/estimation/estimatedFraction`.
-                public var estimatedFraction: Swift.Double
-                /// - Remark: Generated from `#/components/schemas/DayRollup/estimation/entryCount`.
-                public var entryCount: Swift.Int
-                /// - Remark: Generated from `#/components/schemas/DayRollup/estimation/estimatedCount`.
-                public var estimatedCount: Swift.Int
-                /// Creates a new `EstimationPayload`.
-                ///
-                /// - Parameters:
-                ///   - estimatedFraction:
-                ///   - entryCount:
-                ///   - estimatedCount:
-                public init(
-                    estimatedFraction: Swift.Double,
-                    entryCount: Swift.Int,
-                    estimatedCount: Swift.Int
-                ) {
-                    self.estimatedFraction = estimatedFraction
-                    self.entryCount = entryCount
-                    self.estimatedCount = estimatedCount
-                }
-                public enum CodingKeys: String, CodingKey {
-                    case estimatedFraction
-                    case entryCount
-                    case estimatedCount
-                }
-            }
-            /// - Remark: Generated from `#/components/schemas/DayRollup/estimation`.
-            public var estimation: Components.Schemas.DayRollup.EstimationPayload
-            /// - Remark: Generated from `#/components/schemas/DayRollup/target`.
-            public struct TargetPayload: Codable, Hashable, Sendable {
-                /// - Remark: Generated from `#/components/schemas/DayRollup/target/value1`.
-                public var value1: Components.Schemas.MacroTotals
-                /// Creates a new `TargetPayload`.
-                ///
-                /// - Parameters:
-                ///   - value1:
-                public init(value1: Components.Schemas.MacroTotals) {
-                    self.value1 = value1
-                }
-                public init(from decoder: any Swift.Decoder) throws {
-                    self.value1 = try .init(from: decoder)
-                }
-                public func encode(to encoder: any Swift.Encoder) throws {
-                    try self.value1.encode(to: encoder)
-                }
-            }
-            /// - Remark: Generated from `#/components/schemas/DayRollup/target`.
-            public var target: Components.Schemas.DayRollup.TargetPayload?
-            /// - Remark: Generated from `#/components/schemas/DayRollup/entries`.
-            public var entries: [Components.Schemas.EntryView]
-            /// Creates a new `DayRollup`.
-            ///
-            /// - Parameters:
-            ///   - day:
-            ///   - totals:
-            ///   - estimation:
-            ///   - target:
-            ///   - entries:
-            public init(
-                day: Components.Schemas.DayRollup.DayPayload,
-                totals: Components.Schemas.MacroTotals,
-                estimation: Components.Schemas.DayRollup.EstimationPayload,
-                target: Components.Schemas.DayRollup.TargetPayload? = nil,
-                entries: [Components.Schemas.EntryView]
-            ) {
-                self.day = day
-                self.totals = totals
-                self.estimation = estimation
-                self.target = target
-                self.entries = entries
-            }
-            public enum CodingKeys: String, CodingKey {
-                case day
-                case totals
-                case estimation
-                case target
-                case entries
-            }
-        }
-        /// - Remark: Generated from `#/components/schemas/MacroTotals`.
-        public struct MacroTotals: Codable, Hashable, Sendable {
-            /// - Remark: Generated from `#/components/schemas/MacroTotals/calories`.
-            public var calories: Swift.Double?
-            /// - Remark: Generated from `#/components/schemas/MacroTotals/proteinContent`.
-            public var proteinContent: Swift.Double?
-            /// - Remark: Generated from `#/components/schemas/MacroTotals/fatContent`.
-            public var fatContent: Swift.Double?
-            /// - Remark: Generated from `#/components/schemas/MacroTotals/carbohydrateContent`.
-            public var carbohydrateContent: Swift.Double?
-            /// Creates a new `MacroTotals`.
-            ///
-            /// - Parameters:
-            ///   - calories:
-            ///   - proteinContent:
-            ///   - fatContent:
-            ///   - carbohydrateContent:
-            public init(
-                calories: Swift.Double? = nil,
-                proteinContent: Swift.Double? = nil,
-                fatContent: Swift.Double? = nil,
-                carbohydrateContent: Swift.Double? = nil
-            ) {
-                self.calories = calories
-                self.proteinContent = proteinContent
-                self.fatContent = fatContent
-                self.carbohydrateContent = carbohydrateContent
-            }
-            public enum CodingKeys: String, CodingKey {
-                case calories
-                case proteinContent
-                case fatContent
-                case carbohydrateContent
             }
         }
         /// - Remark: Generated from `#/components/schemas/BatchCreate`.
@@ -3354,6 +3018,257 @@ extension Components {
             }
             public enum CodingKeys: String, CodingKey {
                 case fdcId
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/EntryView`.
+        public struct EntryView: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/EntryView/id`.
+            public var id: Swift.String
+            /// - Remark: Generated from `#/components/schemas/EntryView/name`.
+            public var name: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/EntryView/consumedOn`.
+            public var consumedOn: Swift.String
+            /// - Remark: Generated from `#/components/schemas/EntryView/foodId`.
+            public var foodId: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/EntryView/batchId`.
+            public var batchId: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/EntryView/quantityGrams`.
+            public var quantityGrams: Swift.Double
+            /// - Remark: Generated from `#/components/schemas/EntryView/confidence`.
+            @frozen public enum ConfidencePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                case measured = "measured"
+                case estimated = "estimated"
+                case loggedServing = "logged_serving"
+            }
+            /// - Remark: Generated from `#/components/schemas/EntryView/confidence`.
+            public var confidence: Components.Schemas.EntryView.ConfidencePayload
+            /// - Remark: Generated from `#/components/schemas/EntryView/note`.
+            public var note: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/EntryView/calories`.
+            public var calories: Swift.Double?
+            /// - Remark: Generated from `#/components/schemas/EntryView/proteinContent`.
+            public var proteinContent: Swift.Double?
+            /// - Remark: Generated from `#/components/schemas/EntryView/fatContent`.
+            public var fatContent: Swift.Double?
+            /// - Remark: Generated from `#/components/schemas/EntryView/carbohydrateContent`.
+            public var carbohydrateContent: Swift.Double?
+            /// - Remark: Generated from `#/components/schemas/EntryView/fiberContent`.
+            public var fiberContent: Swift.Double?
+            /// - Remark: Generated from `#/components/schemas/EntryView/sugarContent`.
+            public var sugarContent: Swift.Double?
+            /// - Remark: Generated from `#/components/schemas/EntryView/sodiumContent`.
+            public var sodiumContent: Swift.Double?
+            /// - Remark: Generated from `#/components/schemas/EntryView/saturatedFatContent`.
+            public var saturatedFatContent: Swift.Double?
+            /// Creates a new `EntryView`.
+            ///
+            /// - Parameters:
+            ///   - id:
+            ///   - name:
+            ///   - consumedOn:
+            ///   - foodId:
+            ///   - batchId:
+            ///   - quantityGrams:
+            ///   - confidence:
+            ///   - note:
+            ///   - calories:
+            ///   - proteinContent:
+            ///   - fatContent:
+            ///   - carbohydrateContent:
+            ///   - fiberContent:
+            ///   - sugarContent:
+            ///   - sodiumContent:
+            ///   - saturatedFatContent:
+            public init(
+                id: Swift.String,
+                name: Swift.String? = nil,
+                consumedOn: Swift.String,
+                foodId: Swift.String? = nil,
+                batchId: Swift.String? = nil,
+                quantityGrams: Swift.Double,
+                confidence: Components.Schemas.EntryView.ConfidencePayload,
+                note: Swift.String? = nil,
+                calories: Swift.Double? = nil,
+                proteinContent: Swift.Double? = nil,
+                fatContent: Swift.Double? = nil,
+                carbohydrateContent: Swift.Double? = nil,
+                fiberContent: Swift.Double? = nil,
+                sugarContent: Swift.Double? = nil,
+                sodiumContent: Swift.Double? = nil,
+                saturatedFatContent: Swift.Double? = nil
+            ) {
+                self.id = id
+                self.name = name
+                self.consumedOn = consumedOn
+                self.foodId = foodId
+                self.batchId = batchId
+                self.quantityGrams = quantityGrams
+                self.confidence = confidence
+                self.note = note
+                self.calories = calories
+                self.proteinContent = proteinContent
+                self.fatContent = fatContent
+                self.carbohydrateContent = carbohydrateContent
+                self.fiberContent = fiberContent
+                self.sugarContent = sugarContent
+                self.sodiumContent = sodiumContent
+                self.saturatedFatContent = saturatedFatContent
+            }
+            public enum CodingKeys: String, CodingKey {
+                case id
+                case name
+                case consumedOn
+                case foodId
+                case batchId
+                case quantityGrams
+                case confidence
+                case note
+                case calories
+                case proteinContent
+                case fatContent
+                case carbohydrateContent
+                case fiberContent
+                case sugarContent
+                case sodiumContent
+                case saturatedFatContent
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/MacroTotals`.
+        public struct MacroTotals: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/MacroTotals/calories`.
+            public var calories: Swift.Double?
+            /// - Remark: Generated from `#/components/schemas/MacroTotals/proteinContent`.
+            public var proteinContent: Swift.Double?
+            /// - Remark: Generated from `#/components/schemas/MacroTotals/fatContent`.
+            public var fatContent: Swift.Double?
+            /// - Remark: Generated from `#/components/schemas/MacroTotals/carbohydrateContent`.
+            public var carbohydrateContent: Swift.Double?
+            /// Creates a new `MacroTotals`.
+            ///
+            /// - Parameters:
+            ///   - calories:
+            ///   - proteinContent:
+            ///   - fatContent:
+            ///   - carbohydrateContent:
+            public init(
+                calories: Swift.Double? = nil,
+                proteinContent: Swift.Double? = nil,
+                fatContent: Swift.Double? = nil,
+                carbohydrateContent: Swift.Double? = nil
+            ) {
+                self.calories = calories
+                self.proteinContent = proteinContent
+                self.fatContent = fatContent
+                self.carbohydrateContent = carbohydrateContent
+            }
+            public enum CodingKeys: String, CodingKey {
+                case calories
+                case proteinContent
+                case fatContent
+                case carbohydrateContent
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/DayRollup`.
+        public struct DayRollup: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/DayRollup/day`.
+            public struct DayPayload: Codable, Hashable, Sendable {
+                /// - Remark: Generated from `#/components/schemas/DayRollup/day/date`.
+                public var date: Swift.String
+                /// Creates a new `DayPayload`.
+                ///
+                /// - Parameters:
+                ///   - date:
+                public init(date: Swift.String) {
+                    self.date = date
+                }
+                public enum CodingKeys: String, CodingKey {
+                    case date
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/DayRollup/day`.
+            public var day: Components.Schemas.DayRollup.DayPayload
+            /// - Remark: Generated from `#/components/schemas/DayRollup/totals`.
+            public var totals: Components.Schemas.MacroTotals
+            /// - Remark: Generated from `#/components/schemas/DayRollup/estimation`.
+            public struct EstimationPayload: Codable, Hashable, Sendable {
+                /// - Remark: Generated from `#/components/schemas/DayRollup/estimation/estimatedFraction`.
+                public var estimatedFraction: Swift.Double
+                /// - Remark: Generated from `#/components/schemas/DayRollup/estimation/entryCount`.
+                public var entryCount: Swift.Int
+                /// - Remark: Generated from `#/components/schemas/DayRollup/estimation/estimatedCount`.
+                public var estimatedCount: Swift.Int
+                /// Creates a new `EstimationPayload`.
+                ///
+                /// - Parameters:
+                ///   - estimatedFraction:
+                ///   - entryCount:
+                ///   - estimatedCount:
+                public init(
+                    estimatedFraction: Swift.Double,
+                    entryCount: Swift.Int,
+                    estimatedCount: Swift.Int
+                ) {
+                    self.estimatedFraction = estimatedFraction
+                    self.entryCount = entryCount
+                    self.estimatedCount = estimatedCount
+                }
+                public enum CodingKeys: String, CodingKey {
+                    case estimatedFraction
+                    case entryCount
+                    case estimatedCount
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/DayRollup/estimation`.
+            public var estimation: Components.Schemas.DayRollup.EstimationPayload
+            /// - Remark: Generated from `#/components/schemas/DayRollup/target`.
+            public struct TargetPayload: Codable, Hashable, Sendable {
+                /// - Remark: Generated from `#/components/schemas/DayRollup/target/value1`.
+                public var value1: Components.Schemas.MacroTotals
+                /// Creates a new `TargetPayload`.
+                ///
+                /// - Parameters:
+                ///   - value1:
+                public init(value1: Components.Schemas.MacroTotals) {
+                    self.value1 = value1
+                }
+                public init(from decoder: any Swift.Decoder) throws {
+                    self.value1 = try .init(from: decoder)
+                }
+                public func encode(to encoder: any Swift.Encoder) throws {
+                    try self.value1.encode(to: encoder)
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/DayRollup/target`.
+            public var target: Components.Schemas.DayRollup.TargetPayload?
+            /// - Remark: Generated from `#/components/schemas/DayRollup/entries`.
+            public var entries: [Components.Schemas.EntryView]
+            /// Creates a new `DayRollup`.
+            ///
+            /// - Parameters:
+            ///   - day:
+            ///   - totals:
+            ///   - estimation:
+            ///   - target:
+            ///   - entries:
+            public init(
+                day: Components.Schemas.DayRollup.DayPayload,
+                totals: Components.Schemas.MacroTotals,
+                estimation: Components.Schemas.DayRollup.EstimationPayload,
+                target: Components.Schemas.DayRollup.TargetPayload? = nil,
+                entries: [Components.Schemas.EntryView]
+            ) {
+                self.day = day
+                self.totals = totals
+                self.estimation = estimation
+                self.target = target
+                self.entries = entries
+            }
+            public enum CodingKeys: String, CodingKey {
+                case day
+                case totals
+                case estimation
+                case target
+                case entries
             }
         }
         /// - Remark: Generated from `#/components/schemas/Error`.

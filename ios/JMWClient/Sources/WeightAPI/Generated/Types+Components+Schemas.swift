@@ -104,6 +104,177 @@ extension Components {
                 ])
             }
         }
+        /// - Remark: Generated from `#/components/schemas/WeightEntryView`.
+        public struct WeightEntryView: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/WeightEntryView/id`.
+            public var id: Swift.String
+            /// - Remark: Generated from `#/components/schemas/WeightEntryView/createdAt`.
+            public var createdAt: Foundation.Date
+            /// - Remark: Generated from `#/components/schemas/WeightEntryView/updatedAt`.
+            public var updatedAt: Foundation.Date
+            /// - Remark: Generated from `#/components/schemas/WeightEntryView/deletedAt`.
+            public var deletedAt: Foundation.Date?
+            /// - Remark: Generated from `#/components/schemas/WeightEntryView/measuredOn`.
+            public var measuredOn: Swift.String
+            /// - Remark: Generated from `#/components/schemas/WeightEntryView/weight`.
+            public var weight: Swift.Double
+            /// - Remark: Generated from `#/components/schemas/WeightEntryView/note`.
+            public var note: Swift.String?
+            /// Creates a new `WeightEntryView`.
+            ///
+            /// - Parameters:
+            ///   - id:
+            ///   - createdAt:
+            ///   - updatedAt:
+            ///   - deletedAt:
+            ///   - measuredOn:
+            ///   - weight:
+            ///   - note:
+            public init(
+                id: Swift.String,
+                createdAt: Foundation.Date,
+                updatedAt: Foundation.Date,
+                deletedAt: Foundation.Date? = nil,
+                measuredOn: Swift.String,
+                weight: Swift.Double,
+                note: Swift.String? = nil
+            ) {
+                self.id = id
+                self.createdAt = createdAt
+                self.updatedAt = updatedAt
+                self.deletedAt = deletedAt
+                self.measuredOn = measuredOn
+                self.weight = weight
+                self.note = note
+            }
+            public enum CodingKeys: String, CodingKey {
+                case id
+                case createdAt
+                case updatedAt
+                case deletedAt
+                case measuredOn
+                case weight
+                case note
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/WeightRollup`.
+        public struct WeightRollup: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/WeightRollup/summary`.
+            public struct SummaryPayload: Codable, Hashable, Sendable {
+                /// - Remark: Generated from `#/components/schemas/WeightRollup/summary/currentAvg`.
+                public var currentAvg: Swift.Double?
+                /// - Remark: Generated from `#/components/schemas/WeightRollup/summary/current`.
+                public var current: Swift.Double?
+                /// - Remark: Generated from `#/components/schemas/WeightRollup/summary/trendPerWeek`.
+                public var trendPerWeek: Swift.Double?
+                /// - Remark: Generated from `#/components/schemas/WeightRollup/summary/range`.
+                public struct RangePayload: Codable, Hashable, Sendable {
+                    /// - Remark: Generated from `#/components/schemas/WeightRollup/summary/range/min`.
+                    public var min: Swift.Double
+                    /// - Remark: Generated from `#/components/schemas/WeightRollup/summary/range/max`.
+                    public var max: Swift.Double
+                    /// Creates a new `RangePayload`.
+                    ///
+                    /// - Parameters:
+                    ///   - min:
+                    ///   - max:
+                    public init(
+                        min: Swift.Double,
+                        max: Swift.Double
+                    ) {
+                        self.min = min
+                        self.max = max
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case min
+                        case max
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/WeightRollup/summary/range`.
+                public var range: Components.Schemas.WeightRollup.SummaryPayload.RangePayload?
+                /// - Remark: Generated from `#/components/schemas/WeightRollup/summary/window`.
+                public var window: Swift.Int
+                /// Creates a new `SummaryPayload`.
+                ///
+                /// - Parameters:
+                ///   - currentAvg:
+                ///   - current:
+                ///   - trendPerWeek:
+                ///   - range:
+                ///   - window:
+                public init(
+                    currentAvg: Swift.Double? = nil,
+                    current: Swift.Double? = nil,
+                    trendPerWeek: Swift.Double? = nil,
+                    range: Components.Schemas.WeightRollup.SummaryPayload.RangePayload? = nil,
+                    window: Swift.Int
+                ) {
+                    self.currentAvg = currentAvg
+                    self.current = current
+                    self.trendPerWeek = trendPerWeek
+                    self.range = range
+                    self.window = window
+                }
+                public enum CodingKeys: String, CodingKey {
+                    case currentAvg
+                    case current
+                    case trendPerWeek
+                    case range
+                    case window
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/WeightRollup/summary`.
+            public var summary: Components.Schemas.WeightRollup.SummaryPayload
+            /// - Remark: Generated from `#/components/schemas/WeightRollup/SeriesPayload`.
+            public struct SeriesPayloadPayload: Codable, Hashable, Sendable {
+                /// - Remark: Generated from `#/components/schemas/WeightRollup/SeriesPayload/date`.
+                public var date: Swift.String
+                /// - Remark: Generated from `#/components/schemas/WeightRollup/SeriesPayload/weight`.
+                public var weight: Swift.Double?
+                /// - Remark: Generated from `#/components/schemas/WeightRollup/SeriesPayload/avg`.
+                public var avg: Swift.Double?
+                /// Creates a new `SeriesPayloadPayload`.
+                ///
+                /// - Parameters:
+                ///   - date:
+                ///   - weight:
+                ///   - avg:
+                public init(
+                    date: Swift.String,
+                    weight: Swift.Double? = nil,
+                    avg: Swift.Double? = nil
+                ) {
+                    self.date = date
+                    self.weight = weight
+                    self.avg = avg
+                }
+                public enum CodingKeys: String, CodingKey {
+                    case date
+                    case weight
+                    case avg
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/WeightRollup/series`.
+            public typealias SeriesPayload = [Components.Schemas.WeightRollup.SeriesPayloadPayload]
+            /// - Remark: Generated from `#/components/schemas/WeightRollup/series`.
+            public var series: Components.Schemas.WeightRollup.SeriesPayload
+            /// Creates a new `WeightRollup`.
+            ///
+            /// - Parameters:
+            ///   - summary:
+            ///   - series:
+            public init(
+                summary: Components.Schemas.WeightRollup.SummaryPayload,
+                series: Components.Schemas.WeightRollup.SeriesPayload
+            ) {
+                self.summary = summary
+                self.series = series
+            }
+            public enum CodingKeys: String, CodingKey {
+                case summary
+                case series
+            }
+        }
         /// - Remark: Generated from `#/components/schemas/Error`.
         public struct _Error: Codable, Hashable, Sendable {
             /// - Remark: Generated from `#/components/schemas/Error/error`.

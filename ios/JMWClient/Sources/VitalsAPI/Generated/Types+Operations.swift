@@ -74,7 +74,7 @@ public enum Operations {
                     /// - Remark: Generated from `#/paths/api/vitals/GET/responses/200/content/json`.
                     public struct JsonPayload: Codable, Hashable, Sendable {
                         /// - Remark: Generated from `#/paths/api/vitals/GET/responses/200/content/json/items`.
-                        public var items: [Components.Schemas.VitalsDay]
+                        public var items: [Components.Schemas.VitalsDayView]
                         /// - Remark: Generated from `#/paths/api/vitals/GET/responses/200/content/json/limit`.
                         public var limit: Swift.Int
                         /// - Remark: Generated from `#/paths/api/vitals/GET/responses/200/content/json/offset`.
@@ -89,7 +89,7 @@ public enum Operations {
                         ///   - offset:
                         ///   - count:
                         public init(
-                            items: [Components.Schemas.VitalsDay],
+                            items: [Components.Schemas.VitalsDayView],
                             limit: Swift.Int,
                             offset: Swift.Int,
                             count: Swift.Int
@@ -680,8 +680,32 @@ public enum Operations {
         }
         @frozen public enum Output: Sendable, Hashable {
             public struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/api/vitals/{date}/GET/responses/200/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/api/vitals/{date}/GET/responses/200/content/application\/json`.
+                    case json(Components.Schemas.VitalsDayView)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.VitalsDayView {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.GetApiVitalsDate.Output.Ok.Body
                 /// Creates a new `Ok`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.GetApiVitalsDate.Output.Ok.Body) {
+                    self.body = body
+                }
             }
             /// Day of measurements
             ///
@@ -689,14 +713,6 @@ public enum Operations {
             ///
             /// HTTP response code: `200 ok`.
             case ok(Operations.GetApiVitalsDate.Output.Ok)
-            /// Day of measurements
-            ///
-            /// - Remark: Generated from `#/paths//api/vitals/{date}/get/responses/200`.
-            ///
-            /// HTTP response code: `200 ok`.
-            public static var ok: Self {
-                .ok(.init())
-            }
             /// The associated value of the enum case if `self` is `.ok`.
             ///
             /// - Throws: An error if `self` is not `.ok`.
@@ -1230,8 +1246,32 @@ public enum Operations {
         }
         @frozen public enum Output: Sendable, Hashable {
             public struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/api/vitals/{date}/reprocess/POST/responses/200/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/api/vitals/{date}/reprocess/POST/responses/200/content/application\/json`.
+                    case json(Components.Schemas.VitalsDayView)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.VitalsDayView {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.PostApiVitalsDateReprocess.Output.Ok.Body
                 /// Creates a new `Ok`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.PostApiVitalsDateReprocess.Output.Ok.Body) {
+                    self.body = body
+                }
             }
             /// Reprocessed day
             ///
@@ -1239,14 +1279,6 @@ public enum Operations {
             ///
             /// HTTP response code: `200 ok`.
             case ok(Operations.PostApiVitalsDateReprocess.Output.Ok)
-            /// Reprocessed day
-            ///
-            /// - Remark: Generated from `#/paths//api/vitals/{date}/reprocess/post/responses/200`.
-            ///
-            /// HTTP response code: `200 ok`.
-            public static var ok: Self {
-                .ok(.init())
-            }
             /// The associated value of the enum case if `self` is `.ok`.
             ///
             /// - Throws: An error if `self` is not `.ok`.
@@ -1506,8 +1538,32 @@ public enum Operations {
         }
         @frozen public enum Output: Sendable, Hashable {
             public struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/api/vitals/summary/GET/responses/200/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/api/vitals/summary/GET/responses/200/content/application\/json`.
+                    case json(Components.Schemas.VitalsRollup)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.VitalsRollup {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.GetApiVitalsSummary.Output.Ok.Body
                 /// Creates a new `Ok`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.GetApiVitalsSummary.Output.Ok.Body) {
+                    self.body = body
+                }
             }
             /// Rollup (trends + gaps)
             ///
@@ -1515,14 +1571,6 @@ public enum Operations {
             ///
             /// HTTP response code: `200 ok`.
             case ok(Operations.GetApiVitalsSummary.Output.Ok)
-            /// Rollup (trends + gaps)
-            ///
-            /// - Remark: Generated from `#/paths//api/vitals/summary/get/responses/200`.
-            ///
-            /// HTTP response code: `200 ok`.
-            public static var ok: Self {
-                .ok(.init())
-            }
             /// The associated value of the enum case if `self` is `.ok`.
             ///
             /// - Throws: An error if `self` is not `.ok`.

@@ -64,7 +64,7 @@ public enum Operations {
                     /// - Remark: Generated from `#/paths/api/shopping/items/GET/responses/200/content/json`.
                     public struct JsonPayload: Codable, Hashable, Sendable {
                         /// - Remark: Generated from `#/paths/api/shopping/items/GET/responses/200/content/json/items`.
-                        public var items: [Components.Schemas.ShoppingCreate]
+                        public var items: [Components.Schemas.ShoppingItemRow]
                         /// - Remark: Generated from `#/paths/api/shopping/items/GET/responses/200/content/json/limit`.
                         public var limit: Swift.Int
                         /// - Remark: Generated from `#/paths/api/shopping/items/GET/responses/200/content/json/offset`.
@@ -79,7 +79,7 @@ public enum Operations {
                         ///   - offset:
                         ///   - count:
                         public init(
-                            items: [Components.Schemas.ShoppingCreate],
+                            items: [Components.Schemas.ShoppingItemRow],
                             limit: Swift.Int,
                             offset: Swift.Int,
                             count: Swift.Int
@@ -368,8 +368,32 @@ public enum Operations {
         }
         @frozen public enum Output: Sendable, Hashable {
             public struct Created: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/api/shopping/items/POST/responses/201/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/api/shopping/items/POST/responses/201/content/application\/json`.
+                    case json(Components.Schemas.ShoppingItemRow)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.ShoppingItemRow {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.PostApiShoppingItems.Output.Created.Body
                 /// Creates a new `Created`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.PostApiShoppingItems.Output.Created.Body) {
+                    self.body = body
+                }
             }
             /// Created item
             ///
@@ -377,14 +401,6 @@ public enum Operations {
             ///
             /// HTTP response code: `201 created`.
             case created(Operations.PostApiShoppingItems.Output.Created)
-            /// Created item
-            ///
-            /// - Remark: Generated from `#/paths//api/shopping/items/post/responses/201`.
-            ///
-            /// HTTP response code: `201 created`.
-            public static var created: Self {
-                .created(.init())
-            }
             /// The associated value of the enum case if `self` is `.created`.
             ///
             /// - Throws: An error if `self` is not `.created`.
@@ -633,8 +649,32 @@ public enum Operations {
         }
         @frozen public enum Output: Sendable, Hashable {
             public struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/api/shopping/items/{id}/GET/responses/200/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/api/shopping/items/{id}/GET/responses/200/content/application\/json`.
+                    case json(Components.Schemas.ShoppingItemRow)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.ShoppingItemRow {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.GetApiShoppingItemsId.Output.Ok.Body
                 /// Creates a new `Ok`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.GetApiShoppingItemsId.Output.Ok.Body) {
+                    self.body = body
+                }
             }
             /// Item
             ///
@@ -642,14 +682,6 @@ public enum Operations {
             ///
             /// HTTP response code: `200 ok`.
             case ok(Operations.GetApiShoppingItemsId.Output.Ok)
-            /// Item
-            ///
-            /// - Remark: Generated from `#/paths//api/shopping/items/{id}/get/responses/200`.
-            ///
-            /// HTTP response code: `200 ok`.
-            public static var ok: Self {
-                .ok(.init())
-            }
             /// The associated value of the enum case if `self` is `.ok`.
             ///
             /// - Throws: An error if `self` is not `.ok`.
@@ -907,8 +939,32 @@ public enum Operations {
         }
         @frozen public enum Output: Sendable, Hashable {
             public struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/api/shopping/items/{id}/PATCH/responses/200/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/api/shopping/items/{id}/PATCH/responses/200/content/application\/json`.
+                    case json(Components.Schemas.ShoppingItemRow)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.ShoppingItemRow {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.PatchApiShoppingItemsId.Output.Ok.Body
                 /// Creates a new `Ok`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.PatchApiShoppingItemsId.Output.Ok.Body) {
+                    self.body = body
+                }
             }
             /// Updated item
             ///
@@ -916,14 +972,6 @@ public enum Operations {
             ///
             /// HTTP response code: `200 ok`.
             case ok(Operations.PatchApiShoppingItemsId.Output.Ok)
-            /// Updated item
-            ///
-            /// - Remark: Generated from `#/paths//api/shopping/items/{id}/patch/responses/200`.
-            ///
-            /// HTTP response code: `200 ok`.
-            public static var ok: Self {
-                .ok(.init())
-            }
             /// The associated value of the enum case if `self` is `.ok`.
             ///
             /// - Throws: An error if `self` is not `.ok`.
@@ -1457,8 +1505,32 @@ public enum Operations {
         }
         @frozen public enum Output: Sendable, Hashable {
             public struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/api/shopping/list/GET/responses/200/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/api/shopping/list/GET/responses/200/content/application\/json`.
+                    case json(Components.Schemas.ShoppingList)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.ShoppingList {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.GetApiShoppingList.Output.Ok.Body
                 /// Creates a new `Ok`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.GetApiShoppingList.Output.Ok.Body) {
+                    self.body = body
+                }
             }
             /// Two-section list
             ///
@@ -1466,14 +1538,6 @@ public enum Operations {
             ///
             /// HTTP response code: `200 ok`.
             case ok(Operations.GetApiShoppingList.Output.Ok)
-            /// Two-section list
-            ///
-            /// - Remark: Generated from `#/paths//api/shopping/list/get/responses/200`.
-            ///
-            /// HTTP response code: `200 ok`.
-            public static var ok: Self {
-                .ok(.init())
-            }
             /// The associated value of the enum case if `self` is `.ok`.
             ///
             /// - Throws: An error if `self` is not `.ok`.

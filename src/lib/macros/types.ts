@@ -1,14 +1,12 @@
 /** Macros domain + rollup-contract types (UI-CONTRACT §4). Consumed by both the repo/lib layer
  *  (e.g. `week.ts`) and the UI — hence they live in `lib/macros`, never in `components`. */
 
+import type { MacroSet } from "./schema";
+
 export type Confidence = "measured" | "estimated" | "logged_serving";
 
-export type MacroSet = {
-  calories: number | null;
-  proteinContent: number | null;
-  fatContent: number | null;
-  carbohydrateContent: number | null;
-};
+/** The four headline macros (the contract lives in `schema.ts` as `macroSetSchema`). */
+export type { MacroSet };
 
 /**
  * The subset of the API's entry shape (`EntryView`) that the UI renders. `name` is the resolved

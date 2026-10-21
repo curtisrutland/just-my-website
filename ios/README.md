@@ -38,6 +38,19 @@ ios/scripts/generate-client.sh
 
 That runs `npm run openapi:build`, then the pinned generator. If `git diff` is clean afterwards, the client is in sync.
 
+Two tests hold the client to what the server really sends (#80):
+
+- `src/lib/http/contract.test.ts`, run by `npm test`. Every allowlisted route's real JSON must parse with its Zod view schema, the same schema the OpenAPI is built from, with no undeclared fields.
+- `JMWClient/Tests/…/LiveContractTests.swift` calls every allowlisted operation through the generated client against a running server, and decodes the result. It's skipped unless a server and a phone token are given:
+
+  ```bash
+  JMW_E2E_BASE=http://localhost:3000 JMW_E2E_TOKEN=jmw_… swift test --package-path ios/JMWClient
+  ```
+
+  It writes a `1990-01-03` weigh-in and a `zzz-e2e` shopping item. The phone token can't delete them, so remove them afterwards, and revoke the token.
+
+Dates arrive with milliseconds (`Date.toISOString()`), so every client is built with `ISO8601Transcoder`; the runtime's default rejects the fraction. A nullable `$ref` (for example `RideDetail.stream`) comes through as `allOf` plus `nullable`, which the generator wraps: read the value as `.value1`.
+
 ## Pairing
 
 The app talks to the server only with a **device token** that holds the phone scopes (spec §3–4). The token lives in the Keychain, behind Face ID or the passcode, on this device only.

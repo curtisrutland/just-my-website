@@ -62,92 +62,75 @@ extension Components {
                 ])
             }
         }
-        /// - Remark: Generated from `#/components/schemas/VitalsDay`.
-        public struct VitalsDay: Codable, Hashable, Sendable {
-            /// - Remark: Generated from `#/components/schemas/VitalsDay/measuredOn`.
-            public var measuredOn: Swift.String
-            /// - Remark: Generated from `#/components/schemas/VitalsDay/sleepTotalSeconds`.
+        /// - Remark: Generated from `#/components/schemas/VitalsDayView`.
+        public struct VitalsDayView: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/VitalsDayView/sleepTotalSeconds`.
             public var sleepTotalSeconds: Swift.Int?
-            /// - Remark: Generated from `#/components/schemas/VitalsDay/sleepDeepSeconds`.
+            /// - Remark: Generated from `#/components/schemas/VitalsDayView/sleepDeepSeconds`.
             public var sleepDeepSeconds: Swift.Int?
-            /// - Remark: Generated from `#/components/schemas/VitalsDay/sleepLightSeconds`.
+            /// - Remark: Generated from `#/components/schemas/VitalsDayView/sleepLightSeconds`.
             public var sleepLightSeconds: Swift.Int?
-            /// - Remark: Generated from `#/components/schemas/VitalsDay/sleepRemSeconds`.
+            /// - Remark: Generated from `#/components/schemas/VitalsDayView/sleepRemSeconds`.
             public var sleepRemSeconds: Swift.Int?
-            /// - Remark: Generated from `#/components/schemas/VitalsDay/sleepAwakeSeconds`.
+            /// - Remark: Generated from `#/components/schemas/VitalsDayView/sleepAwakeSeconds`.
             public var sleepAwakeSeconds: Swift.Int?
-            /// - Remark: Generated from `#/components/schemas/VitalsDay/napSeconds`.
+            /// - Remark: Generated from `#/components/schemas/VitalsDayView/napSeconds`.
             public var napSeconds: Swift.Int?
-            /// - Remark: Generated from `#/components/schemas/VitalsDay/sleepStartAt`.
-            public var sleepStartAt: Foundation.Date?
-            /// - Remark: Generated from `#/components/schemas/VitalsDay/sleepEndAt`.
-            public var sleepEndAt: Foundation.Date?
-            /// - Remark: Generated from `#/components/schemas/VitalsDay/sleepSpo2Avg`.
+            /// - Remark: Generated from `#/components/schemas/VitalsDayView/sleepSpo2Avg`.
             public var sleepSpo2Avg: Swift.Double?
-            /// - Remark: Generated from `#/components/schemas/VitalsDay/sleepSpo2Low`.
+            /// - Remark: Generated from `#/components/schemas/VitalsDayView/sleepSpo2Low`.
             public var sleepSpo2Low: Swift.Double?
-            /// - Remark: Generated from `#/components/schemas/VitalsDay/sleepRespirationAvg`.
+            /// - Remark: Generated from `#/components/schemas/VitalsDayView/sleepRespirationAvg`.
             public var sleepRespirationAvg: Swift.Double?
-            /// - Remark: Generated from `#/components/schemas/VitalsDay/hrvLastNightMs`.
+            /// - Remark: Generated from `#/components/schemas/VitalsDayView/hrvLastNightMs`.
             public var hrvLastNightMs: Swift.Int?
-            /// - Remark: Generated from `#/components/schemas/VitalsDay/hrvLastNight5MinHighMs`.
+            /// - Remark: Generated from `#/components/schemas/VitalsDayView/hrvLastNight5MinHighMs`.
             public var hrvLastNight5MinHighMs: Swift.Int?
-            /// - Remark: Generated from `#/components/schemas/VitalsDay/restingHeartRate`.
+            /// - Remark: Generated from `#/components/schemas/VitalsDayView/restingHeartRate`.
             public var restingHeartRate: Swift.Int?
-            /// - Remark: Generated from `#/components/schemas/VitalsDay/minHeartRate`.
+            /// - Remark: Generated from `#/components/schemas/VitalsDayView/minHeartRate`.
             public var minHeartRate: Swift.Int?
-            /// - Remark: Generated from `#/components/schemas/VitalsDay/maxHeartRate`.
+            /// - Remark: Generated from `#/components/schemas/VitalsDayView/maxHeartRate`.
             public var maxHeartRate: Swift.Int?
-            /// - Remark: Generated from `#/components/schemas/VitalsDay/spo2Avg`.
+            /// - Remark: Generated from `#/components/schemas/VitalsDayView/spo2Avg`.
             public var spo2Avg: Swift.Double?
-            /// - Remark: Generated from `#/components/schemas/VitalsDay/spo2Low`.
+            /// - Remark: Generated from `#/components/schemas/VitalsDayView/spo2Low`.
             public var spo2Low: Swift.Double?
-            /// - Remark: Generated from `#/components/schemas/VitalsDay/respirationWakingAvg`.
+            /// - Remark: Generated from `#/components/schemas/VitalsDayView/respirationWakingAvg`.
             public var respirationWakingAvg: Swift.Double?
-            /// - Remark: Generated from `#/components/schemas/VitalsDay/respirationLow`.
+            /// - Remark: Generated from `#/components/schemas/VitalsDayView/respirationLow`.
             public var respirationLow: Swift.Double?
-            /// - Remark: Generated from `#/components/schemas/VitalsDay/respirationHigh`.
+            /// - Remark: Generated from `#/components/schemas/VitalsDayView/respirationHigh`.
             public var respirationHigh: Swift.Double?
-            /// - Remark: Generated from `#/components/schemas/VitalsDay/steps`.
+            /// - Remark: Generated from `#/components/schemas/VitalsDayView/steps`.
             public var steps: Swift.Int?
-            /// - Remark: Generated from `#/components/schemas/VitalsDay/floorsAscended`.
+            /// - Remark: Generated from `#/components/schemas/VitalsDayView/floorsAscended`.
             public var floorsAscended: Swift.Double?
-            /// - Remark: Generated from `#/components/schemas/VitalsDay/intensityMinutesModerate`.
+            /// - Remark: Generated from `#/components/schemas/VitalsDayView/intensityMinutesModerate`.
             public var intensityMinutesModerate: Swift.Int?
-            /// - Remark: Generated from `#/components/schemas/VitalsDay/intensityMinutesVigorous`.
+            /// - Remark: Generated from `#/components/schemas/VitalsDayView/intensityMinutesVigorous`.
             public var intensityMinutesVigorous: Swift.Int?
-            /// - Remark: Generated from `#/components/schemas/VitalsDay/rawPayload`.
-            public struct RawPayloadPayload: Codable, Hashable, Sendable {
-                /// A container of undocumented properties.
-                public var additionalProperties: [String: OpenAPIRuntime.OpenAPIValueContainer]
-                /// Creates a new `RawPayloadPayload`.
-                ///
-                /// - Parameters:
-                ///   - additionalProperties: A container of undocumented properties.
-                public init(additionalProperties: [String: OpenAPIRuntime.OpenAPIValueContainer] = .init()) {
-                    self.additionalProperties = additionalProperties
-                }
-                public init(from decoder: any Swift.Decoder) throws {
-                    additionalProperties = try decoder.decodeAdditionalProperties(knownKeys: [])
-                }
-                public func encode(to encoder: any Swift.Encoder) throws {
-                    try encoder.encodeAdditionalProperties(additionalProperties)
-                }
-            }
-            /// - Remark: Generated from `#/components/schemas/VitalsDay/rawPayload`.
-            public var rawPayload: Components.Schemas.VitalsDay.RawPayloadPayload
-            /// Creates a new `VitalsDay`.
+            /// - Remark: Generated from `#/components/schemas/VitalsDayView/id`.
+            public var id: Swift.String
+            /// - Remark: Generated from `#/components/schemas/VitalsDayView/measuredOn`.
+            public var measuredOn: Swift.String
+            /// - Remark: Generated from `#/components/schemas/VitalsDayView/sleepStartAt`.
+            public var sleepStartAt: Foundation.Date?
+            /// - Remark: Generated from `#/components/schemas/VitalsDayView/sleepEndAt`.
+            public var sleepEndAt: Foundation.Date?
+            /// - Remark: Generated from `#/components/schemas/VitalsDayView/createdAt`.
+            public var createdAt: Foundation.Date
+            /// - Remark: Generated from `#/components/schemas/VitalsDayView/updatedAt`.
+            public var updatedAt: Foundation.Date
+            /// Creates a new `VitalsDayView`.
             ///
             /// - Parameters:
-            ///   - measuredOn:
             ///   - sleepTotalSeconds:
             ///   - sleepDeepSeconds:
             ///   - sleepLightSeconds:
             ///   - sleepRemSeconds:
             ///   - sleepAwakeSeconds:
             ///   - napSeconds:
-            ///   - sleepStartAt:
-            ///   - sleepEndAt:
             ///   - sleepSpo2Avg:
             ///   - sleepSpo2Low:
             ///   - sleepRespirationAvg:
@@ -165,17 +148,19 @@ extension Components {
             ///   - floorsAscended:
             ///   - intensityMinutesModerate:
             ///   - intensityMinutesVigorous:
-            ///   - rawPayload:
+            ///   - id:
+            ///   - measuredOn:
+            ///   - sleepStartAt:
+            ///   - sleepEndAt:
+            ///   - createdAt:
+            ///   - updatedAt:
             public init(
-                measuredOn: Swift.String,
                 sleepTotalSeconds: Swift.Int? = nil,
                 sleepDeepSeconds: Swift.Int? = nil,
                 sleepLightSeconds: Swift.Int? = nil,
                 sleepRemSeconds: Swift.Int? = nil,
                 sleepAwakeSeconds: Swift.Int? = nil,
                 napSeconds: Swift.Int? = nil,
-                sleepStartAt: Foundation.Date? = nil,
-                sleepEndAt: Foundation.Date? = nil,
                 sleepSpo2Avg: Swift.Double? = nil,
                 sleepSpo2Low: Swift.Double? = nil,
                 sleepRespirationAvg: Swift.Double? = nil,
@@ -193,17 +178,19 @@ extension Components {
                 floorsAscended: Swift.Double? = nil,
                 intensityMinutesModerate: Swift.Int? = nil,
                 intensityMinutesVigorous: Swift.Int? = nil,
-                rawPayload: Components.Schemas.VitalsDay.RawPayloadPayload
+                id: Swift.String,
+                measuredOn: Swift.String,
+                sleepStartAt: Foundation.Date? = nil,
+                sleepEndAt: Foundation.Date? = nil,
+                createdAt: Foundation.Date,
+                updatedAt: Foundation.Date
             ) {
-                self.measuredOn = measuredOn
                 self.sleepTotalSeconds = sleepTotalSeconds
                 self.sleepDeepSeconds = sleepDeepSeconds
                 self.sleepLightSeconds = sleepLightSeconds
                 self.sleepRemSeconds = sleepRemSeconds
                 self.sleepAwakeSeconds = sleepAwakeSeconds
                 self.napSeconds = napSeconds
-                self.sleepStartAt = sleepStartAt
-                self.sleepEndAt = sleepEndAt
                 self.sleepSpo2Avg = sleepSpo2Avg
                 self.sleepSpo2Low = sleepSpo2Low
                 self.sleepRespirationAvg = sleepRespirationAvg
@@ -221,18 +208,20 @@ extension Components {
                 self.floorsAscended = floorsAscended
                 self.intensityMinutesModerate = intensityMinutesModerate
                 self.intensityMinutesVigorous = intensityMinutesVigorous
-                self.rawPayload = rawPayload
+                self.id = id
+                self.measuredOn = measuredOn
+                self.sleepStartAt = sleepStartAt
+                self.sleepEndAt = sleepEndAt
+                self.createdAt = createdAt
+                self.updatedAt = updatedAt
             }
             public enum CodingKeys: String, CodingKey {
-                case measuredOn
                 case sleepTotalSeconds
                 case sleepDeepSeconds
                 case sleepLightSeconds
                 case sleepRemSeconds
                 case sleepAwakeSeconds
                 case napSeconds
-                case sleepStartAt
-                case sleepEndAt
                 case sleepSpo2Avg
                 case sleepSpo2Low
                 case sleepRespirationAvg
@@ -250,147 +239,293 @@ extension Components {
                 case floorsAscended
                 case intensityMinutesModerate
                 case intensityMinutesVigorous
-                case rawPayload
+                case id
+                case measuredOn
+                case sleepStartAt
+                case sleepEndAt
+                case createdAt
+                case updatedAt
             }
-            public init(from decoder: any Swift.Decoder) throws {
-                let container = try decoder.container(keyedBy: CodingKeys.self)
-                self.measuredOn = try container.decode(
-                    Swift.String.self,
-                    forKey: .measuredOn
-                )
-                self.sleepTotalSeconds = try container.decodeIfPresent(
-                    Swift.Int.self,
-                    forKey: .sleepTotalSeconds
-                )
-                self.sleepDeepSeconds = try container.decodeIfPresent(
-                    Swift.Int.self,
-                    forKey: .sleepDeepSeconds
-                )
-                self.sleepLightSeconds = try container.decodeIfPresent(
-                    Swift.Int.self,
-                    forKey: .sleepLightSeconds
-                )
-                self.sleepRemSeconds = try container.decodeIfPresent(
-                    Swift.Int.self,
-                    forKey: .sleepRemSeconds
-                )
-                self.sleepAwakeSeconds = try container.decodeIfPresent(
-                    Swift.Int.self,
-                    forKey: .sleepAwakeSeconds
-                )
-                self.napSeconds = try container.decodeIfPresent(
-                    Swift.Int.self,
-                    forKey: .napSeconds
-                )
-                self.sleepStartAt = try container.decodeIfPresent(
-                    Foundation.Date.self,
-                    forKey: .sleepStartAt
-                )
-                self.sleepEndAt = try container.decodeIfPresent(
-                    Foundation.Date.self,
-                    forKey: .sleepEndAt
-                )
-                self.sleepSpo2Avg = try container.decodeIfPresent(
-                    Swift.Double.self,
-                    forKey: .sleepSpo2Avg
-                )
-                self.sleepSpo2Low = try container.decodeIfPresent(
-                    Swift.Double.self,
-                    forKey: .sleepSpo2Low
-                )
-                self.sleepRespirationAvg = try container.decodeIfPresent(
-                    Swift.Double.self,
-                    forKey: .sleepRespirationAvg
-                )
-                self.hrvLastNightMs = try container.decodeIfPresent(
-                    Swift.Int.self,
-                    forKey: .hrvLastNightMs
-                )
-                self.hrvLastNight5MinHighMs = try container.decodeIfPresent(
-                    Swift.Int.self,
-                    forKey: .hrvLastNight5MinHighMs
-                )
-                self.restingHeartRate = try container.decodeIfPresent(
-                    Swift.Int.self,
-                    forKey: .restingHeartRate
-                )
-                self.minHeartRate = try container.decodeIfPresent(
-                    Swift.Int.self,
-                    forKey: .minHeartRate
-                )
-                self.maxHeartRate = try container.decodeIfPresent(
-                    Swift.Int.self,
-                    forKey: .maxHeartRate
-                )
-                self.spo2Avg = try container.decodeIfPresent(
-                    Swift.Double.self,
-                    forKey: .spo2Avg
-                )
-                self.spo2Low = try container.decodeIfPresent(
-                    Swift.Double.self,
-                    forKey: .spo2Low
-                )
-                self.respirationWakingAvg = try container.decodeIfPresent(
-                    Swift.Double.self,
-                    forKey: .respirationWakingAvg
-                )
-                self.respirationLow = try container.decodeIfPresent(
-                    Swift.Double.self,
-                    forKey: .respirationLow
-                )
-                self.respirationHigh = try container.decodeIfPresent(
-                    Swift.Double.self,
-                    forKey: .respirationHigh
-                )
-                self.steps = try container.decodeIfPresent(
-                    Swift.Int.self,
-                    forKey: .steps
-                )
-                self.floorsAscended = try container.decodeIfPresent(
-                    Swift.Double.self,
-                    forKey: .floorsAscended
-                )
-                self.intensityMinutesModerate = try container.decodeIfPresent(
-                    Swift.Int.self,
-                    forKey: .intensityMinutesModerate
-                )
-                self.intensityMinutesVigorous = try container.decodeIfPresent(
-                    Swift.Int.self,
-                    forKey: .intensityMinutesVigorous
-                )
-                self.rawPayload = try container.decode(
-                    Components.Schemas.VitalsDay.RawPayloadPayload.self,
-                    forKey: .rawPayload
-                )
-                try decoder.ensureNoAdditionalProperties(knownKeys: [
-                    "measuredOn",
-                    "sleepTotalSeconds",
-                    "sleepDeepSeconds",
-                    "sleepLightSeconds",
-                    "sleepRemSeconds",
-                    "sleepAwakeSeconds",
-                    "napSeconds",
-                    "sleepStartAt",
-                    "sleepEndAt",
-                    "sleepSpo2Avg",
-                    "sleepSpo2Low",
-                    "sleepRespirationAvg",
-                    "hrvLastNightMs",
-                    "hrvLastNight5MinHighMs",
-                    "restingHeartRate",
-                    "minHeartRate",
-                    "maxHeartRate",
-                    "spo2Avg",
-                    "spo2Low",
-                    "respirationWakingAvg",
-                    "respirationLow",
-                    "respirationHigh",
-                    "steps",
-                    "floorsAscended",
-                    "intensityMinutesModerate",
-                    "intensityMinutesVigorous",
-                    "rawPayload"
-                ])
+        }
+        /// - Remark: Generated from `#/components/schemas/VitalsRollup`.
+        public struct VitalsRollup: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/VitalsRollup/window`.
+            public var window: Swift.Int
+            /// - Remark: Generated from `#/components/schemas/VitalsRollup/from`.
+            public var from: Swift.String
+            /// - Remark: Generated from `#/components/schemas/VitalsRollup/to`.
+            public var to: Swift.String
+            /// - Remark: Generated from `#/components/schemas/VitalsRollup/restingHeartRate`.
+            public struct RestingHeartRatePayload: Codable, Hashable, Sendable {
+                /// - Remark: Generated from `#/components/schemas/VitalsRollup/restingHeartRate/current`.
+                public var current: Swift.Double?
+                /// - Remark: Generated from `#/components/schemas/VitalsRollup/restingHeartRate/currentAvg`.
+                public var currentAvg: Swift.Double?
+                /// - Remark: Generated from `#/components/schemas/VitalsRollup/restingHeartRate/deltaPerWeek`.
+                public var deltaPerWeek: Swift.Double?
+                /// - Remark: Generated from `#/components/schemas/VitalsRollup/restingHeartRate/SeriesPayload`.
+                public struct SeriesPayloadPayload: Codable, Hashable, Sendable {
+                    /// - Remark: Generated from `#/components/schemas/VitalsRollup/restingHeartRate/SeriesPayload/date`.
+                    public var date: Swift.String
+                    /// - Remark: Generated from `#/components/schemas/VitalsRollup/restingHeartRate/SeriesPayload/value`.
+                    public var value: Swift.Double?
+                    /// - Remark: Generated from `#/components/schemas/VitalsRollup/restingHeartRate/SeriesPayload/avg`.
+                    public var avg: Swift.Double?
+                    /// Creates a new `SeriesPayloadPayload`.
+                    ///
+                    /// - Parameters:
+                    ///   - date:
+                    ///   - value:
+                    ///   - avg:
+                    public init(
+                        date: Swift.String,
+                        value: Swift.Double? = nil,
+                        avg: Swift.Double? = nil
+                    ) {
+                        self.date = date
+                        self.value = value
+                        self.avg = avg
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case date
+                        case value
+                        case avg
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/VitalsRollup/restingHeartRate/series`.
+                public typealias SeriesPayload = [Components.Schemas.VitalsRollup.RestingHeartRatePayload.SeriesPayloadPayload]
+                /// - Remark: Generated from `#/components/schemas/VitalsRollup/restingHeartRate/series`.
+                public var series: Components.Schemas.VitalsRollup.RestingHeartRatePayload.SeriesPayload
+                /// Creates a new `RestingHeartRatePayload`.
+                ///
+                /// - Parameters:
+                ///   - current:
+                ///   - currentAvg:
+                ///   - deltaPerWeek:
+                ///   - series:
+                public init(
+                    current: Swift.Double? = nil,
+                    currentAvg: Swift.Double? = nil,
+                    deltaPerWeek: Swift.Double? = nil,
+                    series: Components.Schemas.VitalsRollup.RestingHeartRatePayload.SeriesPayload
+                ) {
+                    self.current = current
+                    self.currentAvg = currentAvg
+                    self.deltaPerWeek = deltaPerWeek
+                    self.series = series
+                }
+                public enum CodingKeys: String, CodingKey {
+                    case current
+                    case currentAvg
+                    case deltaPerWeek
+                    case series
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/VitalsRollup/restingHeartRate`.
+            public var restingHeartRate: Components.Schemas.VitalsRollup.RestingHeartRatePayload
+            /// - Remark: Generated from `#/components/schemas/VitalsRollup/hrvLastNightMs`.
+            public struct HrvLastNightMsPayload: Codable, Hashable, Sendable {
+                /// - Remark: Generated from `#/components/schemas/VitalsRollup/hrvLastNightMs/current`.
+                public var current: Swift.Double?
+                /// - Remark: Generated from `#/components/schemas/VitalsRollup/hrvLastNightMs/currentAvg`.
+                public var currentAvg: Swift.Double?
+                /// - Remark: Generated from `#/components/schemas/VitalsRollup/hrvLastNightMs/deltaPerWeek`.
+                public var deltaPerWeek: Swift.Double?
+                /// - Remark: Generated from `#/components/schemas/VitalsRollup/hrvLastNightMs/SeriesPayload`.
+                public struct SeriesPayloadPayload: Codable, Hashable, Sendable {
+                    /// - Remark: Generated from `#/components/schemas/VitalsRollup/hrvLastNightMs/SeriesPayload/date`.
+                    public var date: Swift.String
+                    /// - Remark: Generated from `#/components/schemas/VitalsRollup/hrvLastNightMs/SeriesPayload/value`.
+                    public var value: Swift.Double?
+                    /// - Remark: Generated from `#/components/schemas/VitalsRollup/hrvLastNightMs/SeriesPayload/avg`.
+                    public var avg: Swift.Double?
+                    /// Creates a new `SeriesPayloadPayload`.
+                    ///
+                    /// - Parameters:
+                    ///   - date:
+                    ///   - value:
+                    ///   - avg:
+                    public init(
+                        date: Swift.String,
+                        value: Swift.Double? = nil,
+                        avg: Swift.Double? = nil
+                    ) {
+                        self.date = date
+                        self.value = value
+                        self.avg = avg
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case date
+                        case value
+                        case avg
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/VitalsRollup/hrvLastNightMs/series`.
+                public typealias SeriesPayload = [Components.Schemas.VitalsRollup.HrvLastNightMsPayload.SeriesPayloadPayload]
+                /// - Remark: Generated from `#/components/schemas/VitalsRollup/hrvLastNightMs/series`.
+                public var series: Components.Schemas.VitalsRollup.HrvLastNightMsPayload.SeriesPayload
+                /// Creates a new `HrvLastNightMsPayload`.
+                ///
+                /// - Parameters:
+                ///   - current:
+                ///   - currentAvg:
+                ///   - deltaPerWeek:
+                ///   - series:
+                public init(
+                    current: Swift.Double? = nil,
+                    currentAvg: Swift.Double? = nil,
+                    deltaPerWeek: Swift.Double? = nil,
+                    series: Components.Schemas.VitalsRollup.HrvLastNightMsPayload.SeriesPayload
+                ) {
+                    self.current = current
+                    self.currentAvg = currentAvg
+                    self.deltaPerWeek = deltaPerWeek
+                    self.series = series
+                }
+                public enum CodingKeys: String, CodingKey {
+                    case current
+                    case currentAvg
+                    case deltaPerWeek
+                    case series
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/VitalsRollup/hrvLastNightMs`.
+            public var hrvLastNightMs: Components.Schemas.VitalsRollup.HrvLastNightMsPayload
+            /// - Remark: Generated from `#/components/schemas/VitalsRollup/sleepTotalSeconds`.
+            public struct SleepTotalSecondsPayload: Codable, Hashable, Sendable {
+                /// - Remark: Generated from `#/components/schemas/VitalsRollup/sleepTotalSeconds/current`.
+                public var current: Swift.Double?
+                /// - Remark: Generated from `#/components/schemas/VitalsRollup/sleepTotalSeconds/currentAvg`.
+                public var currentAvg: Swift.Double?
+                /// - Remark: Generated from `#/components/schemas/VitalsRollup/sleepTotalSeconds/deltaPerWeek`.
+                public var deltaPerWeek: Swift.Double?
+                /// - Remark: Generated from `#/components/schemas/VitalsRollup/sleepTotalSeconds/SeriesPayload`.
+                public struct SeriesPayloadPayload: Codable, Hashable, Sendable {
+                    /// - Remark: Generated from `#/components/schemas/VitalsRollup/sleepTotalSeconds/SeriesPayload/date`.
+                    public var date: Swift.String
+                    /// - Remark: Generated from `#/components/schemas/VitalsRollup/sleepTotalSeconds/SeriesPayload/value`.
+                    public var value: Swift.Double?
+                    /// - Remark: Generated from `#/components/schemas/VitalsRollup/sleepTotalSeconds/SeriesPayload/avg`.
+                    public var avg: Swift.Double?
+                    /// Creates a new `SeriesPayloadPayload`.
+                    ///
+                    /// - Parameters:
+                    ///   - date:
+                    ///   - value:
+                    ///   - avg:
+                    public init(
+                        date: Swift.String,
+                        value: Swift.Double? = nil,
+                        avg: Swift.Double? = nil
+                    ) {
+                        self.date = date
+                        self.value = value
+                        self.avg = avg
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case date
+                        case value
+                        case avg
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/VitalsRollup/sleepTotalSeconds/series`.
+                public typealias SeriesPayload = [Components.Schemas.VitalsRollup.SleepTotalSecondsPayload.SeriesPayloadPayload]
+                /// - Remark: Generated from `#/components/schemas/VitalsRollup/sleepTotalSeconds/series`.
+                public var series: Components.Schemas.VitalsRollup.SleepTotalSecondsPayload.SeriesPayload
+                /// Creates a new `SleepTotalSecondsPayload`.
+                ///
+                /// - Parameters:
+                ///   - current:
+                ///   - currentAvg:
+                ///   - deltaPerWeek:
+                ///   - series:
+                public init(
+                    current: Swift.Double? = nil,
+                    currentAvg: Swift.Double? = nil,
+                    deltaPerWeek: Swift.Double? = nil,
+                    series: Components.Schemas.VitalsRollup.SleepTotalSecondsPayload.SeriesPayload
+                ) {
+                    self.current = current
+                    self.currentAvg = currentAvg
+                    self.deltaPerWeek = deltaPerWeek
+                    self.series = series
+                }
+                public enum CodingKeys: String, CodingKey {
+                    case current
+                    case currentAvg
+                    case deltaPerWeek
+                    case series
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/VitalsRollup/sleepTotalSeconds`.
+            public var sleepTotalSeconds: Components.Schemas.VitalsRollup.SleepTotalSecondsPayload
+            /// - Remark: Generated from `#/components/schemas/VitalsRollup/GapsPayload`.
+            public struct GapsPayloadPayload: Codable, Hashable, Sendable {
+                /// - Remark: Generated from `#/components/schemas/VitalsRollup/GapsPayload/date`.
+                public var date: Swift.String
+                /// - Remark: Generated from `#/components/schemas/VitalsRollup/GapsPayload/reason`.
+                @frozen public enum ReasonPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case noRow = "no_row"
+                    case noMeasurements = "no_measurements"
+                }
+                /// - Remark: Generated from `#/components/schemas/VitalsRollup/GapsPayload/reason`.
+                public var reason: Components.Schemas.VitalsRollup.GapsPayloadPayload.ReasonPayload
+                /// Creates a new `GapsPayloadPayload`.
+                ///
+                /// - Parameters:
+                ///   - date:
+                ///   - reason:
+                public init(
+                    date: Swift.String,
+                    reason: Components.Schemas.VitalsRollup.GapsPayloadPayload.ReasonPayload
+                ) {
+                    self.date = date
+                    self.reason = reason
+                }
+                public enum CodingKeys: String, CodingKey {
+                    case date
+                    case reason
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/VitalsRollup/gaps`.
+            public typealias GapsPayload = [Components.Schemas.VitalsRollup.GapsPayloadPayload]
+            /// - Remark: Generated from `#/components/schemas/VitalsRollup/gaps`.
+            public var gaps: Components.Schemas.VitalsRollup.GapsPayload
+            /// Creates a new `VitalsRollup`.
+            ///
+            /// - Parameters:
+            ///   - window:
+            ///   - from:
+            ///   - to:
+            ///   - restingHeartRate:
+            ///   - hrvLastNightMs:
+            ///   - sleepTotalSeconds:
+            ///   - gaps:
+            public init(
+                window: Swift.Int,
+                from: Swift.String,
+                to: Swift.String,
+                restingHeartRate: Components.Schemas.VitalsRollup.RestingHeartRatePayload,
+                hrvLastNightMs: Components.Schemas.VitalsRollup.HrvLastNightMsPayload,
+                sleepTotalSeconds: Components.Schemas.VitalsRollup.SleepTotalSecondsPayload,
+                gaps: Components.Schemas.VitalsRollup.GapsPayload
+            ) {
+                self.window = window
+                self.from = from
+                self.to = to
+                self.restingHeartRate = restingHeartRate
+                self.hrvLastNightMs = hrvLastNightMs
+                self.sleepTotalSeconds = sleepTotalSeconds
+                self.gaps = gaps
+            }
+            public enum CodingKeys: String, CodingKey {
+                case window
+                case from
+                case to
+                case restingHeartRate
+                case hrvLastNightMs
+                case sleepTotalSeconds
+                case gaps
             }
         }
         /// - Remark: Generated from `#/components/schemas/Error`.

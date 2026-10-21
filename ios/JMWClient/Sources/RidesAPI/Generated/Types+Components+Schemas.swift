@@ -44,67 +44,92 @@ extension Components {
                 ])
             }
         }
-        /// The session-referenced HR-zone histogram, verbatim from the file: seconds-per-zone PLUS the bpm boundaries it was computed with (self-describing — a later zone-config change never falsifies old rides). A histogram of measurements, not a fitness score.
-        ///
         /// - Remark: Generated from `#/components/schemas/TimeInHrZone`.
         public struct TimeInHrZone: Codable, Hashable, Sendable {
-            /// seconds per zone bucket
-            ///
             /// - Remark: Generated from `#/components/schemas/TimeInHrZone/timeInHrZone`.
             public var timeInHrZone: [Swift.Double]?
-            /// bpm upper bounds the buckets were computed against
-            ///
             /// - Remark: Generated from `#/components/schemas/TimeInHrZone/hrZoneHighBoundary`.
             public var hrZoneHighBoundary: [Swift.Double]?
             /// - Remark: Generated from `#/components/schemas/TimeInHrZone/maxHeartRate`.
             public var maxHeartRate: Swift.Double?
+            /// A container of undocumented properties.
+            public var additionalProperties: [String: OpenAPIRuntime.OpenAPIValueContainer]
             /// Creates a new `TimeInHrZone`.
             ///
             /// - Parameters:
-            ///   - timeInHrZone: seconds per zone bucket
-            ///   - hrZoneHighBoundary: bpm upper bounds the buckets were computed against
+            ///   - timeInHrZone:
+            ///   - hrZoneHighBoundary:
             ///   - maxHeartRate:
+            ///   - additionalProperties: A container of undocumented properties.
             public init(
                 timeInHrZone: [Swift.Double]? = nil,
                 hrZoneHighBoundary: [Swift.Double]? = nil,
-                maxHeartRate: Swift.Double? = nil
+                maxHeartRate: Swift.Double? = nil,
+                additionalProperties: [String: OpenAPIRuntime.OpenAPIValueContainer] = .init()
             ) {
                 self.timeInHrZone = timeInHrZone
                 self.hrZoneHighBoundary = hrZoneHighBoundary
                 self.maxHeartRate = maxHeartRate
+                self.additionalProperties = additionalProperties
             }
             public enum CodingKeys: String, CodingKey {
                 case timeInHrZone
                 case hrZoneHighBoundary
                 case maxHeartRate
             }
+            public init(from decoder: any Swift.Decoder) throws {
+                let container = try decoder.container(keyedBy: CodingKeys.self)
+                self.timeInHrZone = try container.decodeIfPresent(
+                    [Swift.Double].self,
+                    forKey: .timeInHrZone
+                )
+                self.hrZoneHighBoundary = try container.decodeIfPresent(
+                    [Swift.Double].self,
+                    forKey: .hrZoneHighBoundary
+                )
+                self.maxHeartRate = try container.decodeIfPresent(
+                    Swift.Double.self,
+                    forKey: .maxHeartRate
+                )
+                additionalProperties = try decoder.decodeAdditionalProperties(knownKeys: [
+                    "timeInHrZone",
+                    "hrZoneHighBoundary",
+                    "maxHeartRate"
+                ])
+            }
+            public func encode(to encoder: any Swift.Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                try container.encodeIfPresent(
+                    self.timeInHrZone,
+                    forKey: .timeInHrZone
+                )
+                try container.encodeIfPresent(
+                    self.hrZoneHighBoundary,
+                    forKey: .hrZoneHighBoundary
+                )
+                try container.encodeIfPresent(
+                    self.maxHeartRate,
+                    forKey: .maxHeartRate
+                )
+                try encoder.encodeAdditionalProperties(additionalProperties)
+            }
         }
-        /// The one read shape every rides surface shares. Most fields nullable — honesty about what a given device captured (a watch ride has no power; a trainer ride no GPS).
-        ///
         /// - Remark: Generated from `#/components/schemas/RideView`.
         public struct RideView: Codable, Hashable, Sendable {
             /// - Remark: Generated from `#/components/schemas/RideView/id`.
             public var id: Swift.String
-            /// the human layer; display falls back to sportProfileName + localDate
-            ///
             /// - Remark: Generated from `#/components/schemas/RideView/name`.
             public var name: Swift.String?
             /// - Remark: Generated from `#/components/schemas/RideView/note`.
             public var note: Swift.String?
-            /// Garmin sport string verbatim (cycling, running, …)
-            ///
             /// - Remark: Generated from `#/components/schemas/RideView/sport`.
             public var sport: Swift.String
             /// - Remark: Generated from `#/components/schemas/RideView/subSport`.
             public var subSport: Swift.String?
-            /// device profile name ("MTB") — the display fallback for unnamed rides
-            ///
             /// - Remark: Generated from `#/components/schemas/RideView/sportProfileName`.
             public var sportProfileName: Swift.String?
             /// - Remark: Generated from `#/components/schemas/RideView/startedAt`.
             public var startedAt: Foundation.Date
-            /// the ride's LOCAL calendar date, from the file's own clock — use this for display/grouping, never the UTC date of startedAt
-            ///
             /// - Remark: Generated from `#/components/schemas/RideView/localDate`.
             public var localDate: Swift.String
             /// - Remark: Generated from `#/components/schemas/RideView/elapsedSeconds`.
@@ -121,14 +146,12 @@ extension Components {
             public var avgPowerWatts: Swift.Double?
             /// - Remark: Generated from `#/components/schemas/RideView/maxPowerWatts`.
             public var maxPowerWatts: Swift.Double?
-            /// device-computed; this module computes no power model of its own
-            ///
             /// - Remark: Generated from `#/components/schemas/RideView/normalizedPowerWatts`.
             public var normalizedPowerWatts: Swift.Double?
             /// - Remark: Generated from `#/components/schemas/RideView/avgHeartRate`.
-            public var avgHeartRate: Swift.Int?
+            public var avgHeartRate: Swift.Double?
             /// - Remark: Generated from `#/components/schemas/RideView/maxHeartRate`.
-            public var maxHeartRate: Swift.Int?
+            public var maxHeartRate: Swift.Double?
             /// - Remark: Generated from `#/components/schemas/RideView/avgCadence`.
             public var avgCadence: Swift.Double?
             /// - Remark: Generated from `#/components/schemas/RideView/maxCadence`.
@@ -137,14 +160,30 @@ extension Components {
             public var avgSpeedMps: Swift.Double?
             /// - Remark: Generated from `#/components/schemas/RideView/maxSpeedMps`.
             public var maxSpeedMps: Swift.Double?
-            /// kcal — the same energy unit as macros
-            ///
             /// - Remark: Generated from `#/components/schemas/RideView/calories`.
-            public var calories: Swift.Int?
+            public var calories: Swift.Double?
             /// - Remark: Generated from `#/components/schemas/RideView/avgTemperatureC`.
             public var avgTemperatureC: Swift.Double?
             /// - Remark: Generated from `#/components/schemas/RideView/timeInHrZone`.
-            public var timeInHrZone: Components.Schemas.TimeInHrZone?
+            public struct TimeInHrZonePayload: Codable, Hashable, Sendable {
+                /// - Remark: Generated from `#/components/schemas/RideView/timeInHrZone/value1`.
+                public var value1: Components.Schemas.TimeInHrZone
+                /// Creates a new `TimeInHrZonePayload`.
+                ///
+                /// - Parameters:
+                ///   - value1:
+                public init(value1: Components.Schemas.TimeInHrZone) {
+                    self.value1 = value1
+                }
+                public init(from decoder: any Swift.Decoder) throws {
+                    self.value1 = try .init(from: decoder)
+                }
+                public func encode(to encoder: any Swift.Encoder) throws {
+                    try self.value1.encode(to: encoder)
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/RideView/timeInHrZone`.
+            public var timeInHrZone: Components.Schemas.RideView.TimeInHrZonePayload?
             /// - Remark: Generated from `#/components/schemas/RideView/deviceManufacturer`.
             public var deviceManufacturer: Swift.String?
             /// - Remark: Generated from `#/components/schemas/RideView/deviceProduct`.
@@ -157,13 +196,13 @@ extension Components {
             ///
             /// - Parameters:
             ///   - id:
-            ///   - name: the human layer; display falls back to sportProfileName + localDate
+            ///   - name:
             ///   - note:
-            ///   - sport: Garmin sport string verbatim (cycling, running, …)
+            ///   - sport:
             ///   - subSport:
-            ///   - sportProfileName: device profile name ("MTB") — the display fallback for unnamed rides
+            ///   - sportProfileName:
             ///   - startedAt:
-            ///   - localDate: the ride's LOCAL calendar date, from the file's own clock — use this for display/grouping, never the UTC date of startedAt
+            ///   - localDate:
             ///   - elapsedSeconds:
             ///   - movingSeconds:
             ///   - distanceMeters:
@@ -171,14 +210,14 @@ extension Components {
             ///   - totalDescentMeters:
             ///   - avgPowerWatts:
             ///   - maxPowerWatts:
-            ///   - normalizedPowerWatts: device-computed; this module computes no power model of its own
+            ///   - normalizedPowerWatts:
             ///   - avgHeartRate:
             ///   - maxHeartRate:
             ///   - avgCadence:
             ///   - maxCadence:
             ///   - avgSpeedMps:
             ///   - maxSpeedMps:
-            ///   - calories: kcal — the same energy unit as macros
+            ///   - calories:
             ///   - avgTemperatureC:
             ///   - timeInHrZone:
             ///   - deviceManufacturer:
@@ -202,15 +241,15 @@ extension Components {
                 avgPowerWatts: Swift.Double? = nil,
                 maxPowerWatts: Swift.Double? = nil,
                 normalizedPowerWatts: Swift.Double? = nil,
-                avgHeartRate: Swift.Int? = nil,
-                maxHeartRate: Swift.Int? = nil,
+                avgHeartRate: Swift.Double? = nil,
+                maxHeartRate: Swift.Double? = nil,
                 avgCadence: Swift.Double? = nil,
                 maxCadence: Swift.Double? = nil,
                 avgSpeedMps: Swift.Double? = nil,
                 maxSpeedMps: Swift.Double? = nil,
-                calories: Swift.Int? = nil,
+                calories: Swift.Double? = nil,
                 avgTemperatureC: Swift.Double? = nil,
-                timeInHrZone: Components.Schemas.TimeInHrZone? = nil,
+                timeInHrZone: Components.Schemas.RideView.TimeInHrZonePayload? = nil,
                 deviceManufacturer: Swift.String? = nil,
                 deviceProduct: Swift.String? = nil,
                 createdAt: Foundation.Date,
@@ -278,8 +317,6 @@ extension Components {
                 case updatedAt
             }
         }
-        /// Downsampled aligned arrays. `t` is seconds from start; other channels align to it with null gaps (smart recording is irregular — gaps are data, not errors). Absent channel = never recorded.
-        ///
         /// - Remark: Generated from `#/components/schemas/RideStream`.
         public struct RideStream: Codable, Hashable, Sendable {
             /// - Remark: Generated from `#/components/schemas/RideStream/resolutionSeconds`.
@@ -345,66 +382,293 @@ extension Components {
         }
         /// - Remark: Generated from `#/components/schemas/RideDetail`.
         public struct RideDetail: Codable, Hashable, Sendable {
-            /// - Remark: Generated from `#/components/schemas/RideDetail/value1`.
-            public var value1: Components.Schemas.RideView
-            /// - Remark: Generated from `#/components/schemas/RideDetail/value2`.
-            public struct Value2Payload: Codable, Hashable, Sendable {
-                /// present only when ?streams=1
-                ///
-                /// - Remark: Generated from `#/components/schemas/RideDetail/value2/stream`.
-                public struct StreamPayload: Codable, Hashable, Sendable {
-                    /// - Remark: Generated from `#/components/schemas/RideDetail/value2/stream/value1`.
-                    public var value1: Components.Schemas.RideStream
-                    /// Creates a new `StreamPayload`.
-                    ///
-                    /// - Parameters:
-                    ///   - value1:
-                    public init(value1: Components.Schemas.RideStream) {
-                        self.value1 = value1
-                    }
-                    public init(from decoder: any Swift.Decoder) throws {
-                        self.value1 = try .init(from: decoder)
-                    }
-                    public func encode(to encoder: any Swift.Encoder) throws {
-                        try self.value1.encode(to: encoder)
-                    }
-                }
-                /// present only when ?streams=1
-                ///
-                /// - Remark: Generated from `#/components/schemas/RideDetail/value2/stream`.
-                public var stream: Components.Schemas.RideDetail.Value2Payload.StreamPayload?
-                /// Creates a new `Value2Payload`.
+            /// - Remark: Generated from `#/components/schemas/RideDetail/id`.
+            public var id: Swift.String
+            /// - Remark: Generated from `#/components/schemas/RideDetail/name`.
+            public var name: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/RideDetail/note`.
+            public var note: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/RideDetail/sport`.
+            public var sport: Swift.String
+            /// - Remark: Generated from `#/components/schemas/RideDetail/subSport`.
+            public var subSport: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/RideDetail/sportProfileName`.
+            public var sportProfileName: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/RideDetail/startedAt`.
+            public var startedAt: Foundation.Date
+            /// - Remark: Generated from `#/components/schemas/RideDetail/localDate`.
+            public var localDate: Swift.String
+            /// - Remark: Generated from `#/components/schemas/RideDetail/elapsedSeconds`.
+            public var elapsedSeconds: Swift.Double
+            /// - Remark: Generated from `#/components/schemas/RideDetail/movingSeconds`.
+            public var movingSeconds: Swift.Double
+            /// - Remark: Generated from `#/components/schemas/RideDetail/distanceMeters`.
+            public var distanceMeters: Swift.Double?
+            /// - Remark: Generated from `#/components/schemas/RideDetail/totalAscentMeters`.
+            public var totalAscentMeters: Swift.Double?
+            /// - Remark: Generated from `#/components/schemas/RideDetail/totalDescentMeters`.
+            public var totalDescentMeters: Swift.Double?
+            /// - Remark: Generated from `#/components/schemas/RideDetail/avgPowerWatts`.
+            public var avgPowerWatts: Swift.Double?
+            /// - Remark: Generated from `#/components/schemas/RideDetail/maxPowerWatts`.
+            public var maxPowerWatts: Swift.Double?
+            /// - Remark: Generated from `#/components/schemas/RideDetail/normalizedPowerWatts`.
+            public var normalizedPowerWatts: Swift.Double?
+            /// - Remark: Generated from `#/components/schemas/RideDetail/avgHeartRate`.
+            public var avgHeartRate: Swift.Double?
+            /// - Remark: Generated from `#/components/schemas/RideDetail/maxHeartRate`.
+            public var maxHeartRate: Swift.Double?
+            /// - Remark: Generated from `#/components/schemas/RideDetail/avgCadence`.
+            public var avgCadence: Swift.Double?
+            /// - Remark: Generated from `#/components/schemas/RideDetail/maxCadence`.
+            public var maxCadence: Swift.Double?
+            /// - Remark: Generated from `#/components/schemas/RideDetail/avgSpeedMps`.
+            public var avgSpeedMps: Swift.Double?
+            /// - Remark: Generated from `#/components/schemas/RideDetail/maxSpeedMps`.
+            public var maxSpeedMps: Swift.Double?
+            /// - Remark: Generated from `#/components/schemas/RideDetail/calories`.
+            public var calories: Swift.Double?
+            /// - Remark: Generated from `#/components/schemas/RideDetail/avgTemperatureC`.
+            public var avgTemperatureC: Swift.Double?
+            /// - Remark: Generated from `#/components/schemas/RideDetail/timeInHrZone`.
+            public struct TimeInHrZonePayload: Codable, Hashable, Sendable {
+                /// - Remark: Generated from `#/components/schemas/RideDetail/timeInHrZone/value1`.
+                public var value1: Components.Schemas.TimeInHrZone
+                /// Creates a new `TimeInHrZonePayload`.
                 ///
                 /// - Parameters:
-                ///   - stream: present only when ?streams=1
-                public init(stream: Components.Schemas.RideDetail.Value2Payload.StreamPayload? = nil) {
-                    self.stream = stream
+                ///   - value1:
+                public init(value1: Components.Schemas.TimeInHrZone) {
+                    self.value1 = value1
                 }
-                public enum CodingKeys: String, CodingKey {
-                    case stream
+                public init(from decoder: any Swift.Decoder) throws {
+                    self.value1 = try .init(from: decoder)
+                }
+                public func encode(to encoder: any Swift.Encoder) throws {
+                    try self.value1.encode(to: encoder)
                 }
             }
-            /// - Remark: Generated from `#/components/schemas/RideDetail/value2`.
-            public var value2: Components.Schemas.RideDetail.Value2Payload
+            /// - Remark: Generated from `#/components/schemas/RideDetail/timeInHrZone`.
+            public var timeInHrZone: Components.Schemas.RideDetail.TimeInHrZonePayload?
+            /// - Remark: Generated from `#/components/schemas/RideDetail/deviceManufacturer`.
+            public var deviceManufacturer: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/RideDetail/deviceProduct`.
+            public var deviceProduct: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/RideDetail/createdAt`.
+            public var createdAt: Foundation.Date
+            /// - Remark: Generated from `#/components/schemas/RideDetail/updatedAt`.
+            public var updatedAt: Foundation.Date
+            /// - Remark: Generated from `#/components/schemas/RideDetail/stream`.
+            public struct StreamPayload: Codable, Hashable, Sendable {
+                /// - Remark: Generated from `#/components/schemas/RideDetail/stream/value1`.
+                public var value1: Components.Schemas.RideStream
+                /// Creates a new `StreamPayload`.
+                ///
+                /// - Parameters:
+                ///   - value1:
+                public init(value1: Components.Schemas.RideStream) {
+                    self.value1 = value1
+                }
+                public init(from decoder: any Swift.Decoder) throws {
+                    self.value1 = try .init(from: decoder)
+                }
+                public func encode(to encoder: any Swift.Encoder) throws {
+                    try self.value1.encode(to: encoder)
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/RideDetail/stream`.
+            public var stream: Components.Schemas.RideDetail.StreamPayload?
             /// Creates a new `RideDetail`.
             ///
             /// - Parameters:
-            ///   - value1:
-            ///   - value2:
+            ///   - id:
+            ///   - name:
+            ///   - note:
+            ///   - sport:
+            ///   - subSport:
+            ///   - sportProfileName:
+            ///   - startedAt:
+            ///   - localDate:
+            ///   - elapsedSeconds:
+            ///   - movingSeconds:
+            ///   - distanceMeters:
+            ///   - totalAscentMeters:
+            ///   - totalDescentMeters:
+            ///   - avgPowerWatts:
+            ///   - maxPowerWatts:
+            ///   - normalizedPowerWatts:
+            ///   - avgHeartRate:
+            ///   - maxHeartRate:
+            ///   - avgCadence:
+            ///   - maxCadence:
+            ///   - avgSpeedMps:
+            ///   - maxSpeedMps:
+            ///   - calories:
+            ///   - avgTemperatureC:
+            ///   - timeInHrZone:
+            ///   - deviceManufacturer:
+            ///   - deviceProduct:
+            ///   - createdAt:
+            ///   - updatedAt:
+            ///   - stream:
             public init(
-                value1: Components.Schemas.RideView,
-                value2: Components.Schemas.RideDetail.Value2Payload
+                id: Swift.String,
+                name: Swift.String? = nil,
+                note: Swift.String? = nil,
+                sport: Swift.String,
+                subSport: Swift.String? = nil,
+                sportProfileName: Swift.String? = nil,
+                startedAt: Foundation.Date,
+                localDate: Swift.String,
+                elapsedSeconds: Swift.Double,
+                movingSeconds: Swift.Double,
+                distanceMeters: Swift.Double? = nil,
+                totalAscentMeters: Swift.Double? = nil,
+                totalDescentMeters: Swift.Double? = nil,
+                avgPowerWatts: Swift.Double? = nil,
+                maxPowerWatts: Swift.Double? = nil,
+                normalizedPowerWatts: Swift.Double? = nil,
+                avgHeartRate: Swift.Double? = nil,
+                maxHeartRate: Swift.Double? = nil,
+                avgCadence: Swift.Double? = nil,
+                maxCadence: Swift.Double? = nil,
+                avgSpeedMps: Swift.Double? = nil,
+                maxSpeedMps: Swift.Double? = nil,
+                calories: Swift.Double? = nil,
+                avgTemperatureC: Swift.Double? = nil,
+                timeInHrZone: Components.Schemas.RideDetail.TimeInHrZonePayload? = nil,
+                deviceManufacturer: Swift.String? = nil,
+                deviceProduct: Swift.String? = nil,
+                createdAt: Foundation.Date,
+                updatedAt: Foundation.Date,
+                stream: Components.Schemas.RideDetail.StreamPayload? = nil
             ) {
-                self.value1 = value1
-                self.value2 = value2
+                self.id = id
+                self.name = name
+                self.note = note
+                self.sport = sport
+                self.subSport = subSport
+                self.sportProfileName = sportProfileName
+                self.startedAt = startedAt
+                self.localDate = localDate
+                self.elapsedSeconds = elapsedSeconds
+                self.movingSeconds = movingSeconds
+                self.distanceMeters = distanceMeters
+                self.totalAscentMeters = totalAscentMeters
+                self.totalDescentMeters = totalDescentMeters
+                self.avgPowerWatts = avgPowerWatts
+                self.maxPowerWatts = maxPowerWatts
+                self.normalizedPowerWatts = normalizedPowerWatts
+                self.avgHeartRate = avgHeartRate
+                self.maxHeartRate = maxHeartRate
+                self.avgCadence = avgCadence
+                self.maxCadence = maxCadence
+                self.avgSpeedMps = avgSpeedMps
+                self.maxSpeedMps = maxSpeedMps
+                self.calories = calories
+                self.avgTemperatureC = avgTemperatureC
+                self.timeInHrZone = timeInHrZone
+                self.deviceManufacturer = deviceManufacturer
+                self.deviceProduct = deviceProduct
+                self.createdAt = createdAt
+                self.updatedAt = updatedAt
+                self.stream = stream
             }
-            public init(from decoder: any Swift.Decoder) throws {
-                self.value1 = try .init(from: decoder)
-                self.value2 = try .init(from: decoder)
+            public enum CodingKeys: String, CodingKey {
+                case id
+                case name
+                case note
+                case sport
+                case subSport
+                case sportProfileName
+                case startedAt
+                case localDate
+                case elapsedSeconds
+                case movingSeconds
+                case distanceMeters
+                case totalAscentMeters
+                case totalDescentMeters
+                case avgPowerWatts
+                case maxPowerWatts
+                case normalizedPowerWatts
+                case avgHeartRate
+                case maxHeartRate
+                case avgCadence
+                case maxCadence
+                case avgSpeedMps
+                case maxSpeedMps
+                case calories
+                case avgTemperatureC
+                case timeInHrZone
+                case deviceManufacturer
+                case deviceProduct
+                case createdAt
+                case updatedAt
+                case stream
             }
-            public func encode(to encoder: any Swift.Encoder) throws {
-                try self.value1.encode(to: encoder)
-                try self.value2.encode(to: encoder)
+        }
+        /// - Remark: Generated from `#/components/schemas/WeeklyStats`.
+        public struct WeeklyStats: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/WeeklyStats/WeeksPayload`.
+            public struct WeeksPayloadPayload: Codable, Hashable, Sendable {
+                /// - Remark: Generated from `#/components/schemas/WeeklyStats/WeeksPayload/weekStart`.
+                public var weekStart: Swift.String
+                /// - Remark: Generated from `#/components/schemas/WeeklyStats/WeeksPayload/rides`.
+                public var rides: Swift.Int
+                /// - Remark: Generated from `#/components/schemas/WeeklyStats/WeeksPayload/distanceMeters`.
+                public var distanceMeters: Swift.Double
+                /// - Remark: Generated from `#/components/schemas/WeeklyStats/WeeksPayload/movingSeconds`.
+                public var movingSeconds: Swift.Double
+                /// - Remark: Generated from `#/components/schemas/WeeklyStats/WeeksPayload/totalAscentMeters`.
+                public var totalAscentMeters: Swift.Double
+                /// - Remark: Generated from `#/components/schemas/WeeklyStats/WeeksPayload/avgPowerWatts`.
+                public var avgPowerWatts: Swift.Double?
+                /// Creates a new `WeeksPayloadPayload`.
+                ///
+                /// - Parameters:
+                ///   - weekStart:
+                ///   - rides:
+                ///   - distanceMeters:
+                ///   - movingSeconds:
+                ///   - totalAscentMeters:
+                ///   - avgPowerWatts:
+                public init(
+                    weekStart: Swift.String,
+                    rides: Swift.Int,
+                    distanceMeters: Swift.Double,
+                    movingSeconds: Swift.Double,
+                    totalAscentMeters: Swift.Double,
+                    avgPowerWatts: Swift.Double? = nil
+                ) {
+                    self.weekStart = weekStart
+                    self.rides = rides
+                    self.distanceMeters = distanceMeters
+                    self.movingSeconds = movingSeconds
+                    self.totalAscentMeters = totalAscentMeters
+                    self.avgPowerWatts = avgPowerWatts
+                }
+                public enum CodingKeys: String, CodingKey {
+                    case weekStart
+                    case rides
+                    case distanceMeters
+                    case movingSeconds
+                    case totalAscentMeters
+                    case avgPowerWatts
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/WeeklyStats/weeks`.
+            public typealias WeeksPayload = [Components.Schemas.WeeklyStats.WeeksPayloadPayload]
+            /// - Remark: Generated from `#/components/schemas/WeeklyStats/weeks`.
+            public var weeks: Components.Schemas.WeeklyStats.WeeksPayload
+            /// Creates a new `WeeklyStats`.
+            ///
+            /// - Parameters:
+            ///   - weeks:
+            public init(weeks: Components.Schemas.WeeklyStats.WeeksPayload) {
+                self.weeks = weeks
+            }
+            public enum CodingKeys: String, CodingKey {
+                case weeks
             }
         }
         /// - Remark: Generated from `#/components/schemas/IngestResult`.
@@ -449,78 +713,6 @@ extension Components {
             public func encode(to encoder: any Swift.Encoder) throws {
                 try self.value1.encode(to: encoder)
                 try self.value2.encode(to: encoder)
-            }
-        }
-        /// - Remark: Generated from `#/components/schemas/WeeklyStats`.
-        public struct WeeklyStats: Codable, Hashable, Sendable {
-            /// - Remark: Generated from `#/components/schemas/WeeklyStats/WeeksPayload`.
-            public struct WeeksPayloadPayload: Codable, Hashable, Sendable {
-                /// Monday of the ISO week
-                ///
-                /// - Remark: Generated from `#/components/schemas/WeeklyStats/WeeksPayload/weekStart`.
-                public var weekStart: Swift.String
-                /// - Remark: Generated from `#/components/schemas/WeeklyStats/WeeksPayload/rides`.
-                public var rides: Swift.Int
-                /// - Remark: Generated from `#/components/schemas/WeeklyStats/WeeksPayload/distanceMeters`.
-                public var distanceMeters: Swift.Double
-                /// - Remark: Generated from `#/components/schemas/WeeklyStats/WeeksPayload/movingSeconds`.
-                public var movingSeconds: Swift.Double
-                /// - Remark: Generated from `#/components/schemas/WeeklyStats/WeeksPayload/totalAscentMeters`.
-                public var totalAscentMeters: Swift.Double
-                /// mean across the week's rides that have power; null when none do
-                ///
-                /// - Remark: Generated from `#/components/schemas/WeeklyStats/WeeksPayload/avgPowerWatts`.
-                public var avgPowerWatts: Swift.Double?
-                /// Creates a new `WeeksPayloadPayload`.
-                ///
-                /// - Parameters:
-                ///   - weekStart: Monday of the ISO week
-                ///   - rides:
-                ///   - distanceMeters:
-                ///   - movingSeconds:
-                ///   - totalAscentMeters:
-                ///   - avgPowerWatts: mean across the week's rides that have power; null when none do
-                public init(
-                    weekStart: Swift.String,
-                    rides: Swift.Int,
-                    distanceMeters: Swift.Double,
-                    movingSeconds: Swift.Double,
-                    totalAscentMeters: Swift.Double,
-                    avgPowerWatts: Swift.Double? = nil
-                ) {
-                    self.weekStart = weekStart
-                    self.rides = rides
-                    self.distanceMeters = distanceMeters
-                    self.movingSeconds = movingSeconds
-                    self.totalAscentMeters = totalAscentMeters
-                    self.avgPowerWatts = avgPowerWatts
-                }
-                public enum CodingKeys: String, CodingKey {
-                    case weekStart
-                    case rides
-                    case distanceMeters
-                    case movingSeconds
-                    case totalAscentMeters
-                    case avgPowerWatts
-                }
-            }
-            /// newest week first; weeks with no matching rides are omitted
-            ///
-            /// - Remark: Generated from `#/components/schemas/WeeklyStats/weeks`.
-            public typealias WeeksPayload = [Components.Schemas.WeeklyStats.WeeksPayloadPayload]
-            /// newest week first; weeks with no matching rides are omitted
-            ///
-            /// - Remark: Generated from `#/components/schemas/WeeklyStats/weeks`.
-            public var weeks: Components.Schemas.WeeklyStats.WeeksPayload
-            /// Creates a new `WeeklyStats`.
-            ///
-            /// - Parameters:
-            ///   - weeks: newest week first; weeks with no matching rides are omitted
-            public init(weeks: Components.Schemas.WeeklyStats.WeeksPayload) {
-                self.weeks = weeks
-            }
-            public enum CodingKeys: String, CodingKey {
-                case weeks
             }
         }
         /// - Remark: Generated from `#/components/schemas/Error`.

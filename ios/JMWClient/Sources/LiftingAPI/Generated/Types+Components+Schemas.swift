@@ -156,20 +156,16 @@ extension Components {
         public struct GoalView: Codable, Hashable, Sendable {
             /// - Remark: Generated from `#/components/schemas/GoalView/id`.
             public var id: Swift.String
-            /// calendar date the goal takes effect; the goal in force on any date is the latest effectiveFrom on/before it
-            ///
             /// - Remark: Generated from `#/components/schemas/GoalView/effectiveFrom`.
             public var effectiveFrom: Swift.String
-            /// freeform prose — what the training is for. Deliberately unstructured.
-            ///
             /// - Remark: Generated from `#/components/schemas/GoalView/statement`.
             public var statement: Swift.String
             /// Creates a new `GoalView`.
             ///
             /// - Parameters:
             ///   - id:
-            ///   - effectiveFrom: calendar date the goal takes effect; the goal in force on any date is the latest effectiveFrom on/before it
-            ///   - statement: freeform prose — what the training is for. Deliberately unstructured.
+            ///   - effectiveFrom:
+            ///   - statement:
             public init(
                 id: Swift.String,
                 effectiveFrom: Swift.String,
@@ -198,8 +194,6 @@ extension Components {
             }
             /// - Remark: Generated from `#/components/schemas/PrFlag/kind`.
             public var kind: Components.Schemas.PrFlag.KindPayload
-            /// kg (display in whole lb)
-            ///
             /// - Remark: Generated from `#/components/schemas/PrFlag/value`.
             public var value: Swift.Double
             /// Creates a new `PrFlag`.
@@ -208,7 +202,7 @@ extension Components {
             ///   - lift:
             ///   - templateId:
             ///   - kind:
-            ///   - value: kg (display in whole lb)
+            ///   - value:
             public init(
                 lift: Swift.String,
                 templateId: Swift.String? = nil,
@@ -240,7 +234,7 @@ extension Components {
             /// - Remark: Generated from `#/components/schemas/SessionDerived/topE1rmKg`.
             public var topE1rmKg: Swift.Double?
             /// - Remark: Generated from `#/components/schemas/SessionDerived/durationMin`.
-            public var durationMin: Swift.Int?
+            public var durationMin: Swift.Double?
             /// - Remark: Generated from `#/components/schemas/SessionDerived/prs`.
             public var prs: [Components.Schemas.PrFlag]
             /// Creates a new `SessionDerived`.
@@ -259,7 +253,7 @@ extension Components {
                 totalReps: Swift.Int,
                 exerciseCount: Swift.Int,
                 topE1rmKg: Swift.Double? = nil,
-                durationMin: Swift.Int? = nil,
+                durationMin: Swift.Double? = nil,
                 prs: [Components.Schemas.PrFlag]
             ) {
                 self.tonnageKg = tonnageKg
@@ -300,8 +294,6 @@ extension Components {
             public var focus: Components.Schemas.SessionAnnotation.FocusPayload?
             /// - Remark: Generated from `#/components/schemas/SessionAnnotation/interpretation`.
             public var interpretation: Swift.String?
-            /// interpretedAt is set
-            ///
             /// - Remark: Generated from `#/components/schemas/SessionAnnotation/interpreted`.
             public var interpreted: Swift.Bool
             /// Creates a new `SessionAnnotation`.
@@ -311,7 +303,7 @@ extension Components {
             ///   - quality:
             ///   - focus:
             ///   - interpretation:
-            ///   - interpreted: interpretedAt is set
+            ///   - interpreted:
             public init(
                 sessionNotes: Swift.String? = nil,
                 quality: Swift.Int? = nil,
@@ -338,28 +330,17 @@ extension Components {
             /// - Remark: Generated from `#/components/schemas/SetView/index`.
             public var index: Swift.Int
             /// - Remark: Generated from `#/components/schemas/SetView/setType`.
-            @frozen public enum SetTypePayload: String, Codable, Hashable, Sendable, CaseIterable {
-                case normal = "normal"
-                case warmup = "warmup"
-                case failure = "failure"
-                case dropset = "dropset"
-            }
-            /// - Remark: Generated from `#/components/schemas/SetView/setType`.
-            public var setType: Components.Schemas.SetView.SetTypePayload
+            public var setType: Swift.String
             /// - Remark: Generated from `#/components/schemas/SetView/weightKg`.
             public var weightKg: Swift.Double?
             /// - Remark: Generated from `#/components/schemas/SetView/reps`.
             public var reps: Swift.Int?
-            /// unused in practice (always null)
-            ///
             /// - Remark: Generated from `#/components/schemas/SetView/rpe`.
             public var rpe: Swift.Double?
             /// - Remark: Generated from `#/components/schemas/SetView/distanceMeters`.
             public var distanceMeters: Swift.Double?
             /// - Remark: Generated from `#/components/schemas/SetView/durationSeconds`.
-            public var durationSeconds: Swift.Int?
-            /// this set achieved a PR (weight or e1RM) for its lift
-            ///
+            public var durationSeconds: Swift.Double?
             /// - Remark: Generated from `#/components/schemas/SetView/pr`.
             public var pr: Swift.Bool
             /// Creates a new `SetView`.
@@ -369,18 +350,18 @@ extension Components {
             ///   - setType:
             ///   - weightKg:
             ///   - reps:
-            ///   - rpe: unused in practice (always null)
+            ///   - rpe:
             ///   - distanceMeters:
             ///   - durationSeconds:
-            ///   - pr: this set achieved a PR (weight or e1RM) for its lift
+            ///   - pr:
             public init(
                 index: Swift.Int,
-                setType: Components.Schemas.SetView.SetTypePayload,
+                setType: Swift.String,
                 weightKg: Swift.Double? = nil,
                 reps: Swift.Int? = nil,
                 rpe: Swift.Double? = nil,
                 distanceMeters: Swift.Double? = nil,
-                durationSeconds: Swift.Int? = nil,
+                durationSeconds: Swift.Double? = nil,
                 pr: Swift.Bool
             ) {
                 self.index = index
@@ -409,20 +390,14 @@ extension Components {
             public var index: Swift.Int
             /// - Remark: Generated from `#/components/schemas/ExerciseView/title`.
             public var title: Swift.String
-            /// Hevy's stable lift id — threads a lift across sessions
-            ///
             /// - Remark: Generated from `#/components/schemas/ExerciseView/exerciseTemplateId`.
             public var exerciseTemplateId: Swift.String?
             /// - Remark: Generated from `#/components/schemas/ExerciseView/notes`.
             public var notes: Swift.String?
             /// - Remark: Generated from `#/components/schemas/ExerciseView/supersetGroup`.
             public var supersetGroup: Swift.Int?
-            /// best Epley e1RM over working sets
-            ///
             /// - Remark: Generated from `#/components/schemas/ExerciseView/e1rmKg`.
             public var e1rmKg: Swift.Double?
-            /// best set is >12 reps — estimate degrades
-            ///
             /// - Remark: Generated from `#/components/schemas/ExerciseView/e1rmUnreliable`.
             public var e1rmUnreliable: Swift.Bool
             /// - Remark: Generated from `#/components/schemas/ExerciseView/sets`.
@@ -432,11 +407,11 @@ extension Components {
             /// - Parameters:
             ///   - index:
             ///   - title:
-            ///   - exerciseTemplateId: Hevy's stable lift id — threads a lift across sessions
+            ///   - exerciseTemplateId:
             ///   - notes:
             ///   - supersetGroup:
-            ///   - e1rmKg: best Epley e1RM over working sets
-            ///   - e1rmUnreliable: best set is >12 reps — estimate degrades
+            ///   - e1rmKg:
+            ///   - e1rmUnreliable:
             ///   - sets:
             public init(
                 index: Swift.Int,
@@ -480,8 +455,6 @@ extension Components {
             public var startedAt: Foundation.Date
             /// - Remark: Generated from `#/components/schemas/SessionSummary/endedAt`.
             public var endedAt: Foundation.Date?
-            /// Hevy's own workout note (distinct from sessionNotes)
-            ///
             /// - Remark: Generated from `#/components/schemas/SessionSummary/description`.
             public var description: Swift.String?
             /// - Remark: Generated from `#/components/schemas/SessionSummary/derived`.
@@ -496,7 +469,7 @@ extension Components {
             ///   - title:
             ///   - startedAt:
             ///   - endedAt:
-            ///   - description: Hevy's own workout note (distinct from sessionNotes)
+            ///   - description:
             ///   - derived:
             ///   - annotation:
             public init(
@@ -531,74 +504,91 @@ extension Components {
         }
         /// - Remark: Generated from `#/components/schemas/SessionDetail`.
         public struct SessionDetail: Codable, Hashable, Sendable {
-            /// - Remark: Generated from `#/components/schemas/SessionDetail/value1`.
-            public var value1: Components.Schemas.SessionSummary
-            /// - Remark: Generated from `#/components/schemas/SessionDetail/value2`.
-            public struct Value2Payload: Codable, Hashable, Sendable {
-                /// - Remark: Generated from `#/components/schemas/SessionDetail/value2/exercises`.
-                public var exercises: [Components.Schemas.ExerciseView]
-                /// the goal in force ON THIS SESSION'S DATE (not necessarily today's) — read it before interpreting
-                ///
-                /// - Remark: Generated from `#/components/schemas/SessionDetail/value2/goal`.
-                public struct GoalPayload: Codable, Hashable, Sendable {
-                    /// - Remark: Generated from `#/components/schemas/SessionDetail/value2/goal/value1`.
-                    public var value1: Components.Schemas.GoalView
-                    /// Creates a new `GoalPayload`.
-                    ///
-                    /// - Parameters:
-                    ///   - value1:
-                    public init(value1: Components.Schemas.GoalView) {
-                        self.value1 = value1
-                    }
-                    public init(from decoder: any Swift.Decoder) throws {
-                        self.value1 = try .init(from: decoder)
-                    }
-                    public func encode(to encoder: any Swift.Encoder) throws {
-                        try self.value1.encode(to: encoder)
-                    }
-                }
-                /// the goal in force ON THIS SESSION'S DATE (not necessarily today's) — read it before interpreting
-                ///
-                /// - Remark: Generated from `#/components/schemas/SessionDetail/value2/goal`.
-                public var goal: Components.Schemas.SessionDetail.Value2Payload.GoalPayload?
-                /// Creates a new `Value2Payload`.
+            /// - Remark: Generated from `#/components/schemas/SessionDetail/id`.
+            public var id: Swift.String
+            /// - Remark: Generated from `#/components/schemas/SessionDetail/hevyId`.
+            public var hevyId: Swift.String
+            /// - Remark: Generated from `#/components/schemas/SessionDetail/title`.
+            public var title: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/SessionDetail/startedAt`.
+            public var startedAt: Foundation.Date
+            /// - Remark: Generated from `#/components/schemas/SessionDetail/endedAt`.
+            public var endedAt: Foundation.Date?
+            /// - Remark: Generated from `#/components/schemas/SessionDetail/description`.
+            public var description: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/SessionDetail/derived`.
+            public var derived: Components.Schemas.SessionDerived
+            /// - Remark: Generated from `#/components/schemas/SessionDetail/annotation`.
+            public var annotation: Components.Schemas.SessionAnnotation
+            /// - Remark: Generated from `#/components/schemas/SessionDetail/exercises`.
+            public var exercises: [Components.Schemas.ExerciseView]
+            /// - Remark: Generated from `#/components/schemas/SessionDetail/goal`.
+            public struct GoalPayload: Codable, Hashable, Sendable {
+                /// - Remark: Generated from `#/components/schemas/SessionDetail/goal/value1`.
+                public var value1: Components.Schemas.GoalView
+                /// Creates a new `GoalPayload`.
                 ///
                 /// - Parameters:
-                ///   - exercises:
-                ///   - goal: the goal in force ON THIS SESSION'S DATE (not necessarily today's) — read it before interpreting
-                public init(
-                    exercises: [Components.Schemas.ExerciseView],
-                    goal: Components.Schemas.SessionDetail.Value2Payload.GoalPayload? = nil
-                ) {
-                    self.exercises = exercises
-                    self.goal = goal
+                ///   - value1:
+                public init(value1: Components.Schemas.GoalView) {
+                    self.value1 = value1
                 }
-                public enum CodingKeys: String, CodingKey {
-                    case exercises
-                    case goal
+                public init(from decoder: any Swift.Decoder) throws {
+                    self.value1 = try .init(from: decoder)
+                }
+                public func encode(to encoder: any Swift.Encoder) throws {
+                    try self.value1.encode(to: encoder)
                 }
             }
-            /// - Remark: Generated from `#/components/schemas/SessionDetail/value2`.
-            public var value2: Components.Schemas.SessionDetail.Value2Payload
+            /// - Remark: Generated from `#/components/schemas/SessionDetail/goal`.
+            public var goal: Components.Schemas.SessionDetail.GoalPayload?
             /// Creates a new `SessionDetail`.
             ///
             /// - Parameters:
-            ///   - value1:
-            ///   - value2:
+            ///   - id:
+            ///   - hevyId:
+            ///   - title:
+            ///   - startedAt:
+            ///   - endedAt:
+            ///   - description:
+            ///   - derived:
+            ///   - annotation:
+            ///   - exercises:
+            ///   - goal:
             public init(
-                value1: Components.Schemas.SessionSummary,
-                value2: Components.Schemas.SessionDetail.Value2Payload
+                id: Swift.String,
+                hevyId: Swift.String,
+                title: Swift.String? = nil,
+                startedAt: Foundation.Date,
+                endedAt: Foundation.Date? = nil,
+                description: Swift.String? = nil,
+                derived: Components.Schemas.SessionDerived,
+                annotation: Components.Schemas.SessionAnnotation,
+                exercises: [Components.Schemas.ExerciseView],
+                goal: Components.Schemas.SessionDetail.GoalPayload? = nil
             ) {
-                self.value1 = value1
-                self.value2 = value2
+                self.id = id
+                self.hevyId = hevyId
+                self.title = title
+                self.startedAt = startedAt
+                self.endedAt = endedAt
+                self.description = description
+                self.derived = derived
+                self.annotation = annotation
+                self.exercises = exercises
+                self.goal = goal
             }
-            public init(from decoder: any Swift.Decoder) throws {
-                self.value1 = try .init(from: decoder)
-                self.value2 = try .init(from: decoder)
-            }
-            public func encode(to encoder: any Swift.Encoder) throws {
-                try self.value1.encode(to: encoder)
-                try self.value2.encode(to: encoder)
+            public enum CodingKeys: String, CodingKey {
+                case id
+                case hevyId
+                case title
+                case startedAt
+                case endedAt
+                case description
+                case derived
+                case annotation
+                case exercises
+                case goal
             }
         }
         /// - Remark: Generated from `#/components/schemas/LiftProgression`.

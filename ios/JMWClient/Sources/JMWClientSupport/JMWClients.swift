@@ -21,14 +21,15 @@ public struct JMWClients: Sendable {
     public init(pairing: PairingPayload, session: URLSession = .shared) {
         let transport = URLSessionTransport(configuration: .init(session: session))
         let middlewares: [any ClientMiddleware] = [BearerTokenMiddleware(token: pairing.token)]
+        let configuration = Configuration(dateTranscoder: ISO8601Transcoder())
         // The specs' paths are absolute (`/api/weight/rollup`), so the server URL is just the origin.
         let server = pairing.base
-        macros = .init(serverURL: server, transport: transport, middlewares: middlewares)
-        weight = .init(serverURL: server, transport: transport, middlewares: middlewares)
-        lifting = .init(serverURL: server, transport: transport, middlewares: middlewares)
-        rides = .init(serverURL: server, transport: transport, middlewares: middlewares)
-        vitals = .init(serverURL: server, transport: transport, middlewares: middlewares)
-        shopping = .init(serverURL: server, transport: transport, middlewares: middlewares)
+        macros = .init(serverURL: server, configuration: configuration, transport: transport, middlewares: middlewares)
+        weight = .init(serverURL: server, configuration: configuration, transport: transport, middlewares: middlewares)
+        lifting = .init(serverURL: server, configuration: configuration, transport: transport, middlewares: middlewares)
+        rides = .init(serverURL: server, configuration: configuration, transport: transport, middlewares: middlewares)
+        vitals = .init(serverURL: server, configuration: configuration, transport: transport, middlewares: middlewares)
+        shopping = .init(serverURL: server, configuration: configuration, transport: transport, middlewares: middlewares)
     }
 
     public enum CheckResult: Equatable, Sendable {

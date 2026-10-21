@@ -64,7 +64,7 @@ public enum Operations {
                     /// - Remark: Generated from `#/paths/api/weight/entries/GET/responses/200/content/json`.
                     public struct JsonPayload: Codable, Hashable, Sendable {
                         /// - Remark: Generated from `#/paths/api/weight/entries/GET/responses/200/content/json/items`.
-                        public var items: [Components.Schemas.WeightCreate]
+                        public var items: [Components.Schemas.WeightEntryView]
                         /// - Remark: Generated from `#/paths/api/weight/entries/GET/responses/200/content/json/limit`.
                         public var limit: Swift.Int
                         /// - Remark: Generated from `#/paths/api/weight/entries/GET/responses/200/content/json/offset`.
@@ -79,7 +79,7 @@ public enum Operations {
                         ///   - offset:
                         ///   - count:
                         public init(
-                            items: [Components.Schemas.WeightCreate],
+                            items: [Components.Schemas.WeightEntryView],
                             limit: Swift.Int,
                             offset: Swift.Int,
                             count: Swift.Int
@@ -368,8 +368,32 @@ public enum Operations {
         }
         @frozen public enum Output: Sendable, Hashable {
             public struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/api/weight/entries/POST/responses/200/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/api/weight/entries/POST/responses/200/content/application\/json`.
+                    case json(Components.Schemas.WeightEntryView)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.WeightEntryView {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.PostApiWeightEntries.Output.Ok.Body
                 /// Creates a new `Ok`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.PostApiWeightEntries.Output.Ok.Body) {
+                    self.body = body
+                }
             }
             /// Weigh-in (created or replaced) + Location
             ///
@@ -377,14 +401,6 @@ public enum Operations {
             ///
             /// HTTP response code: `200 ok`.
             case ok(Operations.PostApiWeightEntries.Output.Ok)
-            /// Weigh-in (created or replaced) + Location
-            ///
-            /// - Remark: Generated from `#/paths//api/weight/entries/post/responses/200`.
-            ///
-            /// HTTP response code: `200 ok`.
-            public static var ok: Self {
-                .ok(.init())
-            }
             /// The associated value of the enum case if `self` is `.ok`.
             ///
             /// - Throws: An error if `self` is not `.ok`.
@@ -633,8 +649,32 @@ public enum Operations {
         }
         @frozen public enum Output: Sendable, Hashable {
             public struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/api/weight/entries/{id}/GET/responses/200/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/api/weight/entries/{id}/GET/responses/200/content/application\/json`.
+                    case json(Components.Schemas.WeightEntryView)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.WeightEntryView {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.GetApiWeightEntriesId.Output.Ok.Body
                 /// Creates a new `Ok`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.GetApiWeightEntriesId.Output.Ok.Body) {
+                    self.body = body
+                }
             }
             /// Weigh-in
             ///
@@ -642,14 +682,6 @@ public enum Operations {
             ///
             /// HTTP response code: `200 ok`.
             case ok(Operations.GetApiWeightEntriesId.Output.Ok)
-            /// Weigh-in
-            ///
-            /// - Remark: Generated from `#/paths//api/weight/entries/{id}/get/responses/200`.
-            ///
-            /// HTTP response code: `200 ok`.
-            public static var ok: Self {
-                .ok(.init())
-            }
             /// The associated value of the enum case if `self` is `.ok`.
             ///
             /// - Throws: An error if `self` is not `.ok`.
@@ -907,8 +939,32 @@ public enum Operations {
         }
         @frozen public enum Output: Sendable, Hashable {
             public struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/api/weight/entries/{id}/PATCH/responses/200/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/api/weight/entries/{id}/PATCH/responses/200/content/application\/json`.
+                    case json(Components.Schemas.WeightEntryView)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.WeightEntryView {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.PatchApiWeightEntriesId.Output.Ok.Body
                 /// Creates a new `Ok`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.PatchApiWeightEntriesId.Output.Ok.Body) {
+                    self.body = body
+                }
             }
             /// Updated weigh-in
             ///
@@ -916,14 +972,6 @@ public enum Operations {
             ///
             /// HTTP response code: `200 ok`.
             case ok(Operations.PatchApiWeightEntriesId.Output.Ok)
-            /// Updated weigh-in
-            ///
-            /// - Remark: Generated from `#/paths//api/weight/entries/{id}/patch/responses/200`.
-            ///
-            /// HTTP response code: `200 ok`.
-            public static var ok: Self {
-                .ok(.init())
-            }
             /// The associated value of the enum case if `self` is `.ok`.
             ///
             /// - Throws: An error if `self` is not `.ok`.
@@ -1455,8 +1503,32 @@ public enum Operations {
         }
         @frozen public enum Output: Sendable, Hashable {
             public struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/api/weight/days/{date}/GET/responses/200/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/api/weight/days/{date}/GET/responses/200/content/application\/json`.
+                    case json(Components.Schemas.WeightEntryView)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.WeightEntryView {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.GetApiWeightDaysDate.Output.Ok.Body
                 /// Creates a new `Ok`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.GetApiWeightDaysDate.Output.Ok.Body) {
+                    self.body = body
+                }
             }
             /// Weigh-in
             ///
@@ -1464,14 +1536,6 @@ public enum Operations {
             ///
             /// HTTP response code: `200 ok`.
             case ok(Operations.GetApiWeightDaysDate.Output.Ok)
-            /// Weigh-in
-            ///
-            /// - Remark: Generated from `#/paths//api/weight/days/{date}/get/responses/200`.
-            ///
-            /// HTTP response code: `200 ok`.
-            public static var ok: Self {
-                .ok(.init())
-            }
             /// The associated value of the enum case if `self` is `.ok`.
             ///
             /// - Throws: An error if `self` is not `.ok`.
@@ -1731,8 +1795,32 @@ public enum Operations {
         }
         @frozen public enum Output: Sendable, Hashable {
             public struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/api/weight/rollup/GET/responses/200/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/api/weight/rollup/GET/responses/200/content/application\/json`.
+                    case json(Components.Schemas.WeightRollup)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.WeightRollup {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.GetApiWeightRollup.Output.Ok.Body
                 /// Creates a new `Ok`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.GetApiWeightRollup.Output.Ok.Body) {
+                    self.body = body
+                }
             }
             /// Rollup (series + summary)
             ///
@@ -1740,14 +1828,6 @@ public enum Operations {
             ///
             /// HTTP response code: `200 ok`.
             case ok(Operations.GetApiWeightRollup.Output.Ok)
-            /// Rollup (series + summary)
-            ///
-            /// - Remark: Generated from `#/paths//api/weight/rollup/get/responses/200`.
-            ///
-            /// HTTP response code: `200 ok`.
-            public static var ok: Self {
-                .ok(.init())
-            }
             /// The associated value of the enum case if `self` is `.ok`.
             ///
             /// - Throws: An error if `self` is not `.ok`.

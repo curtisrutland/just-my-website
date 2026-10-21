@@ -1,4 +1,5 @@
 import * as z from "zod";
+import { isoInstant } from "@/lib/http/view-schemas";
 
 /**
  * Vitals module — Zod schemas. Single source of truth for validation (docs/vitals-model.md).
@@ -97,3 +98,55 @@ export const vitalsIngestSchema = z
   .strict();
 
 export type VitalsIngest = z.infer<typeof vitalsIngestSchema>;
+
+// --- Response views (the JSON the routes send; OpenAPI + the contract test read these) ---
+
+/**
+ * The ONE view shared by list and detail (issue #40: list endpoints must not silently omit fields
+ * that exist on detail objects). `rawPayload` is excluded from both — it is the archive, not the
+ * contract — and is reachable only via reprocess. Every measurement is present, `null` when the
+ * watch didn't measure it.
+ */
+const {
+  rawPayload: _raw,
+  measuredOn: _on,
+  sleepStartAt: _start,
+  sleepEndAt: _end,
+  ...measurements
+} = vitalsDaySchema.shape;
+export const vitalsDayViewSchema = z
+  .object(measurements)
+  .required() // nullish on write → always present (null = not measured) on read
+  .extend({
+    id: z.uuid(),
+    measuredOn: calendarDate,
+    sleepStartAt: isoInstant.nullable(),
+    sleepEndAt: isoInstant.nullable(),
+    createdAt: isoInstant,
+    updatedAt: isoInstant,
+  });
+
+/** A point in a derived series. `value` is null on days with no measurement — never zero. */
+export const vitalsPointSchema = z.object({ date: calendarDate, value: z.number().nullable(), avg: z.number().nullable() });
+
+/** One derived metric's trend. Deltas compare 7-day averages, never day-over-day (which is noise). */
+export const vitalsTrendSchema = z.object({
+  current: z.number().nullable(),
+  currentAvg: z.number().nullable(),
+  deltaPerWeek: z.number().nullable(),
+  series: z.array(vitalsPointSchema),
+});
+
+/**
+ * `gaps` is the only additive layer: factual absences, stated as observations, never judgments
+ * (CONVENTIONS §9). A missing day is a missing day, not a failure.
+ */
+export const vitalsRollupSchema = z.object({
+  window: z.number().int(),
+  from: calendarDate,
+  to: calendarDate,
+  restingHeartRate: vitalsTrendSchema,
+  hrvLastNightMs: vitalsTrendSchema,
+  sleepTotalSeconds: vitalsTrendSchema,
+  gaps: z.array(z.object({ date: calendarDate, reason: z.enum(["no_row", "no_measurements"]) })),
+});
