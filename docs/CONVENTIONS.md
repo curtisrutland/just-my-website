@@ -14,6 +14,12 @@ Derived from justmy.recipes, with intentional deviations marked **[DIFFERS FROM 
 |---|---|---|
 | **Web UI** (`/`, Clerk-gated) | server component → `repo` (direct DB) | server action → `schema.parse` → `repo` |
 | **Token API** (`/api/**`) | route → `repo` | route → `schema.parse` → `repo` |
+| **iOS app** (`ios/`) | token API `GET` | token API `POST`/`PATCH`/soft-`DELETE` |
+
+The iOS app is a client of the token API, not a fourth path to the data: its writes are API
+writes, so they get the same `schema.parse` → `repo`. It renders what the API returns. Domain
+logic it would need lives in `src/lib/{module}` and is exposed by the API, never reimplemented
+in Swift (`docs/ios-app.md` §2, §7).
 
 - The **repo layer** (`src/lib/{module}/repo.ts`) is the only place Drizzle tables are
   touched. Both read surfaces call it. This is the "same data" guarantee.
@@ -45,8 +51,19 @@ needs a model-doc entry and a test):
 - `JMW_DISPLAY_TOKEN` — the ESP32 round display; read-only: `GET /api/macros/days/{date}`
   (`docs/macro-model.md` § "Kernel departure").
 
+DB-backed device tokens (`device_tokens`: hashed, scoped, individually revocable, minted on
+`/settings/devices` or by `npm run panel:token`):
+- The kitchen panel and the recipes sender: `/api/panel/**` only, which also accepts a Clerk
+  session (`docs/panel-contract.md` §3).
+- The iOS app: module routes, via `requireScope(request, "{module}:read|write")`, on exactly the
+  allowlist in `docs/ios-app.md` §3.4 (v1) and §6.1 (phase 2). Never in `identify()`, so a
+  device token never passes `bearerAuth`/`primaryKey`. Hard DELETE (`?hard=true`) stays on
+  `requirePrimary`, so a device token can only soft-delete. OpenAPI marks these operations
+  with the `deviceToken` scheme.
+
 The web UI authenticates via Clerk session and never presents a bearer token; it does not
-call `/api`. Clerk gates `/` entirely.
+call `/api`. Clerk gates `/` entirely. The iOS app never talks to Clerk; its only credential is
+its device token.
 
 ## 3. Error envelope
 

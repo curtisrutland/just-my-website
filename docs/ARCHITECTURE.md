@@ -123,7 +123,7 @@ obvious:
 | | Reads | Writes |
 |---|---|---|
 | **Web UI** (`/`, Clerk-gated) | server component → `repo` (direct DB) | server action → `schema.parse()` → `repo` |
-| **Token API** (`/api/**`, machine-only) | route handler → `repo` | route handler → `schema.parse()` → `repo` |
+| **Token API** (`/api/**`, machines + the iOS app) | route handler → `repo` | route handler → `schema.parse()` → `repo` |
 
 Two layers make this guarantee real, and they are the *only* two shared choke points:
 
@@ -146,6 +146,11 @@ wants to write from a conversation; a bearer token over HTTP is the natural inte
 that. Forcing both through one interface would compromise one of them. Splitting the
 *surfaces* while sharing the *data and rules* gives each user the right ergonomics without
 letting the two diverge into two codebases.
+
+The native iOS app (`ios/`) doesn't add a third surface. It's another token-API client, like the
+skills and the panel. Curtis gets native navigation on his phone, and the guarantee holds
+unchanged: the app's writes are API writes, through the same `schema.parse()` and the same
+repo. See [`ios-app.md`](ios-app.md).
 
 ### Auth, concretely
 
@@ -170,6 +175,12 @@ which pushes facts and can never read, PATCH or DELETE anywhere), and the panel
 surface has its own hashed/revocable `device_tokens` guarding `/api/panel/**` only (that
 surface also accepts a Clerk session, a documented exception for the no-hardware dev path —
 see `panel-contract.md`).
+
+The **iOS app** reuses those `device_tokens` on module routes. Each route on its allowlist
+calls `requireScope(request, "{module}:read|write")`, scopes like `weight:read` and
+`shopping:write`. The token is paired once by QR from `/settings/devices`, kept in the
+Keychain behind Face ID, and revocable from the web. Like every scoped credential, it can
+never pass `requireBearer` and can never hard DELETE. See [`ios-app.md`](ios-app.md) §3.
 
 ---
 
@@ -377,6 +388,7 @@ configured but deferred to a real domain activation step).
 | The lifting module's Hevy ingestion + annotation model | [`lifting-model.md`](lifting-model.md) |
 | The rides module's FIT ingestion + stream model | [`rides-model.md`](rides-model.md) |
 | The panel surface's binding contract | [`panel-contract.md`](panel-contract.md) |
+| The native iOS app: auth, nav, scope, API gaps | [`ios-app.md`](ios-app.md) |
 | Design tokens, component inventory, layout | [`UI-CONTRACT.md`](UI-CONTRACT.md) |
 | Outstanding work & deferred decisions | [GitHub Issues](https://github.com/curtisrutland/just-my-website/issues) |
 | Setup & scripts | [`../README.md`](../README.md) |
