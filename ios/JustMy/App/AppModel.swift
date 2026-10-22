@@ -15,6 +15,10 @@ final class AppModel {
 
     enum PhaseKind: Equatable { case unpaired, locked, unlocked }
 
+    /// Where an unlock is (handoff §5, Lock): Face ID scanning, then the one token check before
+    /// the app opens. `idle` while locked means the prompt failed or was dismissed.
+    enum UnlockStage: Equatable { case idle, scanning, checking }
+
     struct Session {
         let pairing: PairingPayload
         let clients: JMWClients
@@ -28,6 +32,7 @@ final class AppModel {
     private(set) var isCovered = false
     private(set) var isBusy = false
     private(set) var errorMessage: String?
+    private(set) var unlockStage = UnlockStage.idle
 
     private let store: any TokenStoring
     private let check: Check
@@ -35,11 +40,17 @@ final class AppModel {
     private let now: () -> Date
     private var backgroundedAt: Date?
 
-    init(store: any TokenStoring, check: @escaping Check, policy: LockPolicy = .init(), now: @escaping () -> Date = Date.init) {
+    /// How long the lock screen waits on the token check before opening anyway (the screens then
+    /// report the network themselves).
+    private let checkTimeout: Duration
+
+    init(store: any TokenStoring, check: @escaping Check, policy: LockPolicy = .init(),
+         now: @escaping () -> Date = Date.init, checkTimeout: Duration = .seconds(4)) {
         self.store = store
         self.check = check
         self.policy = policy
         self.now = now
+        self.checkTimeout = checkTimeout
         phase = store.hasPairing ? .locked : .unpaired(notice: nil)
     }
 
@@ -117,7 +128,11 @@ final class AppModel {
         guard case .locked = phase, !isBusy else { return }
         errorMessage = nil
         isBusy = true
-        defer { isBusy = false }
+        unlockStage = .scanning
+        defer {
+            isBusy = false
+            unlockStage = .idle
+        }
         let pairing: PairingPayload
         do {
             pairing = try await store.load(reason: "Unlock your data")
@@ -127,15 +142,35 @@ final class AppModel {
             return
         } catch .cancelled {
             return
+        } catch .authFailed {
+            errorMessage = "Face ID didn’t match. Try again, or use your passcode."
+            return
         } catch {
             errorMessage = "Couldn't read the token (\(error))."
             return
         }
-        phase = .unlocked(Session(pairing: pairing, clients: makeClients(pairing)))
-        // Re-prove the token so a revocation shows up now, not on the first screen's fetch.
-        // Offline is fine: stay unlocked and let the screens report the network.
-        if case .rejected = try? await check(pairing) {
+        // Prove the token before the app opens, so a revocation shows up now rather than on the
+        // first screen's fetch. Offline, or slower than the timeout, opens anyway.
+        unlockStage = .checking
+        if case .rejected = await checkWithTimeout(pairing) {
             handleUnauthorized()
+            return
+        }
+        phase = .unlocked(Session(pairing: pairing, clients: makeClients(pairing)))
+    }
+
+    /// The check's result, or nil when it threw or ran past `checkTimeout`.
+    private func checkWithTimeout(_ pairing: PairingPayload) async -> JMWClients.CheckResult? {
+        let check = self.check, timeout = checkTimeout
+        return await withTaskGroup(of: JMWClients.CheckResult?.self) { group in
+            group.addTask { try? await check(pairing) }
+            group.addTask {
+                try? await Task.sleep(for: timeout)
+                return nil
+            }
+            let first = await group.next() ?? nil
+            group.cancelAll()
+            return first
         }
     }
 

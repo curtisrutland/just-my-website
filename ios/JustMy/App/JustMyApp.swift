@@ -27,14 +27,15 @@ struct RootView: View {
             case let .unpaired(notice):
                 PairView(notice: notice)
             case .locked:
-                LockView()
+                LockView().transition(.opacity)
             case .unlocked:
-                RootTabView()
+                RootTabView().transition(.opacity)
             }
             if model.isCovered {
                 PrivacyCover()
             }
         }
-        .animation(.default, value: model.phaseKind)
+        // Unlocking cross-dissolves into the app (handoff §5, Lock).
+        .animation(.easeInOut(duration: 0.25), value: model.phaseKind)
     }
 }

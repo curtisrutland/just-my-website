@@ -88,6 +88,38 @@ struct AppModelTests {
         #expect(store.saved != nil)
     }
 
+    @Test func aFaceIDMismatchStaysLockedAndSaysSo() async {
+        let store = FakeStore()
+        store.saved = PairingPayload(base: base, token: token)
+        store.loadError = .authFailed
+        let m = model(store: store)
+        await m.unlock()
+        #expect(m.phaseKind == .locked)
+        #expect(m.errorMessage?.contains("didn’t match") == true)
+        #expect(m.unlockStage == .idle)
+    }
+
+    @Test func anUnreachableServerStillOpensTheApp() async {
+        let store = FakeStore()
+        store.saved = PairingPayload(base: base, token: token)
+        let m = AppModel(store: store, check: { _ in throw URLError(.notConnectedToInternet) })
+        await m.unlock()
+        #expect(m.phaseKind == .unlocked)
+    }
+
+    @Test func aSlowCheckOpensTheAppAtTheTimeout() async {
+        let store = FakeStore()
+        store.saved = PairingPayload(base: base, token: token)
+        let m = AppModel(store: store, check: { _ in
+            try await Task.sleep(for: .seconds(30))
+            return .rejected
+        }, checkTimeout: .milliseconds(50))
+        let started = Date()
+        await m.unlock()
+        #expect(m.phaseKind == .unlocked)
+        #expect(Date().timeIntervalSince(started) < 5)
+    }
+
     @Test func relocksAfterFiveMinutesInTheBackgroundButNotBefore() async {
         let store = FakeStore()
         let clock = Clock()

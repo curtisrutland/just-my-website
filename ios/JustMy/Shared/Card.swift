@@ -37,23 +37,6 @@ struct RowCard<Item: Identifiable, Row: View>: View {
     }
 }
 
-/// A 5 pt neutral track filled to `fraction` (clamped to 0…1).
-struct Track: View {
-    let fraction: Double
-    var fill: Color = .secondary
-
-    var body: some View {
-        GeometryReader { geo in
-            ZStack(alignment: .leading) {
-                Capsule().fill(Color(.systemFill))
-                Capsule().fill(fill).frame(width: geo.size.width * min(max(fraction, 0), 1))
-            }
-        }
-        .frame(height: 5)
-        .accessibilityHidden(true)
-    }
-}
-
 extension View {
     /// A page's vertical-scroll content, pinned to exactly the scroll view's width. A wrapped `Text`
     /// can round ⅓ pt wider than it was offered, and content even that much wider than its scroll
