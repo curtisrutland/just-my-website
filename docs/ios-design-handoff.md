@@ -320,9 +320,24 @@ Boards: `Settings-Dark`, `Pair-Dark`, `Lock-Dark`; the privacy cover is on `Stat
   section with the code field (SF Mono, a `Paste` chip) and a `Server` row (used only for a bare
   token); a `Pair` capsule, disabled until a code is present; a footnote that pairing makes one
   read before saving to the Keychain.
-- **Lock:** wordmark + `Locked`; one filled Accent capsule **Unlock with Face ID** (Face ID is
-  prompted on appear; the button is for a dismissed prompt); the error line in `Color.red`
-  `.footnote` under it when set.
+- **Lock** (boards `Lock-Scanning-Dark`, `Lock-Checking-Dark`, `Lock-Dark`): the app icon's
+  mark, large (128 pt, white stroke, Accent dot), inside a **dial of 60 ticks** (260 pt, ticks
+  1.3° wide every 6°, radius 113–130, `secondaryLabel` 18%) — the composition sits in the top
+  third (centered at y ≈ 280) because iOS draws its own Face ID glyph at the screen's center
+  during `evaluatePolicy`. Wordmark `JustMy` `.title2` semibold under it, then a status line in
+  `.subheadline` `secondaryLabel`. Three beats:
+  1. **Scanning:** a 110° arc of Accent-lit ticks sweeps around the dial once per 1.8 s
+     (`TimelineView` rotating a conic mask over an Accent copy of the ticks); the mark's dot
+     breathes on the same beat (scale 1 → 1.18, opacity 1 → 0.75). Status `Face ID`.
+  2. **Checking the token** (the one allowlisted read before the app opens): all ticks lit in
+     Accent, a slow alternate fade (0.35 → 1, 1.2 s). Status `Checking the token…`.
+  3. **Failed or dismissed:** ticks dim and still, dot stays Accent, the status line becomes the
+     error in `Color.red` (`Face ID didn't match. Try again, or use your passcode.`), and the
+     filled Accent capsule **Unlock with Face ID** appears at the bottom with the footnote
+     *Face ID is asked on appear. This button is for when it was dismissed.*
+  Success has no state: the ring completes, then the screen cross-dissolves into the app
+  (`.opacity`, ~250 ms). The same view, static, is the privacy cover. No assets: the dial is a
+  `Canvas` or 60 rotated `Capsule`s; the mark is the icon's path.
 
 ## 6. Replay — new view (not in the brief)
 
