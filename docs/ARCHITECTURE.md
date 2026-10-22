@@ -275,16 +275,26 @@ data model, because it only ever speaks the same HTTP the web UI's rules are bui
 never has to know it's talking to an LLM. The database never has to know a request came from a
 conversation.
 
-### The one cross-cutting skill
+### Module dependencies: logging and interpretive
 
-Modules never touch each other server-side, but the skill layer carries one deliberate
-exception: **`manage-health`** is a read-only aggregator that assembles a unified daily/weekly
-view over the five health modules (macros, weight, lifting, rides, vitals) by calling their existing
-token-API read endpoints — module field names verbatim, no new metrics, no writes, plus a
-`gaps` list of factual absences. The cross-cut lives entirely in the replaceable adapter layer,
-so the "modules are self-contained" rule stays true everywhere it's expensive to break (schema,
-repo, routes) and bends only where it's cheap (a Python client). The rules for this are
-`docs/CONVENTIONS.md` §9; each health skill's `SKILL.md` also cross-references its siblings.
+Modules come in two kinds. **Logging modules** own facts — every module built so far (macros,
+weight, shopping, lifting, rides, vitals). **Interpretive modules** own reads *about* those facts:
+an interpretation of a ride written with last night's sleep in view, a daily health summary.
+
+The dependency rule runs one way. A logging module never relies on another module to do its job —
+it can be built, tested, and deleted alone; it may *copy* a fact in through its own write path
+(garage snapshotting a ride's moving time), but never *queries* another module live to answer its
+own reads. An interpretive module may read across logging modules, because that is its whole job —
+but only through their repo read functions and response views (the Zod views the OpenAPI spec and
+the contract test are built from), writing only its own tables, degrading when an input is
+missing, and adding no cross-module scores. There is no cross-module write path anywhere.
+
+None exists server-side yet. The interpretive module that does exist lives in the skill layer:
+**`manage-health`**, a read-only aggregator that assembles a unified daily/weekly view over the
+health modules by calling their token-API read endpoints — module field names verbatim, no new
+metrics, no writes, plus a `gaps` list of factual absences. Surfaces (web, API, iOS app, panel)
+aren't modules at all: they read and write any module through its own schema and repo. The full
+rules, with the five limits, are `docs/CONVENTIONS.md` §9.
 
 ---
 
@@ -347,10 +357,11 @@ Read top-to-bottom, here is the system as it stands:
   from both surfaces.
 - **The panel** — a third surface, not a module: a wall-mounted kitchen kiosk (Pi + 7"
   touchscreen, deployed) reading a device-token-scoped `/api/panel/**` with KV-cached version
-  polling. The one sanctioned server-side cross-cut: module repos call the panel's
-  fire-and-forget `bump()` after writes so the kiosk knows to re-pull.
+  polling. The one logging → consumer call: module repos fire the panel's fire-and-forget
+  `bump()` after writes so the kiosk knows to re-pull — a notification, not a dependency
+  (`CONVENTIONS.md` §9).
 - **Six skills**: `manage-{macros,weight,shopping,lifting,rides}` plus the read-only
-  cross-cutting `manage-health` daily/weekly view (§4). The web UI is installable as a
+  interpretive `manage-health` daily/weekly view (§4). The web UI is installable as a
   standalone **PWA** with in-app refresh affordances (header control + pull-to-refresh).
 - **Build tooling** that keeps the conventions true rather than aspirational:
   `scripts/build-openapi.ts` (spec generated from Zod, runs on every build) and

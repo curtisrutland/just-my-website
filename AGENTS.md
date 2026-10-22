@@ -52,11 +52,16 @@ utility (`src/lib/date.ts`), and these conventions. Nothing else is "platform." 
 rule is one-directional: UI imports from `lib`, never the reverse — so a module's domain types
 live in `src/lib/{module}/types.ts`, not in its components.
 
-The one sanctioned cross-cut is the **skill layer**: a skill may read across modules
-(`manage-health` assembles the unified daily/weekly health view) — **read-only**, over the
-modules' own token-API read endpoints, adding no new metrics and renaming no fields. Server-side
-code never crosses modules, and a cross-cutting write path is never allowed (writes stay in the
-per-module skills). See `docs/CONVENTIONS.md` §9.
+**Module dependencies run one way** (`docs/CONVENTIONS.md` §9). **Logging modules** own facts
+(macros, weight, shopping, lifting, rides, vitals) and never rely on another module to do their
+job — a logging module may copy facts in through its own write path, but never queries another
+module live to answer its own reads. **Interpretive modules** own reads *about* those facts and
+may read across logging modules — through their repo read functions and response views only,
+never their tables — writing only their own tables, degrading when an input is missing, and
+adding no cross-module scores or renamed fields. There is no cross-module write path, anywhere.
+No interpretive module exists server-side yet; `manage-health` is the skill-layer one. Surfaces
+(web, API, iOS app, panel) are not modules: they read and write any module through its own
+`schema` and `repo`.
 
 ## Work tracking
 

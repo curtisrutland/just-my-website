@@ -48,9 +48,9 @@ What does **not** change:
 - **Surfaces differ on read, never on write.** App writes go through the existing API routes, so they
   hit the same `schema.parse()` and the same `repo` function as every other write. No new write path.
 - **The web UI still never calls the API.** Nothing in this spec touches `src/app/(app)/`.
-- **Server-side code never crosses modules.** If the app later shows a cross-module "Today" screen,
-  it assembles it client-side from per-module reads — the same rule as the `manage-health` skill
-  (CONVENTIONS §9): read-only, no new metrics, no renamed fields.
+- **Module dependencies run one way** (CONVENTIONS §9). If the app later shows a cross-module
+  "Today" screen, it reads it from an interpretive module (or assembles it client-side from
+  per-module reads, as `manage-health` does): read-only, no new metrics, no renamed fields.
 - **Domain logic stays in `src/lib`.** The app renders what the API returns. If a view needs a
   number the API doesn't expose, the fix is to expose it from `src/lib/{module}` (§7), never to
   reimplement the math in Swift.
@@ -476,7 +476,7 @@ The reason to go native at all. **Not scoped until v1 and phase 2 (§6.1) ship**
 - **App Intents / Siri / Shortcuts:** "log my weight 178".
 - **HealthKit:** read-only context alongside vitals, or writing weight to Health. Either direction is
   a scoping conversation of its own — it touches the "the watch is the source of truth" rule.
-- **A cross-module Today tab**, built client-side under the §9 cross-cut rules.
+- **A cross-module Today tab**, read from an interpretive module (CONVENTIONS §9).
 - **Notifications:** none in v1; there is no server push infrastructure.
 
 ---

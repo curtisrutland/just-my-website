@@ -24,6 +24,12 @@ the three existing modules actually differ, so use them as the worked examples.
    utility, not a dashboard* (no hero, no score). **Ask: what's the one idea this module must make
    you feel — and does it even have a hero, or is it a plain utility?**
 
+   **Also ask: logging or interpretive?** A logging module owns facts and must stand alone; an
+   interpretive module owns reads about other modules' facts and may read across them, under the
+   five limits in `docs/CONVENTIONS.md` §9. It decides what the module may depend on, so settle it
+   before the data shape. (A logging module that needs another module's facts copies them in
+   through its own write path — the garage test in §9.)
+
 2. **Data shape — and the anti-scope.** What entities and fields? Just as important: **what do we
    deliberately NOT model?** Shopping's scope was defined as much by its noes (no quantity column, no
    item normalization, no spend/trend, no nesting) as its yeses. Pin the noes down explicitly — they
@@ -53,7 +59,7 @@ the three existing modules actually differ, so use them as the worked examples.
    shopping: batch-add "ingredients for X")? The skill is Python-stdlib over the token API, token
    injected at build. Can land after the web + API (see the backlog for `manage-*` skills).
    **Is the module health-related** (Curtis's body, training, or intake — not a convenience
-   list)? If so, plan the cross-cut too (`docs/CONVENTIONS.md` §9): which of its numbers join
+   list)? If so, plan its place in `manage-health` too (`docs/CONVENTIONS.md` §9): which of its numbers join
    `manage-health`'s daily and weekly views, and the sibling skills get updated "other health
    skills" cross-references.
 
