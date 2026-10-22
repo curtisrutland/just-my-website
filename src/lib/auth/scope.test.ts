@@ -179,11 +179,21 @@ describe("the iOS allowlist — a phone token on module routes", () => {
       ["ride patch", ridePatch(req(raw, `/api/rides/${nil}`, { method: "PATCH", body: {} }), ctx({ id: nil }))],
       ["vitals delete", vitalsDelete(req(raw, "/api/vitals/2026-10-01", { method: "DELETE" }), ctx({ date: "2026-10-01" }))],
       ["shopping items read", shoppingItems(req(raw, "/api/shopping/items"))],
-      ["shopping soft delete", shoppingDelete(req(raw, `/api/shopping/items/${item.id}`, { method: "DELETE" }), ctx({ id: item.id }))],
       ["shopping hard delete", shoppingDelete(req(raw, `/api/shopping/items/${item.id}?hard=true`, { method: "DELETE" }), ctx({ id: item.id }))],
     ];
     for (const [name, res] of offList) expect([name, (await res).status]).toEqual([name, 401]);
-    expect(await getItemById(item.id)).not.toBeNull(); // neither delete touched it
+    expect(await getItemById(item.id)).not.toBeNull(); // the hard delete didn't touch it
+  });
+
+  it("soft-deletes a shopping item (swipe to delete) but can never hard-delete one", async () => {
+    const { raw } = await phone();
+    const item = await addItem({ category: "zzz-scope", text: "swipe-me" });
+    shoppingIds.push(item.id);
+    const path = `/api/shopping/items/${item.id}`;
+    expect((await shoppingDelete(req(raw, `${path}?hard=true`, { method: "DELETE" }), ctx({ id: item.id }))).status).toBe(401);
+    expect(await getItemById(item.id)).not.toBeNull();
+    expect((await shoppingDelete(req(raw, path, { method: "DELETE" }), ctx({ id: item.id }))).status).toBe(204);
+    expect(await getItemById(item.id)).toBeNull(); // soft-deleted: gone from reads, row kept (hard-deleted in afterAll)
   });
 
   it("is rejected (401) on every route once revoked", async () => {

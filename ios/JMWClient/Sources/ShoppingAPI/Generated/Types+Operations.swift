@@ -1175,6 +1175,8 @@ public enum Operations {
     }
     /// Soft/hard delete an item
     ///
+    /// A device token (shopping:write) may soft-delete only; `?hard=true` requires the primary key.
+    ///
     /// - Remark: HTTP `DELETE /api/shopping/items/{id}`.
     /// - Remark: Generated from `#/paths//api/shopping/items/{id}/delete`.
     public enum DeleteApiShoppingItemsId {

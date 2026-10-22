@@ -300,6 +300,8 @@ recommendation; it's a one-file change either way.
 - **Add a shopping item** (`category` + `text`) → `POST /api/shopping/items`, then refetch `/list`.
 - **Check / uncheck a shopping item** → `PATCH /api/shopping/items/{id}` with
   `status: "bought" | "needed"`, then refetch `/list`. Optimistic in the UI, reverted on error.
+- **Delete a shopping item** (swipe to delete, as on the PWA) → `DELETE /api/shopping/items/{id}`,
+  soft only; `?hard=true` stays primary-key-only, so the phone can never reach it.
 - Error envelope surfaced honestly: a validation `400` shows the server's message; a `401` means
   unpaired/revoked and returns to the pair screen; network failure keeps the last data on screen
   with a banner.

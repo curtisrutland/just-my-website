@@ -574,6 +574,8 @@ public struct Client: APIProtocol {
     }
     /// Soft/hard delete an item
     ///
+    /// A device token (shopping:write) may soft-delete only; `?hard=true` requires the primary key.
+    ///
     /// - Remark: HTTP `DELETE /api/shopping/items/{id}`.
     /// - Remark: Generated from `#/paths//api/shopping/items/{id}/delete`.
     public func deleteApiShoppingItemsId(_ input: Operations.DeleteApiShoppingItemsId.Input) async throws -> Operations.DeleteApiShoppingItemsId.Output {
