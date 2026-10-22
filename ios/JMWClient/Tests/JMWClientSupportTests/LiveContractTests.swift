@@ -17,8 +17,8 @@ import WeightAPI
 ///
 ///     JMW_E2E_BASE=http://localhost:3000 JMW_E2E_TOKEN=jmw_… swift test --package-path ios/JMWClient
 ///
-/// It writes a 1990-01-03 weigh-in and a `zzz-e2e` shopping item; the phone token can't delete, so
-/// remove them afterwards (ios/README.md).
+/// It writes a 1990-01-03 weigh-in and a `zzz-e2e` shopping item (which it soft-deletes; the phone
+/// token can't hard-delete), so remove both rows afterwards (ios/README.md).
 private let livePairing: PairingPayload? = {
     let env = ProcessInfo.processInfo.environment
     guard let base = env["JMW_E2E_BASE"].flatMap(URL.init(string:)), let token = env["JMW_E2E_TOKEN"] else { return nil }
@@ -46,7 +46,8 @@ struct LiveContractTests {
             .init(body: .json(.init(measuredOn: "1990-01-03", weight: 150.5, note: "e2e")))
         ).ok.body.json
         #expect(logged.weight == 150.5)
-        #expect(logged.createdAt <= .now)
+        // A real, recent instant decoded from the server's ISO string (clocks may differ by a little).
+        #expect(abs(logged.updatedAt.timeIntervalSinceNow) < 300)
     }
 
     @Test func lifting() async throws {
@@ -89,5 +90,11 @@ struct LiveContractTests {
         #expect(bought.checkedAt != nil)
         let list = try await api.shopping.getApiShoppingList(.init()).ok.body.json
         #expect(list.recentlyBought.contains { $0.id == item.id })
+        // Swipe to delete (soft) — and the same token can never hard-delete.
+        _ = try await api.shopping.deleteApiShoppingItemsId(.init(path: .init(id: item.id))).noContent
+        let after = try await api.shopping.getApiShoppingList(.init()).ok.body.json
+        #expect(!after.recentlyBought.contains { $0.id == item.id })
+        let hard = try await api.shopping.deleteApiShoppingItemsId(.init(path: .init(id: item.id), query: .init(hard: true)))
+        #expect(throws: (any Error).self) { try hard.noContent }
     }
 }

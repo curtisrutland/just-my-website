@@ -347,15 +347,17 @@ The path is in the artboard's SVG (`viewBox 0 0 1024 1024`):
 
 | Where | Flag |
 |---|---|
-| macros | `EntryView.name` is nullable. The row needs a fallback label; the design assumes one exists (the web's). Decide the string. |
+| macros | `EntryView.name` is nullable. The row needs a fallback label; the design assumes one exists (the web's). **Resolved:** `ad-hoc`, the web's string (`EntryRow.tsx`). |
+| macros | The entry sheet shows `Sodium (mg)`, but `sodiumContent` is stored in **grams** like every mass macro (CONVENTIONS §6). Multiply by 1,000 for display. |
 | macros | Entries carry no time, only `consumedOn`. The list has no time column and is shown in API order. |
-| lifting | `annotation.focus` has no documented vocabulary beyond `full`; the list shows it verbatim after the duration when present. |
-| lifting | `GET /lifts/CC55119B` (Cable Core Pallof Press) returns no `points` although the session reports an e1RM for it — no sparkline renders. Worth a look at the source. |
+| lifting | ~~`annotation.focus` has no documented vocabulary beyond `full`.~~ **Corrected:** it is the `liftingFocus` enum (`push · pull · upper · lower · full · accessory · other`), so the generated client has an enum. The list shows a display label (`full` → `full body`). |
+| lifting | ~~`GET /lifts/CC55119B` returns no `points`.~~ **Not reproducible:** checked against live data on 2026-10-22, it returns 15 points, 14 with an e1RM. The sparkline renders. |
 | vitals | `sleepStartAt` / `sleepEndAt` are on the day row and the design uses them for the sleep window. They weren't in the brief; they are in the response view. |
 | vitals | `updatedAt` on the day row is what `SYNCED 10:02 AM` reads. |
 | rides | `timeInHrZone.timeInHrZone` has 7 buckets against 6 boundaries: below-Z1, Z1–Z5, above-max. Rendered as such. |
 | rides | Indoor activities report `distanceMeters: 0`, `avgSpeedMps: 0` (#40) — shown as not measured, tiles omitted. |
 | rides | List rows need `name`, `sportProfileName`, `startedAt`, `movingSeconds`, `distanceMeters`, `totalAscentMeters`, `avgHeartRate` — all on the list shape today. |
+| settings | `Paired: Curtis's iPhone · Oct 21` — the app doesn't know the token's name: the pairing payload is `{v, base, token}`. The app records the pairing date itself; the name needs an optional `name` in the QR payload (#69), and until then the row shows `This iPhone · Oct 21`. |
 
 ## 9. Amendments to the spec and brief (carried into `ios-app.md`)
 

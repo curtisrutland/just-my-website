@@ -23,9 +23,13 @@ export async function PATCH(request: NextRequest, { params }: Ctx) {
   return item ? ok(item) : notFound("Shopping item not found");
 }
 
+/**
+ * Soft delete also accepts a device token holding `shopping:write` (the iOS app's swipe-to-delete,
+ * `docs/ios-app.md` §3.4). Hard delete stays primary-key-only, so a device token can never reach it.
+ */
 export async function DELETE(request: NextRequest, { params }: Ctx) {
   const hard = request.nextUrl.searchParams.get("hard") === "true";
-  const auth = hard ? requirePrimary(request) : requireBearer(request);
+  const auth = hard ? requirePrimary(request) : await requireScope(request, "shopping:write");
   if (!auth.ok) return auth.response;
   const id = (await params).id;
   const done = hard ? await hardDeleteItem(id) : await softDeleteItem(id);

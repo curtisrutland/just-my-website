@@ -408,7 +408,13 @@ const shoppingSpec = {
     "/api/shopping/items/{id}": {
       get: { summary: "Get an item", parameters: [pathParam("id")], responses: { ...okJson("Item", "ShoppingItemRow"), ...errorResponses } },
       patch: { security: deviceSecurity, summary: "Edit or check/un-check an item", parameters: [pathParam("id")], requestBody: jsonBody("ShoppingPatch"), responses: { ...okJson("Updated item", "ShoppingItemRow"), ...errorResponses } },
-      delete: { summary: "Soft/hard delete an item", parameters: [pathParam("id"), hardParam], responses: { ...noContent, ...errorResponses } },
+      delete: {
+        security: deviceSecurity,
+        summary: "Soft/hard delete an item",
+        description: "A device token (shopping:write) may soft-delete only; `?hard=true` requires the primary key.",
+        parameters: [pathParam("id"), hardParam],
+        responses: { ...noContent, ...errorResponses },
+      },
     },
     "/api/shopping/list": {
       get: {
