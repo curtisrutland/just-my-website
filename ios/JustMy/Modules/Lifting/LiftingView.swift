@@ -48,6 +48,7 @@ struct LiftingView<Header: View>: View {
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 24)
+            .pageContent()
         }
         .background(Color(.systemGroupedBackground))
         .navigationDestination(for: SessionSummary.self) { SessionDetailView(summary: $0) }

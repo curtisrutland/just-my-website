@@ -50,6 +50,7 @@ struct RideDetailView: View {
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 24)
+            .pageContent()
         }
         .background(Color(.systemGroupedBackground))
         .navigationTitle(loader.value?.title ?? summary.title)

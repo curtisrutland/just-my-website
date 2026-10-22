@@ -46,6 +46,7 @@ struct SessionDetailView: View {
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 24)
+            .pageContent()
         }
         .background(Color(.systemGroupedBackground))
         .navigationTitle(shortTitle)
@@ -253,6 +254,7 @@ struct LiftProgressionView: View {
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 24)
+            .pageContent()
         }
         .background(Color(.systemGroupedBackground))
         .navigationTitle(link.title)

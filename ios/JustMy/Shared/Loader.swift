@@ -19,11 +19,17 @@ final class Loader<Value> {
             value = try await fetch()
             loadedAt = .now
             failure = nil
-        } catch is CancellationError {
-            // A refresh superseded by another (or the view went away) isn't a failure.
+        } catch where Task.isCancelled || isCancellation(error) {
+            // A refresh superseded by another (or the view went away, e.g. a tab switch mid-load)
+            // isn't a failure. The generated client wraps the cancellation in a ClientError.
         } catch {
             failure = LoadFailure(error)
         }
+    }
+
+    private func isCancellation(_ error: any Error) -> Bool {
+        let underlying = (error as? ClientError)?.underlyingError ?? error
+        return underlying is CancellationError || (underlying as? URLError)?.code == .cancelled
     }
 }
 
