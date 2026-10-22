@@ -9,8 +9,9 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 Section("Server") {
-                    LabeledContent("Address", value: model.session?.pairing.base.absoluteString ?? "—")
-                        .font(.body.monospaced())
+                    LabeledContent("Address") {
+                        Text(model.session?.pairing.base.absoluteString ?? "—").monospaced()
+                    }
                 }
                 Section {
                     LabeledContent("Lock", value: "After 5 min in the background")

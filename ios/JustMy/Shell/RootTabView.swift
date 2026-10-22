@@ -1,42 +1,39 @@
 import SwiftUI
 
-/// The four tabs (docs/ios-app.md §5, decided 2026-10-21). Screens are placeholders until the read
-/// views land (#73); the shape — tabs, segmented pairs, a NavigationStack each — is final.
+/// The four tabs (docs/ios-app.md §5; docs/ios-design-handoff.md §4). Body and Training put two
+/// modules behind a segmented control; Training opens on Rides and remembers the last choice.
 struct RootTabView: View {
+    @Environment(AppModel.self) private var model
+
     var body: some View {
         TabView {
             Tab("Macros", systemImage: "fork.knife") {
-                ModuleStack(title: "Macros") {
-                    Placeholder(title: "Macros", systemImage: "fork.knife")
-                }
+                ModuleStack { MacrosView() }
             }
             Tab("Body", systemImage: "figure") {
-                SegmentedTab(title: "Body", first: ("Weight", "scalemass"), second: ("Vitals", "heart.text.square"))
+                ModuleStack { BodyView() }
             }
-            Tab("Training", systemImage: "dumbbell") {
-                SegmentedTab(title: "Training", first: ("Lifting", "dumbbell"), second: ("Rides", "bicycle"))
+            Tab("Training", systemImage: "figure.outdoor.cycle") {
+                ModuleStack { TrainingView() }
             }
             Tab("Shopping", systemImage: "cart") {
-                ModuleStack(title: "Shopping") {
-                    Placeholder(title: "Shopping", systemImage: "cart")
-                }
+                ModuleStack { ShoppingView() }
             }
         }
+        .environment(\.api, model.session?.clients)
     }
 }
 
-/// A tab's NavigationStack with the shared Settings button.
+/// A tab's NavigationStack with the shared Settings gear (leading, on each tab's top screen).
 private struct ModuleStack<Content: View>: View {
-    let title: String
     @ViewBuilder let content: Content
     @State private var showSettings = false
 
     var body: some View {
         NavigationStack {
             content
-                .navigationTitle(title)
                 .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
+                    ToolbarItem(placement: .topBarLeading) {
                         Button("Settings", systemImage: "gearshape") { showSettings = true }
                     }
                 }
@@ -45,39 +42,59 @@ private struct ModuleStack<Content: View>: View {
     }
 }
 
-/// Body and Training: two modules behind a segmented control.
-private struct SegmentedTab: View {
-    let title: String
-    let first: (String, String)
-    let second: (String, String)
-    @State private var selection = 0
+/// Body: Weight | Vitals.
+struct BodyView: View {
+    @AppStorage("body.segment") private var segment = BodySegment.weight
 
     var body: some View {
-        ModuleStack(title: title) {
-            Group {
-                if selection == 0 {
-                    Placeholder(title: first.0, systemImage: first.1)
-                } else {
-                    Placeholder(title: second.0, systemImage: second.1)
-                }
-            }
-            .safeAreaInset(edge: .top) {
-                Picker(title, selection: $selection) {
-                    Text(first.0).tag(0)
-                    Text(second.0).tag(1)
-                }
-                .pickerStyle(.segmented)
-                .padding(.horizontal)
+        // The segmented control scrolls with each screen's content (under the large title) rather
+        // than sitting in a safe-area inset, which displaces the large title.
+        let header = SegmentBar(selection: $segment)
+        Group {
+            switch segment {
+            case .weight: WeightView(header: header)
+            case .vitals: VitalsView(header: header)
             }
         }
+        .navigationTitle("Body")
     }
 }
 
-private struct Placeholder: View {
-    let title: String
-    let systemImage: String
+enum BodySegment: String, CaseIterable, Identifiable {
+    case weight = "Weight", vitals = "Vitals"
+    var id: Self { self }
+}
+
+/// Training: Lifting | Rides — Rides by default (lifting is deliberately dormant).
+struct TrainingView: View {
+    @AppStorage("training.segment") private var segment = TrainingSegment.rides
 
     var body: some View {
-        ContentUnavailableView(title, systemImage: systemImage, description: Text("Arrives with the read views (#73)."))
+        let header = SegmentBar(selection: $segment)
+        Group {
+            switch segment {
+            case .lifting: LiftingView(header: header)
+            case .rides: RidesView(header: header)
+            }
+        }
+        .navigationTitle("Training")
     }
 }
+
+enum TrainingSegment: String, CaseIterable, Identifiable {
+    case lifting = "Lifting", rides = "Rides"
+    var id: Self { self }
+}
+
+struct SegmentBar<Segment: Hashable & Identifiable & RawRepresentable & CaseIterable>: View
+where Segment.RawValue == String, Segment.AllCases: RandomAccessCollection {
+    @Binding var selection: Segment
+
+    var body: some View {
+        Picker("Section", selection: $selection) {
+            ForEach(Segment.allCases) { Text($0.rawValue).tag($0) }
+        }
+        .pickerStyle(.segmented)
+    }
+}
+

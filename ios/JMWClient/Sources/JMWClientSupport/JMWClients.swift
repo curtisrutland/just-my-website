@@ -18,9 +18,16 @@ public struct JMWClients: Sendable {
     public let vitals: VitalsAPI.Client
     public let shopping: ShoppingAPI.Client
 
-    public init(pairing: PairingPayload, session: URLSession = .shared) {
+    /// `onUnauthorized` fires on any `401` from any module (a revoked token); leave it nil for the
+    /// pairing check, which reads the status itself.
+    public init(
+        pairing: PairingPayload,
+        session: URLSession = .shared,
+        onUnauthorized: (@Sendable () -> Void)? = nil
+    ) {
         let transport = URLSessionTransport(configuration: .init(session: session))
-        let middlewares: [any ClientMiddleware] = [BearerTokenMiddleware(token: pairing.token)]
+        var middlewares: [any ClientMiddleware] = [BearerTokenMiddleware(token: pairing.token)]
+        if let onUnauthorized { middlewares.append(UnauthorizedMiddleware(onUnauthorized: onUnauthorized)) }
         let configuration = Configuration(dateTranscoder: ISO8601Transcoder())
         // The specs' paths are absolute (`/api/weight/rollup`), so the server URL is just the origin.
         let server = pairing.base
