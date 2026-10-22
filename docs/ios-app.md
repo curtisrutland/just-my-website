@@ -429,6 +429,7 @@ The reason to go native at all. Not scoped; listed so v1 doesn't paint them into
 ## 10. Open / deferred
 
 - **Tab grouping** (§5) — four grouped tabs recommended; six flat is the alternative.
-- **Native design brief** (§5.1) — written after this spec is approved, before the read views.
+- **Native design brief** (§5.1) — written: `docs/ios-design-brief.md` (#71). The read views (#73) build to
+  the design Claude Design returns from it.
 - **Paid Developer Program** — not needed for v1; revisit if a "Later" item needs it.
 - **#23 (Clerk production instance)** — independent of this app, which never talks to Clerk.
