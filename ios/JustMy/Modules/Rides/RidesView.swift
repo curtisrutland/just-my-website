@@ -32,6 +32,7 @@ struct RidesView<Header: View>: View {
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 24)
+            .pageContent()
         }
         .background(Color(.systemGroupedBackground))
         .navigationDestination(for: RideSummary.self) { RideDetailView(summary: $0) }

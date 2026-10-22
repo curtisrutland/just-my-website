@@ -34,6 +34,7 @@ struct WeightView<Header: View>: View {
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 24)
+            .pageContent()
         }
         .background(Color(.systemGroupedBackground))
         .refreshable { await load() }

@@ -47,6 +47,7 @@ struct ShoppingView: View {
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 24)
+            .pageContent()
         }
         .background(Color(.systemGroupedBackground))
         .navigationTitle("Shopping")

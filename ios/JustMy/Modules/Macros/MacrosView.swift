@@ -121,6 +121,7 @@ private struct MacrosDayPage: View {
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 24)
+            .pageContent()
         }
         .refreshable { await load() }
         .task(id: date) { await load() }
@@ -364,6 +365,7 @@ private struct EntrySheet: View {
             }
             .padding(.horizontal, 16)
             .padding(.top, 20)
+            .pageContent()
         }
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)

@@ -20,6 +20,7 @@ struct VitalsDayDetail: View {
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 24)
+            .pageContent()
         }
         .background(Color(.systemGroupedBackground))
         .navigationTitle(Format.day(day.measuredOn))

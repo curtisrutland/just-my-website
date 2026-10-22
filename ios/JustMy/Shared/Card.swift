@@ -53,3 +53,12 @@ struct Track: View {
         .accessibilityHidden(true)
     }
 }
+
+extension View {
+    /// A page's vertical-scroll content, pinned to exactly the scroll view's width. A wrapped `Text`
+    /// can round ⅓ pt wider than it was offered, and content even that much wider than its scroll
+    /// view makes the page drag sideways under a horizontal swipe.
+    func pageContent() -> some View {
+        containerRelativeFrame(.horizontal)
+    }
+}
