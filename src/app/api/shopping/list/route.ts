@@ -1,12 +1,12 @@
 import type { NextRequest } from "next/server";
-import { requireBearer } from "@/lib/auth/tokens";
+import { requireScope } from "@/lib/auth/tokens";
 import { ok } from "@/lib/http/responses";
 import { getList } from "@/lib/shopping/repo";
 
 /** The two-section list view: active (grouped by category) + recentlyBought + activeCount.
  *  Optional `?boughtWithinDays=` (default 7) widens/narrows the recently-bought window. */
 export async function GET(request: NextRequest) {
-  const auth = requireBearer(request);
+  const auth = await requireScope(request, "shopping:read");
   if (!auth.ok) return auth.response;
 
   const raw = request.nextUrl.searchParams.get("boughtWithinDays");

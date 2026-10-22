@@ -8,17 +8,45 @@ import {
   entryCreateBatchSchema,
   entryCreateSchema,
   entryPatchSchema,
+  dayRollupSchema,
   entryViewSchema,
   foodCreateSchema,
   foodPatchSchema,
+  macroSetSchema,
   targetProfileCreateSchema,
   targetProfilePatchSchema,
 } from "../src/lib/macros/schema";
-import { liftingAnnotationPatchSchema, liftingGoalCreateSchema, liftingGoalPatchSchema } from "../src/lib/lifting/schema";
-import { ridePatchSchema } from "../src/lib/rides/schema";
-import { shoppingCreateSchema, shoppingPatchSchema } from "../src/lib/shopping/schema";
-import { vitalsDaySchema, vitalsIngestSchema } from "../src/lib/vitals/schema";
-import { weightCreateSchema, weightPatchSchema } from "../src/lib/weight/schema";
+import {
+  exerciseViewSchema,
+  goalViewSchema,
+  liftingAnnotationPatchSchema,
+  liftingGoalCreateSchema,
+  liftingGoalPatchSchema,
+  liftProgressionSchema,
+  prFlagSchema,
+  sessionAnnotationSchema,
+  sessionDerivedSchema,
+  sessionDetailSchema,
+  sessionSummarySchema,
+  setViewSchema,
+} from "../src/lib/lifting/schema";
+import {
+  rideDetailSchema,
+  ridePatchSchema,
+  rideStreamViewSchema,
+  rideViewSchema,
+  timeInHrZoneSchema,
+  weeklyStatsSchema,
+} from "../src/lib/rides/schema";
+import {
+  shoppingCreateSchema,
+  shoppingItemRowSchema,
+  shoppingItemViewSchema,
+  shoppingListSchema,
+  shoppingPatchSchema,
+} from "../src/lib/shopping/schema";
+import { vitalsDayViewSchema, vitalsIngestSchema, vitalsRollupSchema } from "../src/lib/vitals/schema";
+import { weightCreateSchema, weightEntryViewSchema, weightPatchSchema, weightRollupSchema } from "../src/lib/weight/schema";
 
 /**
  * Generate each module's OpenAPI fragment FROM its Zod schemas (CONVENTIONS: schema.ts is the single
@@ -26,6 +54,24 @@ import { weightCreateSchema, weightPatchSchema } from "../src/lib/weight/schema"
  * Output is a build artifact (gitignored).
  */
 const js = (schema: z.ZodType) => z.toJSONSchema(schema, { target: "openapi-3.0", io: "input" });
+
+/**
+ * Response views → named component schemas, from the Zod view schemas in each module's `schema.ts`
+ * (#80). A registry turns every view that another view nests into a `$ref` instead of an inline
+ * copy, so a generated client gets one named type per view (`EntryView`, not `DayRollup.entries`).
+ * The response contract test (`src/lib/http/contract.test.ts`) holds the routes to these shapes.
+ */
+function views(named: Record<string, z.ZodType>): Record<string, unknown> {
+  const registry = z.registry<{ id: string }>();
+  for (const [id, schema] of Object.entries(named)) registry.add(schema, { id });
+  const { schemas } = z.toJSONSchema(registry, {
+    target: "openapi-3.0",
+    io: "input",
+    uri: (id) => `#/components/schemas/${id}`,
+  });
+  // `$id` isn't an OpenAPI 3.0 schema keyword; the component's key already names it.
+  return Object.fromEntries(Object.entries(schemas).map(([id, { $id: _id, ...schema }]) => [id, schema]));
+}
 
 const ERR = { $ref: "#/components/schemas/Error" };
 const errorResponses = {
@@ -60,6 +106,9 @@ const okList = (item: string) => ({
 });
 const ok = (desc: string) => ({ "200": { description: desc } });
 const created = (desc: string) => ({ "201": { description: desc } });
+const json = (ref: string) => ({ "application/json": { schema: { $ref: `#/components/schemas/${ref}` } } });
+const okJson = (desc: string, ref: string) => ({ "200": { description: desc, content: json(ref) } });
+const createdJson = (desc: string, ref: string) => ({ "201": { description: desc, content: json(ref) } });
 const noContent = { "204": { description: "Deleted" } };
 
 const pageParams = [
@@ -73,7 +122,15 @@ const hardParam = { name: "hard", in: "query", schema: { type: "boolean" }, desc
 const securitySchemes = {
   bearerAuth: { type: "http", scheme: "bearer", description: "JMW_API_KEY or JMW_AGENT_TOKEN" },
   primaryKey: { type: "http", scheme: "bearer", description: "JMW_API_KEY only — required for hard DELETE" },
+  deviceToken: {
+    type: "http",
+    scheme: "bearer",
+    description:
+      "A DB-backed device token (the iOS app), checked against the scope the operation names ({module}:read or {module}:write). Accepted ONLY by the operations that list it (docs/ios-app.md §3.4); never for hard DELETE.",
+  },
 };
+// The iOS app's allowlisted operations: either env token, or a device token holding the scope.
+const deviceSecurity = [{ bearerAuth: [] }, { deviceToken: [] }];
 const errorSchema = {
   type: "object",
   required: ["error"],
@@ -111,7 +168,6 @@ const macrosSpec = {
       EntryCreateBatch: js(entryCreateBatchSchema),
       EntryPatch: js(entryPatchSchema),
       // The canonical READ shape — identical for `GET /entries` items and the day-rollup entries.
-      EntryView: js(entryViewSchema),
       RangeDay: {
         type: "object",
         required: ["date", "totals", "target"],
@@ -119,35 +175,6 @@ const macrosSpec = {
           date: { type: "string", format: "date" },
           totals: { $ref: "#/components/schemas/MacroTotals" },
           target: { allOf: [{ $ref: "#/components/schemas/MacroTotals" }], nullable: true },
-        },
-      },
-      DayRollup: {
-        type: "object",
-        required: ["day", "totals", "estimation", "target", "entries"],
-        properties: {
-          day: {
-            type: "object",
-            required: ["date"],
-            properties: { date: { type: "string", format: "date" } },
-          },
-          totals: { $ref: "#/components/schemas/MacroTotals" },
-          estimation: {
-            type: "object",
-            required: ["estimatedFraction", "entryCount", "estimatedCount"],
-            properties: { estimatedFraction: { type: "number" }, entryCount: { type: "integer" }, estimatedCount: { type: "integer" } },
-          },
-          target: { allOf: [{ $ref: "#/components/schemas/MacroTotals" }], nullable: true },
-          entries: { type: "array", items: { $ref: "#/components/schemas/EntryView" } },
-        },
-      },
-      MacroTotals: {
-        type: "object",
-        required: ["calories", "proteinContent", "fatContent", "carbohydrateContent"],
-        properties: {
-          calories: { type: "number", nullable: true },
-          proteinContent: { type: "number", nullable: true },
-          fatContent: { type: "number", nullable: true },
-          carbohydrateContent: { type: "number", nullable: true },
         },
       },
       BatchCreate: js(batchCreateSchema),
@@ -159,6 +186,7 @@ const macrosSpec = {
       TargetProfileCreate: js(targetProfileCreateSchema),
       TargetProfilePatch: js(targetProfilePatchSchema),
       UsdaResolve: { type: "object", required: ["fdcId"], properties: { fdcId: { type: "integer", minimum: 1 } } },
+      ...views({ EntryView: entryViewSchema, MacroTotals: macroSetSchema, DayRollup: dayRollupSchema }),
       Error: errorSchema,
     },
   },
@@ -277,8 +305,8 @@ const macrosSpec = {
     "/api/macros/days/{date}": {
       get: {
         summary: "Day rollup (totals, estimation, target, entries)",
-        description: "The one macros route that also accepts the display token (the ESP32 round display).",
-        security: [{ bearerAuth: [] }, { displayToken: [] }],
+        description: "The one macros route that also accepts the display token (the ESP32 round display), and a device token holding `macros:read` (the iOS app).",
+        security: [{ bearerAuth: [] }, { displayToken: [] }, { deviceToken: [] }],
         parameters: [pathParam("date")],
         responses: {
           "200": { description: "Day rollup", content: { "application/json": { schema: { $ref: "#/components/schemas/DayRollup" } } } },
@@ -324,30 +352,32 @@ const weightSpec = {
     schemas: {
       WeightCreate: js(weightCreateSchema),
       WeightPatch: js(weightPatchSchema),
+      ...views({ WeightEntryView: weightEntryViewSchema, WeightRollup: weightRollupSchema }),
       Error: errorSchema,
     },
   },
   paths: {
     "/api/weight/entries": {
-      get: { summary: "List weigh-ins", parameters: [...pageParams], responses: { ...okList("WeightCreate"), ...errorResponses } },
-      post: { summary: "Upsert a day's weight (one per day; re-logging replaces it)", requestBody: jsonBody("WeightCreate"), responses: { ...ok("Weigh-in (created or replaced) + Location"), ...errorResponses } },
+      get: { security: deviceSecurity, summary: "List weigh-ins", parameters: [...pageParams], responses: { ...okList("WeightEntryView"), ...errorResponses } },
+      post: { security: deviceSecurity, summary: "Upsert a day's weight (one per day; re-logging replaces it)", requestBody: jsonBody("WeightCreate"), responses: { ...okJson("Weigh-in (created or replaced) + Location", "WeightEntryView"), ...errorResponses } },
     },
     "/api/weight/entries/{id}": {
-      get: { summary: "Get a weigh-in", parameters: [pathParam("id")], responses: { ...ok("Weigh-in"), ...errorResponses } },
-      patch: { summary: "Correct a weigh-in", parameters: [pathParam("id")], requestBody: jsonBody("WeightPatch"), responses: { ...ok("Updated weigh-in"), ...errorResponses } },
+      get: { summary: "Get a weigh-in", parameters: [pathParam("id")], responses: { ...okJson("Weigh-in", "WeightEntryView"), ...errorResponses } },
+      patch: { summary: "Correct a weigh-in", parameters: [pathParam("id")], requestBody: jsonBody("WeightPatch"), responses: { ...okJson("Updated weigh-in", "WeightEntryView"), ...errorResponses } },
       delete: { summary: "Soft/hard delete a weigh-in", parameters: [pathParam("id"), hardParam], responses: { ...noContent, ...errorResponses } },
     },
     "/api/weight/days/{date}": {
-      get: { summary: "Get a day's weigh-in", parameters: [pathParam("date")], responses: { ...ok("Weigh-in"), ...errorResponses } },
+      get: { security: deviceSecurity, summary: "Get a day's weigh-in", parameters: [pathParam("date")], responses: { ...okJson("Weigh-in", "WeightEntryView"), ...errorResponses } },
     },
     "/api/weight/rollup": {
       get: {
+        security: deviceSecurity,
         summary: "Trend rollup: per-day series (raw + 7-day average) + summary stats",
         parameters: [
           { name: "window", in: "query", schema: { type: "integer", default: 90, minimum: 7, maximum: 3650 }, description: "Days back from `end`" },
           { name: "end", in: "query", schema: { type: "string", format: "date" }, description: "Last day of the window (default today)" },
         ],
-        responses: { ...ok("Rollup (series + summary)"), ...errorResponses },
+        responses: { ...okJson("Rollup (series + summary)", "WeightRollup"), ...errorResponses },
       },
     },
   },
@@ -366,24 +396,26 @@ const shoppingSpec = {
     schemas: {
       ShoppingCreate: js(shoppingCreateSchema),
       ShoppingPatch: js(shoppingPatchSchema),
+      ...views({ ShoppingItemView: shoppingItemViewSchema, ShoppingItemRow: shoppingItemRowSchema, ShoppingList: shoppingListSchema }),
       Error: errorSchema,
     },
   },
   paths: {
     "/api/shopping/items": {
-      get: { summary: "List items", parameters: [...pageParams], responses: { ...okList("ShoppingCreate"), ...errorResponses } },
-      post: { summary: "Add an item", requestBody: jsonBody("ShoppingCreate"), responses: { ...created("Created item"), ...errorResponses } },
+      get: { summary: "List items", parameters: [...pageParams], responses: { ...okList("ShoppingItemRow"), ...errorResponses } },
+      post: { security: deviceSecurity, summary: "Add an item", requestBody: jsonBody("ShoppingCreate"), responses: { ...createdJson("Created item", "ShoppingItemRow"), ...errorResponses } },
     },
     "/api/shopping/items/{id}": {
-      get: { summary: "Get an item", parameters: [pathParam("id")], responses: { ...ok("Item"), ...errorResponses } },
-      patch: { summary: "Edit or check/un-check an item", parameters: [pathParam("id")], requestBody: jsonBody("ShoppingPatch"), responses: { ...ok("Updated item"), ...errorResponses } },
+      get: { summary: "Get an item", parameters: [pathParam("id")], responses: { ...okJson("Item", "ShoppingItemRow"), ...errorResponses } },
+      patch: { security: deviceSecurity, summary: "Edit or check/un-check an item", parameters: [pathParam("id")], requestBody: jsonBody("ShoppingPatch"), responses: { ...okJson("Updated item", "ShoppingItemRow"), ...errorResponses } },
       delete: { summary: "Soft/hard delete an item", parameters: [pathParam("id"), hardParam], responses: { ...noContent, ...errorResponses } },
     },
     "/api/shopping/list": {
       get: {
+        security: deviceSecurity,
         summary: "The two-section list view (active grouped by category + recently bought + activeCount)",
         parameters: [{ name: "boughtWithinDays", in: "query", schema: { type: "integer", default: 7, minimum: 1, maximum: 365 }, description: "Recently-bought window (days)" }],
-        responses: { ...ok("Two-section list"), ...errorResponses },
+        responses: { ...okJson("Two-section list", "ShoppingList"), ...errorResponses },
       },
     },
   },
@@ -410,132 +442,25 @@ const liftingSpec = {
       LiftingAnnotationPatch: js(liftingAnnotationPatchSchema),
       LiftingGoalCreate: js(liftingGoalCreateSchema),
       LiftingGoalPatch: js(liftingGoalPatchSchema),
-      GoalView: {
-        type: "object",
-        required: ["id", "effectiveFrom", "statement"],
-        properties: {
-          id: { type: "string", format: "uuid" },
-          effectiveFrom: { type: "string", format: "date", description: "calendar date the goal takes effect; the goal in force on any date is the latest effectiveFrom on/before it" },
-          statement: { type: "string", description: "freeform prose — what the training is for. Deliberately unstructured." },
-        },
-      },
+      ...views({
+        GoalView: goalViewSchema,
+        PrFlag: prFlagSchema,
+        SessionDerived: sessionDerivedSchema,
+        SessionAnnotation: sessionAnnotationSchema,
+        SetView: setViewSchema,
+        ExerciseView: exerciseViewSchema,
+        SessionSummary: sessionSummarySchema,
+        SessionDetail: sessionDetailSchema,
+        LiftProgression: liftProgressionSchema,
+      }),
       // Read shapes (from src/lib/lifting/types.ts). Instants are ISO strings; weights canonical kg.
-      PrFlag: {
-        type: "object",
-        required: ["lift", "templateId", "kind", "value"],
-        properties: {
-          lift: { type: "string" },
-          templateId: { type: "string", nullable: true },
-          kind: { type: "string", enum: ["weight", "e1rm"] },
-          value: { type: "number", description: "kg (display in whole lb)" },
-        },
-      },
-      SessionDerived: {
-        type: "object",
-        required: ["tonnageKg", "workingSets", "totalReps", "exerciseCount", "topE1rmKg", "durationMin", "prs"],
-        properties: {
-          tonnageKg: { type: "number" },
-          workingSets: { type: "integer" },
-          totalReps: { type: "integer" },
-          exerciseCount: { type: "integer" },
-          topE1rmKg: { type: "number", nullable: true },
-          durationMin: { type: "integer", nullable: true },
-          prs: { type: "array", items: { $ref: "#/components/schemas/PrFlag" } },
-        },
-      },
-      SessionAnnotation: {
-        type: "object",
-        required: ["sessionNotes", "quality", "focus", "interpretation", "interpreted"],
-        properties: {
-          sessionNotes: { type: "string", nullable: true },
-          quality: { type: "integer", nullable: true, minimum: 1, maximum: 5 },
-          focus: { type: "string", nullable: true, enum: liftingFocuses },
-          interpretation: { type: "string", nullable: true },
-          interpreted: { type: "boolean", description: "interpretedAt is set" },
-        },
-      },
-      SetView: {
-        type: "object",
-        required: ["index", "setType", "weightKg", "reps", "rpe", "distanceMeters", "durationSeconds", "pr"],
-        properties: {
-          index: { type: "integer" },
-          setType: { type: "string", enum: ["normal", "warmup", "failure", "dropset"] },
-          weightKg: { type: "number", nullable: true },
-          reps: { type: "integer", nullable: true },
-          rpe: { type: "number", nullable: true, description: "unused in practice (always null)" },
-          distanceMeters: { type: "number", nullable: true },
-          durationSeconds: { type: "integer", nullable: true },
-          pr: { type: "boolean", description: "this set achieved a PR (weight or e1RM) for its lift" },
-        },
-      },
-      ExerciseView: {
-        type: "object",
-        required: ["index", "title", "exerciseTemplateId", "notes", "supersetGroup", "e1rmKg", "e1rmUnreliable", "sets"],
-        properties: {
-          index: { type: "integer" },
-          title: { type: "string" },
-          exerciseTemplateId: { type: "string", nullable: true, description: "Hevy's stable lift id — threads a lift across sessions" },
-          notes: { type: "string", nullable: true },
-          supersetGroup: { type: "integer", nullable: true },
-          e1rmKg: { type: "number", nullable: true, description: "best Epley e1RM over working sets" },
-          e1rmUnreliable: { type: "boolean", description: "best set is >12 reps — estimate degrades" },
-          sets: { type: "array", items: { $ref: "#/components/schemas/SetView" } },
-        },
-      },
-      SessionSummary: {
-        type: "object",
-        required: ["id", "hevyId", "title", "startedAt", "endedAt", "description", "derived", "annotation"],
-        properties: {
-          id: { type: "string", format: "uuid" },
-          hevyId: { type: "string" },
-          title: { type: "string", nullable: true },
-          startedAt: { type: "string", format: "date-time" },
-          endedAt: { type: "string", format: "date-time", nullable: true },
-          description: { type: "string", nullable: true, description: "Hevy's own workout note (distinct from sessionNotes)" },
-          derived: { $ref: "#/components/schemas/SessionDerived" },
-          annotation: { $ref: "#/components/schemas/SessionAnnotation" },
-        },
-      },
-      SessionDetail: {
-        allOf: [
-          { $ref: "#/components/schemas/SessionSummary" },
-          {
-            type: "object",
-            required: ["exercises", "goal"],
-            properties: {
-              exercises: { type: "array", items: { $ref: "#/components/schemas/ExerciseView" } },
-              goal: { allOf: [{ $ref: "#/components/schemas/GoalView" }], nullable: true, description: "the goal in force ON THIS SESSION'S DATE (not necessarily today's) — read it before interpreting" },
-            },
-          },
-        ],
-      },
-      LiftProgression: {
-        type: "object",
-        required: ["templateId", "title", "points"],
-        properties: {
-          templateId: { type: "string" },
-          title: { type: "string", nullable: true },
-          points: {
-            type: "array",
-            items: {
-              type: "object",
-              required: ["sessionId", "startedAt", "e1rmKg", "topSetKg"],
-              properties: {
-                sessionId: { type: "string", format: "uuid" },
-                startedAt: { type: "string", format: "date-time" },
-                e1rmKg: { type: "number", nullable: true },
-                topSetKg: { type: "number", nullable: true },
-              },
-            },
-          },
-        },
-      },
       Error: errorSchema,
     },
   },
   paths: {
     "/api/lifting/sessions": {
       get: {
+        security: deviceSecurity,
         summary: "List sessions (the journal)",
         description: "Paginated session summaries, newest first. Filter by interpreted state, focus, and a startedAt range.",
         parameters: [
@@ -570,6 +495,7 @@ const liftingSpec = {
     },
     "/api/lifting/sessions/{id}": {
       get: {
+        security: deviceSecurity,
         summary: "Get a full session (exercises + sets + derived + annotation)",
         parameters: [pathParam("id")],
         responses: { "200": { description: "Session detail", content: { "application/json": { schema: { $ref: "#/components/schemas/SessionDetail" } } } }, ...errorResponses },
@@ -585,6 +511,7 @@ const liftingSpec = {
     },
     "/api/lifting/lifts/{templateId}": {
       get: {
+        security: deviceSecurity,
         summary: "Progression series for one lift identity (best e1RM + top-set per session)",
         parameters: [pathParam("templateId")],
         responses: { "200": { description: "Progression", content: { "application/json": { schema: { $ref: "#/components/schemas/LiftProgression" } } } }, ...errorResponses },
@@ -665,86 +592,13 @@ const ridesSpec = {
     },
     schemas: {
       RidePatch: js(ridePatchSchema),
-      TimeInHrZone: {
-        type: "object",
-        nullable: true,
-        description:
-          "The session-referenced HR-zone histogram, verbatim from the file: seconds-per-zone PLUS the bpm boundaries it was computed with (self-describing — a later zone-config change never falsifies old rides). A histogram of measurements, not a fitness score.",
-        properties: {
-          timeInHrZone: { type: "array", items: { type: "number" }, description: "seconds per zone bucket" },
-          hrZoneHighBoundary: { type: "array", items: { type: "number" }, description: "bpm upper bounds the buckets were computed against" },
-          maxHeartRate: { type: "number" },
-        },
-      },
-      RideView: {
-        type: "object",
-        description:
-          "The one read shape every rides surface shares. Most fields nullable — honesty about what a given device captured (a watch ride has no power; a trainer ride no GPS).",
-        required: [
-          "id", "name", "note", "sport", "subSport", "sportProfileName", "startedAt", "localDate",
-          "elapsedSeconds", "movingSeconds", "distanceMeters", "totalAscentMeters", "totalDescentMeters",
-          "avgPowerWatts", "maxPowerWatts", "normalizedPowerWatts", "avgHeartRate", "maxHeartRate",
-          "avgCadence", "maxCadence", "avgSpeedMps", "maxSpeedMps", "calories", "avgTemperatureC",
-          "timeInHrZone", "deviceManufacturer", "deviceProduct", "createdAt", "updatedAt",
-        ],
-        properties: {
-          id: { type: "string", format: "uuid" },
-          name: { type: "string", nullable: true, description: "the human layer; display falls back to sportProfileName + localDate" },
-          note: { type: "string", nullable: true },
-          sport: { type: "string", description: "Garmin sport string verbatim (cycling, running, …)" },
-          subSport: { type: "string", nullable: true },
-          sportProfileName: { type: "string", nullable: true, description: "device profile name (\"MTB\") — the display fallback for unnamed rides" },
-          startedAt: { type: "string", format: "date-time" },
-          localDate: { type: "string", format: "date", description: "the ride's LOCAL calendar date, from the file's own clock — use this for display/grouping, never the UTC date of startedAt" },
-          elapsedSeconds: { type: "number" },
-          movingSeconds: { type: "number" },
-          distanceMeters: { type: "number", nullable: true },
-          totalAscentMeters: { type: "number", nullable: true },
-          totalDescentMeters: { type: "number", nullable: true },
-          avgPowerWatts: { type: "number", nullable: true },
-          maxPowerWatts: { type: "number", nullable: true },
-          normalizedPowerWatts: { type: "number", nullable: true, description: "device-computed; this module computes no power model of its own" },
-          avgHeartRate: { type: "integer", nullable: true },
-          maxHeartRate: { type: "integer", nullable: true },
-          avgCadence: { type: "number", nullable: true },
-          maxCadence: { type: "number", nullable: true },
-          avgSpeedMps: { type: "number", nullable: true },
-          maxSpeedMps: { type: "number", nullable: true },
-          calories: { type: "integer", nullable: true, description: "kcal — the same energy unit as macros" },
-          avgTemperatureC: { type: "number", nullable: true },
-          timeInHrZone: { $ref: "#/components/schemas/TimeInHrZone" },
-          deviceManufacturer: { type: "string", nullable: true },
-          deviceProduct: { type: "string", nullable: true },
-          createdAt: { type: "string", format: "date-time" },
-          updatedAt: { type: "string", format: "date-time" },
-        },
-      },
-      RideStream: {
-        type: "object",
-        required: ["resolutionSeconds", "data"],
-        description: "Downsampled aligned arrays. `t` is seconds from start; other channels align to it with null gaps (smart recording is irregular — gaps are data, not errors). Absent channel = never recorded.",
-        properties: {
-          resolutionSeconds: { type: "integer" },
-          data: {
-            type: "object",
-            required: ["t"],
-            properties: { t: { type: "array", items: { type: "number" } } },
-            additionalProperties: { type: "array", items: { type: "number", nullable: true } },
-          },
-        },
-      },
-      RideDetail: {
-        allOf: [
-          { $ref: "#/components/schemas/RideView" },
-          {
-            type: "object",
-            required: ["stream"],
-            properties: {
-              stream: { allOf: [{ $ref: "#/components/schemas/RideStream" }], nullable: true, description: "present only when ?streams=1" },
-            },
-          },
-        ],
-      },
+      ...views({
+        TimeInHrZone: timeInHrZoneSchema,
+        RideView: rideViewSchema,
+        RideStream: rideStreamViewSchema,
+        RideDetail: rideDetailSchema,
+        WeeklyStats: weeklyStatsSchema,
+      }),
       IngestResult: {
         allOf: [
           { $ref: "#/components/schemas/RideView" },
@@ -756,28 +610,6 @@ const ridesSpec = {
             },
           },
         ],
-      },
-      WeeklyStats: {
-        type: "object",
-        required: ["weeks"],
-        properties: {
-          weeks: {
-            type: "array",
-            description: "newest week first; weeks with no matching rides are omitted",
-            items: {
-              type: "object",
-              required: ["weekStart", "rides", "distanceMeters", "movingSeconds", "totalAscentMeters", "avgPowerWatts"],
-              properties: {
-                weekStart: { type: "string", format: "date", description: "Monday of the ISO week" },
-                rides: { type: "integer" },
-                distanceMeters: { type: "number" },
-                movingSeconds: { type: "number" },
-                totalAscentMeters: { type: "number" },
-                avgPowerWatts: { type: "number", nullable: true, description: "mean across the week's rides that have power; null when none do" },
-              },
-            },
-          },
-        },
       },
       Error: errorSchema,
     },
@@ -800,6 +632,7 @@ const ridesSpec = {
     },
     "/api/rides": {
       get: {
+        security: deviceSecurity,
         summary: "List rides (the log)",
         description: "Summaries only (never streams), newest startedAt first. There is no POST here — rides are never authored, only ingested.",
         parameters: [
@@ -814,6 +647,7 @@ const ridesSpec = {
     },
     "/api/rides/{id}": {
       get: {
+        security: deviceSecurity,
         summary: "Get one ride",
         parameters: [pathParam("id"), { name: "streams", in: "query", schema: { type: "string", enum: ["1"] }, description: "include the downsampled stream arrays (heavy; off by default)" }],
         responses: { "200": { description: "Ride detail", content: { "application/json": { schema: { $ref: "#/components/schemas/RideDetail" } } } }, ...errorResponses },
@@ -845,6 +679,7 @@ const ridesSpec = {
     },
     "/api/rides/weekly": {
       get: {
+        security: deviceSecurity,
         summary: "Weekly rollup (per ISO week: rides / distance / moving time / ascent / avg power)",
         parameters: [
           { name: "weeks", in: "query", schema: { type: "integer", default: 8, minimum: 1, maximum: 104 }, description: "max buckets returned, newest first" },
@@ -882,20 +717,21 @@ const vitalsSpec = {
     },
     schemas: {
       VitalsIngest: js(vitalsIngestSchema),
-      VitalsDay: js(vitalsDaySchema),
+      ...views({ VitalsDayView: vitalsDayViewSchema, VitalsRollup: vitalsRollupSchema }),
       Error: errorSchema,
     },
   },
   paths: {
     "/api/vitals": {
       get: {
+        security: deviceSecurity,
         summary: "List days of measurements (same shape as the detail read)",
         parameters: [
           ...pageParams,
           { name: "from", in: "query", schema: { type: "string", format: "date" } },
           { name: "to", in: "query", schema: { type: "string", format: "date" } },
         ],
-        responses: { ...okList("VitalsDay"), ...errorResponses },
+        responses: { ...okList("VitalsDayView"), ...errorResponses },
       },
       post: {
         summary: "Push one day of Garmin measurements (upsert; the daemon re-polls a trailing window)",
@@ -908,7 +744,7 @@ const vitalsSpec = {
       },
     },
     "/api/vitals/{date}": {
-      get: { summary: "Get one day", parameters: [pathParam("date")], responses: { ...ok("Day of measurements"), ...errorResponses } },
+      get: { security: deviceSecurity, summary: "Get one day", parameters: [pathParam("date")], responses: { ...okJson("Day of measurements", "VitalsDayView"), ...errorResponses } },
       delete: {
         summary: "Soft/hard delete a day (the daemon's next poll can re-create it)",
         parameters: [pathParam("date"), hardParam],
@@ -920,17 +756,18 @@ const vitalsSpec = {
         summary: "Re-derive a day's columns from its stored rawPayload",
         description: "The correction lever, mirroring rides: re-parse the archive rather than re-poll Garmin or hand-edit.",
         parameters: [pathParam("date")],
-        responses: { ...ok("Reprocessed day"), ...errorResponses },
+        responses: { ...okJson("Reprocessed day", "VitalsDayView"), ...errorResponses },
       },
     },
     "/api/vitals/summary": {
       get: {
+        security: deviceSecurity,
         summary: "Derived rollup: 7-day trailing averages, week-over-week deltas, and the gap list",
         parameters: [
           { name: "window", in: "query", schema: { type: "integer", default: 30, minimum: 1, maximum: 365 }, description: "Days back from `end`" },
           { name: "end", in: "query", schema: { type: "string", format: "date" }, description: "Last day of the window (default the latest day)" },
         ],
-        responses: { ...ok("Rollup (trends + gaps)"), ...errorResponses },
+        responses: { ...okJson("Rollup (trends + gaps)", "VitalsRollup"), ...errorResponses },
       },
     },
   },

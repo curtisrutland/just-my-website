@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { requireBearer, requirePrimary } from "@/lib/auth/tokens";
+import { requireBearer, requirePrimary, requireScope } from "@/lib/auth/tokens";
 import { notFound, parseJson } from "@/lib/http/errors";
 import { noContent, ok } from "@/lib/http/responses";
 import { getItemById, hardDeleteItem, patchItem, softDeleteItem } from "@/lib/shopping/repo";
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest, { params }: Ctx) {
 }
 
 export async function PATCH(request: NextRequest, { params }: Ctx) {
-  const auth = requireBearer(request);
+  const auth = await requireScope(request, "shopping:write");
   if (!auth.ok) return auth.response;
   const parsed = await parseJson(request, shoppingPatchSchema);
   if (!parsed.ok) return parsed.response;

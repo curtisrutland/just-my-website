@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { requireBearer } from "@/lib/auth/tokens";
+import { requireScope } from "@/lib/auth/tokens";
 import { errorResponse } from "@/lib/http/errors";
 import { paginated, parsePagination } from "@/lib/http/pagination";
 import { ok } from "@/lib/http/responses";
@@ -13,7 +13,7 @@ import { liftingFocus, type LiftingFocus } from "@/lib/lifting/schema";
  * session start).
  */
 export async function GET(request: NextRequest) {
-  const auth = requireBearer(request);
+  const auth = await requireScope(request, "lifting:read");
   if (!auth.ok) return auth.response;
 
   const sp = request.nextUrl.searchParams;

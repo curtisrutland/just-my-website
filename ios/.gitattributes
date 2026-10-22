@@ -1,0 +1,2 @@
+# Written by scripts/generate-client.sh from the Zod-derived OpenAPI specs; collapse in diffs.
+JMWClient/Sources/*API/Generated/** linguist-generated=true

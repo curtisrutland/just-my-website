@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { requireBearer, requirePrimary } from "@/lib/auth/tokens";
+import { requireBearer, requirePrimary, requireScope } from "@/lib/auth/tokens";
 import { notFound, parseJson } from "@/lib/http/errors";
 import { noContent, ok } from "@/lib/http/responses";
 import { getSession, hardDeleteSession, patchAnnotation, softDeleteSession } from "@/lib/lifting/repo";
@@ -9,7 +9,7 @@ type Ctx = { params: Promise<{ id: string }> };
 
 /** GET — the full session: exercise → set tree, derived stats, PR flags, and the annotation. */
 export async function GET(request: NextRequest, { params }: Ctx) {
-  const auth = requireBearer(request);
+  const auth = await requireScope(request, "lifting:read");
   if (!auth.ok) return auth.response;
   const session = await getSession((await params).id);
   return session ? ok(session) : notFound("Session not found");

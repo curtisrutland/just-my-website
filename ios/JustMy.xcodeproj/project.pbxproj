@@ -1,0 +1,405 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		875D989F76F2C54216CC68C1 /* JMWClient in Frameworks */ = {isa = PBXBuildFile; productRef = D2C286206F7CB255EFD17B44 /* JMWClient */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		59C623FB70DF2D4086D08CDB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AC75F5FB3128505ABB3EB758 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DD603C4A8C3C6ECF0D18C772;
+			remoteInfo = JustMy;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		64C81BAC83221A31055F9D4D /* JustMy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = JustMy.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		344D9412B23E9B03F9034996 /* JustMyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JustMyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		4FD3937EB24397AC336A1E69 /* JustMy-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "JustMy-Info.plist"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		5BB7F50EBDB6B140E7789F0C /* JustMy */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = JustMy;
+			sourceTree = "<group>";
+		};
+		6E22A3C64DFB5AFBC9B38047 /* JustMyTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = JustMyTests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		707647C72E024C224F661E92 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				875D989F76F2C54216CC68C1 /* JMWClient in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		93094721359A43DA8AA68950 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		15876FCF228CC627B751DE32 = {
+			isa = PBXGroup;
+			children = (
+				5BB7F50EBDB6B140E7789F0C /* JustMy */,
+				6E22A3C64DFB5AFBC9B38047 /* JustMyTests */,
+				4FD3937EB24397AC336A1E69 /* JustMy-Info.plist */,
+				A5FF246BE477975D90651200 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A5FF246BE477975D90651200 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				64C81BAC83221A31055F9D4D /* JustMy.app */,
+				344D9412B23E9B03F9034996 /* JustMyTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		DD603C4A8C3C6ECF0D18C772 /* JustMy */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 24317DA8775934D6E8C2ACFA /* Build configuration list for PBXNativeTarget "JustMy" */;
+			buildPhases = (
+				D883BA6A0F8746C05282897A /* Sources */,
+				707647C72E024C224F661E92 /* Frameworks */,
+				BF1F6143ED1127540E1211E9 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				5BB7F50EBDB6B140E7789F0C /* JustMy */,
+			);
+			name = JustMy;
+			packageProductDependencies = (
+				D2C286206F7CB255EFD17B44 /* JMWClient */,
+			);
+			productName = JustMy;
+			productReference = 64C81BAC83221A31055F9D4D /* JustMy.app */;
+			productType = "com.apple.product-type.application";
+		};
+		AEC63D0DF601D745B1B6871D /* JustMyTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9478CF77DBC8910C4911E180 /* Build configuration list for PBXNativeTarget "JustMyTests" */;
+			buildPhases = (
+				6F2BB19FE23D421C22BAE218 /* Sources */,
+				93094721359A43DA8AA68950 /* Frameworks */,
+				802B220552A667DB3637F302 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				9DAC41153C10FC51966034E2 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				6E22A3C64DFB5AFBC9B38047 /* JustMyTests */,
+			);
+			name = JustMyTests;
+			productName = JustMyTests;
+			productReference = 344D9412B23E9B03F9034996 /* JustMyTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		AC75F5FB3128505ABB3EB758 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2710;
+				LastUpgradeCheck = 2710;
+				TargetAttributes = {
+					DD603C4A8C3C6ECF0D18C772 = {
+						CreatedOnToolsVersion = 27.1;
+					};
+					AEC63D0DF601D745B1B6871D = {
+						CreatedOnToolsVersion = 27.1;
+						TestTargetID = DD603C4A8C3C6ECF0D18C772;
+					};
+				};
+			};
+			buildConfigurationList = 2FA82BCE23ECF1568AFE0E70 /* Build configuration list for PBXProject "JustMy" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 15876FCF228CC627B751DE32;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				78265C6FAE1B8D73772909BB /* XCLocalSwiftPackageReference "JMWClient" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = A5FF246BE477975D90651200 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				DD603C4A8C3C6ECF0D18C772 /* JustMy */,
+				AEC63D0DF601D745B1B6871D /* JustMyTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		BF1F6143ED1127540E1211E9 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		802B220552A667DB3637F302 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		D883BA6A0F8746C05282897A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6F2BB19FE23D421C22BAE218 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		9DAC41153C10FC51966034E2 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DD603C4A8C3C6ECF0D18C772 /* JustMy */;
+			targetProxy = 59C623FB70DF2D4086D08CDB /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		118A88D098B4768C724E192B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				ONLY_ACTIVE_ARCH = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		36FC9D86CB9E84F5A4C7A813 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		3D5604BD21C4FA5DDFEC7960 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "JustMy-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = JustMy;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Scan the pairing code shown on justmy.website.";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Face ID unlocks your data on this iPhone.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = website.justmy.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		D028947712EC052AF1C0E58F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "JustMy-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = JustMy;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Scan the pairing code shown on justmy.website.";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Face ID unlocks your data on this iPhone.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = website.justmy.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		F51CA209CA70FAA21A415800 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = website.justmy.app.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/JustMy.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/JustMy";
+			};
+			name = Debug;
+		};
+		56C65A8246CB96AA78429603 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = website.justmy.app.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/JustMy.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/JustMy";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		2FA82BCE23ECF1568AFE0E70 /* Build configuration list for PBXProject "JustMy" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				118A88D098B4768C724E192B /* Debug */,
+				36FC9D86CB9E84F5A4C7A813 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		24317DA8775934D6E8C2ACFA /* Build configuration list for PBXNativeTarget "JustMy" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3D5604BD21C4FA5DDFEC7960 /* Debug */,
+				D028947712EC052AF1C0E58F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9478CF77DBC8910C4911E180 /* Build configuration list for PBXNativeTarget "JustMyTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F51CA209CA70FAA21A415800 /* Debug */,
+				56C65A8246CB96AA78429603 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		78265C6FAE1B8D73772909BB /* XCLocalSwiftPackageReference "JMWClient" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = JMWClient;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		D2C286206F7CB255EFD17B44 /* JMWClient */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = JMWClient;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = AC75F5FB3128505ABB3EB758 /* Project object */;
+}

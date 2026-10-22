@@ -390,12 +390,14 @@ ios/
   README.md               — build, run, pair, sign
 ```
 
-- **Generated client.** `swift-openapi-generator` (Apple's) produces one client per module from the
-  checked-in `openapi/{module}.json` (OpenAPI 3.0.3, which it supports). The spec stays downstream of
-  Zod, and the Swift client stays downstream of the spec. Field names arrive verbatim — the same
-  schema.org names the skills use (`proteinContent`, `calories`, …), no aliases. Whether the
-  generator's build plugin can read the specs via a symlink into each target, or needs a copy step
-  added to `npm run openapi:build`, is settled during the scaffold.
+- **Generated client.** `swift-openapi-generator` (Apple's, pinned in `ios/Tools`) produces one client
+  per module from the generated `openapi/{module}.json` (OpenAPI 3.0.3). `ios/scripts/generate-client.sh`
+  runs `npm run openapi:build` and then the generator. The output (`JMWClient/Sources/*API/Generated/`)
+  is **committed**, so a Swift build never needs Node or a build-plugin trust prompt, and an API change
+  shows up as a reviewable diff beside the route change. A clean `git diff` after running the script
+  means the client is in sync. The spec stays downstream of Zod, and the Swift client stays downstream
+  of the spec. Field names arrive verbatim — the same schema.org names the skills use
+  (`proteinContent`, `calories`, …), no aliases.
 - **Dependencies:** `swift-openapi-generator`, `swift-openapi-runtime`,
   `swift-openapi-urlsession`. Nothing else third-party; Charts, MapKit, VisionKit,
   LocalAuthentication and Security are system frameworks.

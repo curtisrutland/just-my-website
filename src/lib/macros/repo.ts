@@ -18,6 +18,7 @@ import type {
   BatchDetailView,
   BatchPatch,
   BatchView,
+  DayRollup,
   EntryCreate,
   EntryPatch,
   EntryView,
@@ -562,15 +563,8 @@ export async function resolveTarget(date: string): Promise<MacroSet | null> {
 
 // ──────────────────────────────────────────────────────── Day rollup ─────────
 
-export type DayRollup = {
-  day: { date: string };
-  totals: MacroSet;
-  estimation: { estimatedFraction: number; entryCount: number; estimatedCount: number };
-  /** The one target in effect on the day, or null when no profile applies yet. */
-  target: MacroSet | null;
-  // The day's entries use the SAME shape `GET /entries` returns (`EntryView`).
-  entries: EntryView[];
-};
+/** The day-rollup shape — inferred from `dayRollupSchema`, the published contract. */
+export type { DayRollup };
 
 /**
  * The day-rollup (HANDOFF-CODE "the one thing the recipes template can't guide"). Sums the

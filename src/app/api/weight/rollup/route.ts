@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { requireBearer } from "@/lib/auth/tokens";
+import { requireScope } from "@/lib/auth/tokens";
 import { errorResponse } from "@/lib/http/errors";
 import { isValidDate } from "@/lib/http/params";
 import { ok } from "@/lib/http/responses";
@@ -7,7 +7,7 @@ import { getRollup } from "@/lib/weight/repo";
 
 /** The trend rollup: per-day series (raw + 7-day average) + summary stats. `?window=` `?end=`. */
 export async function GET(request: NextRequest) {
-  const auth = requireBearer(request);
+  const auth = await requireScope(request, "weight:read");
   if (!auth.ok) return auth.response;
 
   const sp = request.nextUrl.searchParams;

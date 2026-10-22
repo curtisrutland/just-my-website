@@ -3,7 +3,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { db } from "@/lib/db";
 import { deviceToken } from "@/lib/db/schema";
 import { requirePanelAuth } from "./auth";
-import { createDeviceToken, findLiveTokenByRaw, hashToken } from "./tokens";
+import { createDeviceToken, findLiveTokenByRaw, hashToken } from "@/lib/auth/device-tokens";
 
 /**
  * Integration test against live Neon. Every token minted here uses a recognizable name so the

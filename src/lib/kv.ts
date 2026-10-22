@@ -1,8 +1,8 @@
 import { Redis } from "@upstash/redis";
 
 /**
- * The panel's KV store (Upstash Redis, provisioned via the Vercel Marketplace). This is the ONLY
- * datastore allowed on the version-poll hot path — panel-contract §4.1 forbids Neon there so the
+ * The platform's KV store (Upstash Redis, provisioned via the Vercel Marketplace): the panel's version
+ * stamps and the device-token cache. This is the ONLY datastore allowed on the panel's version-poll hot path — panel-contract §4.1 forbids Neon there so the
  * Neon compute can autosuspend (otherwise the 60s poll bills 24/7, see §9).
  *
  * Lazily constructed and env-guarded: if the connection vars are absent (a context without the

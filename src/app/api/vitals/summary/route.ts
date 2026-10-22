@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { requireBearer } from "@/lib/auth/tokens";
+import { requireScope } from "@/lib/auth/tokens";
 import { isValidDate } from "@/lib/http/params";
 import { ok } from "@/lib/http/responses";
 import { getRollup } from "@/lib/vitals/repo";
@@ -10,7 +10,7 @@ import { getRollup } from "@/lib/vitals/repo";
  * so it cannot drift from the measurements it summarizes.
  */
 export async function GET(request: NextRequest) {
-  const auth = requireBearer(request);
+  const auth = await requireScope(request, "vitals:read");
   if (!auth.ok) return auth.response;
   const sp = request.nextUrl.searchParams;
   const windowParam = Number(sp.get("window"));

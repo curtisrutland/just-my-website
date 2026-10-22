@@ -4,8 +4,8 @@ import { GET as versionGET } from "@/app/api/panel/version/route";
 import { db } from "@/lib/db";
 import { deviceToken, weightEntry } from "@/lib/db/schema";
 import { setWeight } from "@/lib/weight/repo";
-import { kv } from "./kv";
-import { createDeviceToken } from "./tokens";
+import { kv } from "@/lib/kv";
+import { createDeviceToken } from "@/lib/auth/device-tokens";
 import { bump, PANEL_SECTIONS, readVersions } from "./version";
 
 /** Integration test: real Upstash KV + real Neon. Uses a 1903 sentinel date distinct from the

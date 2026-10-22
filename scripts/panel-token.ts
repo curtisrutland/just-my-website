@@ -1,12 +1,13 @@
 import "../src/lib/db/load-env"; // must be first — sets DATABASE_URL before the db client evaluates
-import { KITCHEN_PANEL_SCOPES, RECIPES_SERVICE_SCOPES } from "../src/lib/panel/scopes";
-import { createDeviceToken } from "../src/lib/panel/tokens";
+import { type DeviceScope, KITCHEN_PANEL_SCOPES, PHONE_SCOPES, RECIPES_SERVICE_SCOPES } from "../src/lib/auth/scopes";
+import { createDeviceToken } from "../src/lib/auth/device-tokens";
 
 /**
- * Mint a panel credential and print the RAW token ONCE (it is never retrievable afterward).
+ * Mint a device credential and print the RAW token ONCE (it is never retrievable afterward).
  *
  *   npm run panel:token -- kitchen-panel     # panel:read + write:shopping
  *   npm run panel:token -- justmy-recipes    # panel:write:recipe (the send-to-panel service token)
+ *   npm run panel:token -- phone             # the iOS app: module reads + weight/shopping writes
  *
  * Or with an explicit name:  npm run panel:token -- justmy-recipes staging-sender
  */
@@ -14,7 +15,7 @@ async function main() {
   const kind = process.argv[2];
   const nameArg = process.argv[3];
 
-  let scopes;
+  let scopes: DeviceScope[];
   let defaultName;
   if (kind === "kitchen-panel") {
     scopes = KITCHEN_PANEL_SCOPES;
@@ -22,8 +23,11 @@ async function main() {
   } else if (kind === "justmy-recipes") {
     scopes = RECIPES_SERVICE_SCOPES;
     defaultName = "justmy-recipes";
+  } else if (kind === "phone") {
+    scopes = PHONE_SCOPES;
+    defaultName = "iphone";
   } else {
-    console.error("Usage: npm run panel:token -- <kitchen-panel|justmy-recipes> [name]");
+    console.error("Usage: npm run panel:token -- <kitchen-panel|justmy-recipes|phone> [name]");
     process.exit(1);
     return;
   }

@@ -2,7 +2,7 @@ import { eq, inArray } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 import { db } from "@/lib/db";
 import { deviceToken, panelState } from "@/lib/db/schema";
-import { createDeviceToken } from "@/lib/panel/tokens";
+import { createDeviceToken } from "@/lib/auth/device-tokens";
 import { GET, POST } from "./route";
 
 /**

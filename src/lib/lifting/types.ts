@@ -1,121 +1,33 @@
-import type { LiftingFocus } from "./schema";
+import type * as z from "zod";
+import type {
+  exerciseViewSchema,
+  goalViewSchema,
+  liftProgressionPointSchema,
+  liftProgressionSchema,
+  prFlagSchema,
+  prKindSchema,
+  sessionAnnotationSchema,
+  sessionDerivedSchema,
+  sessionDetailSchema,
+  sessionSummarySchema,
+  setViewSchema,
+} from "./schema";
 
 /**
  * Lifting module — domain + response-contract types. Shared by `repo.ts` (which builds them) and
  * the UI (which renders them); per the layering rule these live in `lib`, never in components.
- * These mirror the API read shape in docs/lifting-model.md: instants are ISO strings (never JS
- * `Date`), weights are canonical kg numbers, and the audit columns are dropped.
+ * Inferred from the view schemas in `schema.ts` (where each field is documented), so the repo's
+ * builders are type-checked against the published contract.
  */
 
-/** A PR is per lift identity (`exerciseTemplateId`); two kinds — top working weight, or best e1RM. */
-export type PrKind = "weight" | "e1rm";
-export type PrFlag = {
-  /** The exercise title as Hevy renders it, for display ("Bench Press (Barbell)"). */
-  lift: string;
-  templateId: string | null;
-  kind: PrKind;
-  /** The value that set the PR (kg for `weight`, kg for `e1rm`), rounded to 1 dp. */
-  value: number;
-};
-
-/** The derived headline stats for a session — all computed in the repo, never stored. */
-export type SessionDerived = {
-  tonnageKg: number;
-  workingSets: number;
-  totalReps: number;
-  exerciseCount: number;
-  /** Best e1RM across the session's exercises (kg), null if no working set has weight+reps. */
-  topE1rmKg: number | null;
-  /** Session duration in minutes (endedAt − startedAt), null when endedAt is missing. */
-  durationMin: number | null;
-  prs: PrFlag[];
-};
-
-/** The annotation layer projected for read. `interpreted` = `interpretedAt` is set. */
-export type SessionAnnotation = {
-  sessionNotes: string | null;
-  quality: number | null;
-  focus: LiftingFocus | null;
-  interpretation: string | null;
-  interpreted: boolean;
-};
-
-/** One set, as read. `pr` marks the set that achieved a PR (weight or e1RM) for its lift. */
-export type SetView = {
-  index: number;
-  setType: string;
-  weightKg: number | null;
-  reps: number | null;
-  rpe: number | null;
-  distanceMeters: number | null;
-  durationSeconds: number | null;
-  pr: boolean;
-};
-
-/** One exercise instance, as read, with its per-exercise derived e1RM. */
-export type ExerciseView = {
-  index: number;
-  title: string;
-  exerciseTemplateId: string | null;
-  notes: string | null;
-  supersetGroup: number | null;
-  /** Best Epley e1RM over working sets (kg), null when none is computable. */
-  e1rmKg: number | null;
-  /** True when the best set's reps > 12 (Epley degrades at high reps) — render muted, not trusted. */
-  e1rmUnreliable: boolean;
-  sets: SetView[];
-};
-
-/**
- * The goal statement as read — what the training is FOR. Prose only; the audit columns are dropped
- * per the module's read contract, so `effectiveFrom` (a calendar date, 'YYYY-MM-DD') is the only
- * time on it.
- */
-export type GoalView = {
-  id: string;
-  effectiveFrom: string;
-  statement: string;
-};
-
-/** A session summary — the journal-card shape (no exercises). */
-export type SessionSummary = {
-  id: string;
-  hevyId: string;
-  title: string | null;
-  /** ISO 8601 instant. */
-  startedAt: string;
-  endedAt: string | null;
-  /** Hevy's own workout-level note (distinct from our `sessionNotes`). */
-  description: string | null;
-  derived: SessionDerived;
-  annotation: SessionAnnotation;
-};
-
-/**
- * A full session — summary plus the exercise → set tree, plus the goal it should be read against.
- *
- * `goal` is the goal in force ON THIS SESSION'S DATE, not necessarily today's: a session from an old
- * block is judged against the goal that actually applied when it happened, which is the whole reason
- * goals are dated. It rides along on every full read so an interpretation can never be written
- * goal-blind. Null when no goal was set by then.
- */
-export type SessionDetail = SessionSummary & {
-  exercises: ExerciseView[];
-  goal: GoalView | null;
-};
-
-/** One point in a lift's progression series. */
-export type LiftProgressionPoint = {
-  sessionId: string;
-  startedAt: string;
-  e1rmKg: number | null;
-  topSetKg: number | null;
-};
-
-/** The progression series for one lift identity (`exerciseTemplateId`), oldest → newest. */
-export type LiftProgression = {
-  templateId: string;
-  /** The lift's most recent title. */
-  title: string | null;
-  points: LiftProgressionPoint[];
-};
+export type PrKind = z.infer<typeof prKindSchema>;
+export type PrFlag = z.infer<typeof prFlagSchema>;
+export type SessionDerived = z.infer<typeof sessionDerivedSchema>;
+export type SessionAnnotation = z.infer<typeof sessionAnnotationSchema>;
+export type SetView = z.infer<typeof setViewSchema>;
+export type ExerciseView = z.infer<typeof exerciseViewSchema>;
+export type GoalView = z.infer<typeof goalViewSchema>;
+export type SessionSummary = z.infer<typeof sessionSummarySchema>;
+export type SessionDetail = z.infer<typeof sessionDetailSchema>;
+export type LiftProgressionPoint = z.infer<typeof liftProgressionPointSchema>;
+export type LiftProgression = z.infer<typeof liftProgressionSchema>;

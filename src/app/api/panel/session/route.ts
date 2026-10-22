@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { findLiveTokenByRaw } from "@/lib/panel/tokens";
+import { findLiveTokenByRaw } from "@/lib/auth/device-tokens";
 
 /**
  * GET /api/panel/session?token=<device token> — one-time kiosk setup (impl §7). Validates the token

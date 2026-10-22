@@ -1,4 +1,5 @@
 import * as z from "zod";
+import { calendarDate, isoInstant, paginatedSchema } from "@/lib/http/view-schemas";
 
 /**
  * Rides module — Zod schemas. The SINGLE SOURCE OF TRUTH for validation (CONVENTIONS §1, §5).
@@ -105,3 +106,82 @@ export const rideListQuerySchema = z.object({
   to: z.iso.date().optional(),
   q: z.string().min(1).optional(),
 });
+
+// --- Response views (the JSON the routes send; OpenAPI + the contract test read these) ---
+// Instants are ISO strings; `localDate` is a 'YYYY-MM-DD' calendar date; every quantity is SI
+// (m, s, m/s, W, bpm, kcal, °C) — display units (mi/ft/mph) are a UI concern.
+
+/**
+ * The session-referenced HR-zone histogram, verbatim from the file: seconds-per-zone plus the
+ * boundaries it was computed with — self-describing, so a later zone-config change never
+ * falsifies old rides. A histogram of measurements, not a model score. Loose: it carries whatever
+ * else the file put in the zone message.
+ */
+export const timeInHrZoneSchema = z.looseObject({
+  timeInHrZone: z.array(z.number()).optional(),
+  hrZoneHighBoundary: z.array(z.number()).optional(),
+  maxHeartRate: z.number().optional(),
+});
+
+/** One ride as read — the one view schema every read surface shares (field-parity rule). */
+export const rideViewSchema = z.object({
+  id: z.uuid(),
+  /** The human layer (the only surface-writable fields). */
+  name: z.string().nullable(),
+  note: z.string().nullable(),
+  sport: z.string(),
+  subSport: z.string().nullable(),
+  /** Device profile name ("MTB") — the display fallback for unnamed rides. */
+  sportProfileName: z.string().nullable(),
+  /** ISO 8601 instant (UTC). */
+  startedAt: isoInstant,
+  /** The ride's LOCAL calendar date, from the file's own clock. */
+  localDate: calendarDate,
+  elapsedSeconds: z.number(),
+  movingSeconds: z.number(),
+  distanceMeters: z.number().nullable(),
+  totalAscentMeters: z.number().nullable(),
+  totalDescentMeters: z.number().nullable(),
+  avgPowerWatts: z.number().nullable(),
+  maxPowerWatts: z.number().nullable(),
+  normalizedPowerWatts: z.number().nullable(),
+  avgHeartRate: z.number().nullable(),
+  maxHeartRate: z.number().nullable(),
+  avgCadence: z.number().nullable(),
+  maxCadence: z.number().nullable(),
+  avgSpeedMps: z.number().nullable(),
+  maxSpeedMps: z.number().nullable(),
+  calories: z.number().nullable(),
+  avgTemperatureC: z.number().nullable(),
+  timeInHrZone: timeInHrZoneSchema.nullable(),
+  deviceManufacturer: z.string().nullable(),
+  deviceProduct: z.string().nullable(),
+  createdAt: isoInstant,
+  updatedAt: isoInstant,
+});
+
+/** The downsampled time series as read: `t` (seconds from start) plus aligned channels; absent key = never recorded. */
+export const rideStreamViewSchema = z.object({
+  resolutionSeconds: z.number().int(),
+  data: z.object({ t: z.array(z.number()) }).catchall(z.array(z.number().nullable())),
+});
+
+/** Full ride — the detail read. `stream` is included only when the read asks for it (`?streams=1`). */
+export const rideDetailSchema = rideViewSchema.extend({ stream: rideStreamViewSchema.nullable() });
+
+/** `GET /api/rides`: a page of rides. */
+export const rideListSchema = paginatedSchema(rideViewSchema);
+
+/** One ISO week of the rollup (weeks with no matching rides are omitted). */
+export const weeklyBucketSchema = z.object({
+  /** Monday of the ISO week, 'YYYY-MM-DD'. */
+  weekStart: calendarDate,
+  rides: z.number().int(),
+  distanceMeters: z.number(),
+  movingSeconds: z.number(),
+  totalAscentMeters: z.number(),
+  /** Mean of avg_power_watts across the week's rides that have it; null when none do. */
+  avgPowerWatts: z.number().nullable(),
+});
+
+export const weeklyStatsSchema = z.object({ weeks: z.array(weeklyBucketSchema) });

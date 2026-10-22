@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { requireBearer, requirePrimary } from "@/lib/auth/tokens";
+import { requireBearer, requirePrimary, requireScope } from "@/lib/auth/tokens";
 import { notFound } from "@/lib/http/errors";
 import { isValidDate } from "@/lib/http/params";
 import { noContent, ok } from "@/lib/http/responses";
@@ -15,7 +15,7 @@ type Ctx = { params: Promise<{ date: string }> };
  * fiction. A wrong value is corrected by REPROCESSING the stored payload.
  */
 export async function GET(request: NextRequest, { params }: Ctx) {
-  const auth = requireBearer(request);
+  const auth = await requireScope(request, "vitals:read");
   if (!auth.ok) return auth.response;
   const { date } = await params;
   if (!isValidDate(date)) return notFound("No vitals for that day");
