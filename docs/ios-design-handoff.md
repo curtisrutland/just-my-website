@@ -291,8 +291,11 @@ Boards: `Shopping-Dark/Light`, `ShoppingCheck-Dark`, `ShoppingAdd-Dark`, `Shoppi
   44 pt. No quantities, no notes — they live in the text.
 - **Check off:** tap anywhere on the row → `PATCH {status: "bought"}` optimistic. Light haptic;
   the circle fills Accent with a check; text strikes and dims; a 2 pt Accent bar drains along the
-  row's bottom edge for ~2.5 s; then the row moves to **RECENTLY BOUGHT · LAST 7 DAYS** at the
-  end of the list (grey filled check, subtitle `Meat · just now`). A tap during the drain cancels.
+  row's bottom edge for ~2.5 s; then the row moves to **RECENTLY BOUGHT** at the end of the list
+  (grey filled check, subtitle `Meat · just now`). A tap during the drain cancels.
+- **Recently bought is collapsed by default** (#102): its header is a disclosure row
+  `RECENTLY BOUGHT · 6 ›` (chevron rotates on expand), collapsed on every launch, kept open while
+  the app is in use. A check-off lands in it without expanding it; the count ticks up.
   Tapping a bought row un-checks it (`PATCH {status: "needed"}`). The header count updates with
   the optimistic state and reverts with the row on error (quiet banner).
 - **Swipe to delete** (v1, see §9): trailing `.swipeActions` with the stock red `Delete`

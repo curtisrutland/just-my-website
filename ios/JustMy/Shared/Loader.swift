@@ -49,3 +49,29 @@ struct LoadFailure: Equatable {
         }
     }
 }
+
+/// A write the server refused (its validation message) or couldn't take.
+struct WriteError: LocalizedError {
+    let message: String
+    var errorDescription: String? { message }
+}
+
+extension LoadFailure {
+    /// A failed write, worded for the same quiet banner: the server's own message for a refusal,
+    /// "Offline" for no network, otherwise "Couldn't save".
+    init(write error: any Error) {
+        let underlying = (error as? ClientError)?.underlyingError ?? error
+        if let write = underlying as? WriteError {
+            self.init(isOffline: false, message: write.message)
+        } else if let url = underlying as? URLError, url.code != .cancelled {
+            self.init(isOffline: true, message: "Offline")
+        } else {
+            self.init(isOffline: false, message: "Couldn't save")
+        }
+    }
+
+    init(isOffline: Bool, message: String) {
+        self.isOffline = isOffline
+        self.message = message
+    }
+}
