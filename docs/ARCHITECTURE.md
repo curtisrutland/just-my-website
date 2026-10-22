@@ -123,7 +123,7 @@ obvious:
 | | Reads | Writes |
 |---|---|---|
 | **Web UI** (`/`, Clerk-gated) | server component → `repo` (direct DB) | server action → `schema.parse()` → `repo` |
-| **Token API** (`/api/**`, machine-only) | route handler → `repo` | route handler → `schema.parse()` → `repo` |
+| **Token API** (`/api/**`, machines + the iOS app) | route handler → `repo` | route handler → `schema.parse()` → `repo` |
 
 Two layers make this guarantee real, and they are the *only* two shared choke points:
 
@@ -146,6 +146,11 @@ wants to write from a conversation; a bearer token over HTTP is the natural inte
 that. Forcing both through one interface would compromise one of them. Splitting the
 *surfaces* while sharing the *data and rules* gives each user the right ergonomics without
 letting the two diverge into two codebases.
+
+The native iOS app (`ios/`) doesn't add a third surface. It's another token-API client, like the
+skills and the panel. Curtis gets native navigation on his phone, and the guarantee holds
+unchanged: the app's writes are API writes, through the same `schema.parse()` and the same
+repo. See [`ios-app.md`](ios-app.md).
 
 ### Auth, concretely
 
@@ -170,6 +175,12 @@ which pushes facts and can never read, PATCH or DELETE anywhere), and the panel
 surface has its own hashed/revocable `device_tokens` guarding `/api/panel/**` only (that
 surface also accepts a Clerk session, a documented exception for the no-hardware dev path —
 see `panel-contract.md`).
+
+The **iOS app** reuses those `device_tokens` on module routes. Each route on its allowlist
+calls `requireScope(request, "{module}:read|write")`, scopes like `weight:read` and
+`shopping:write`. The token is paired once by QR from `/settings/devices`, kept in the
+Keychain behind Face ID, and revocable from the web. Like every scoped credential, it can
+never pass `requireBearer` and can never hard DELETE. See [`ios-app.md`](ios-app.md) §3.
 
 ---
 
@@ -264,16 +275,26 @@ data model, because it only ever speaks the same HTTP the web UI's rules are bui
 never has to know it's talking to an LLM. The database never has to know a request came from a
 conversation.
 
-### The one cross-cutting skill
+### Module dependencies: logging and interpretive
 
-Modules never touch each other server-side, but the skill layer carries one deliberate
-exception: **`manage-health`** is a read-only aggregator that assembles a unified daily/weekly
-view over the five health modules (macros, weight, lifting, rides, vitals) by calling their existing
-token-API read endpoints — module field names verbatim, no new metrics, no writes, plus a
-`gaps` list of factual absences. The cross-cut lives entirely in the replaceable adapter layer,
-so the "modules are self-contained" rule stays true everywhere it's expensive to break (schema,
-repo, routes) and bends only where it's cheap (a Python client). The rules for this are
-`docs/CONVENTIONS.md` §9; each health skill's `SKILL.md` also cross-references its siblings.
+Modules come in two kinds. **Logging modules** own facts — every module built so far (macros,
+weight, shopping, lifting, rides, vitals). **Interpretive modules** own reads *about* those facts:
+an interpretation of a ride written with last night's sleep in view, a daily health summary.
+
+The dependency rule runs one way. A logging module never relies on another module to do its job —
+it can be built, tested, and deleted alone; it may *copy* a fact in through its own write path
+(garage snapshotting a ride's moving time), but never *queries* another module live to answer its
+own reads. An interpretive module may read across logging modules, because that is its whole job —
+but only through their repo read functions and response views (the Zod views the OpenAPI spec and
+the contract test are built from), writing only its own tables, degrading when an input is
+missing, and adding no cross-module scores. There is no cross-module write path anywhere.
+
+None exists server-side yet. The interpretive module that does exist lives in the skill layer:
+**`manage-health`**, a read-only aggregator that assembles a unified daily/weekly view over the
+health modules by calling their token-API read endpoints — module field names verbatim, no new
+metrics, no writes, plus a `gaps` list of factual absences. Surfaces (web, API, iOS app, panel)
+aren't modules at all: they read and write any module through its own schema and repo. The full
+rules, with the five limits, are `docs/CONVENTIONS.md` §9.
 
 ---
 
@@ -336,10 +357,11 @@ Read top-to-bottom, here is the system as it stands:
   from both surfaces.
 - **The panel** — a third surface, not a module: a wall-mounted kitchen kiosk (Pi + 7"
   touchscreen, deployed) reading a device-token-scoped `/api/panel/**` with KV-cached version
-  polling. The one sanctioned server-side cross-cut: module repos call the panel's
-  fire-and-forget `bump()` after writes so the kiosk knows to re-pull.
+  polling. The one logging → consumer call: module repos fire the panel's fire-and-forget
+  `bump()` after writes so the kiosk knows to re-pull — a notification, not a dependency
+  (`CONVENTIONS.md` §9).
 - **Six skills**: `manage-{macros,weight,shopping,lifting,rides}` plus the read-only
-  cross-cutting `manage-health` daily/weekly view (§4). The web UI is installable as a
+  interpretive `manage-health` daily/weekly view (§4). The web UI is installable as a
   standalone **PWA** with in-app refresh affordances (header control + pull-to-refresh).
 - **Build tooling** that keeps the conventions true rather than aspirational:
   `scripts/build-openapi.ts` (spec generated from Zod, runs on every build) and
@@ -377,6 +399,7 @@ configured but deferred to a real domain activation step).
 | The lifting module's Hevy ingestion + annotation model | [`lifting-model.md`](lifting-model.md) |
 | The rides module's FIT ingestion + stream model | [`rides-model.md`](rides-model.md) |
 | The panel surface's binding contract | [`panel-contract.md`](panel-contract.md) |
+| The native iOS app: auth, nav, scope, API gaps | [`ios-app.md`](ios-app.md) |
 | Design tokens, component inventory, layout | [`UI-CONTRACT.md`](UI-CONTRACT.md) |
 | Outstanding work & deferred decisions | [GitHub Issues](https://github.com/curtisrutland/just-my-website/issues) |
 | Setup & scripts | [`../README.md`](../README.md) |

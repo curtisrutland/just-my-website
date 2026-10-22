@@ -14,12 +14,21 @@ Derived from justmy.recipes, with intentional deviations marked **[DIFFERS FROM 
 |---|---|---|
 | **Web UI** (`/`, Clerk-gated) | server component → `repo` (direct DB) | server action → `schema.parse` → `repo` |
 | **Token API** (`/api/**`) | route → `repo` | route → `schema.parse` → `repo` |
+| **iOS app** (`ios/`) | token API `GET` | token API `POST`/`PATCH`/soft-`DELETE` |
+| **Kitchen panel** (`/panel`, `/api/panel/**`) | route → module `repo` reads | check-off → `shopping` `repo` |
+
+The iOS app is a client of the token API, not a fourth path to the data: its writes are API
+writes, so they get the same `schema.parse` → `repo`. It renders what the API returns. Domain
+logic it would need lives in `src/lib/{module}` and is exposed by the API, never reimplemented
+in Swift (`docs/ios-app.md` §2, §7).
 
 - The **repo layer** (`src/lib/{module}/repo.ts`) is the only place Drizzle tables are
   touched. Both read surfaces call it. This is the "same data" guarantee.
 - The **schema layer** (`src/lib/{module}/schema.ts`) is the only validator. Both write
   surfaces call it. This is the "same rules" guarantee.
 - The surfaces are thin shells. If they stay thin, they cannot drift.
+- Surfaces are not modules. A surface may read and write any module, through that module's own
+  `schema` and `repo`; how modules relate to *each other* is §9.
 - **[DIFFERS FROM RECIPES]** Recipes' web UI is public and renders anonymously. Ours is
   private: the UI is Clerk-gated and there is no anonymous render path.
 
@@ -45,8 +54,19 @@ needs a model-doc entry and a test):
 - `JMW_DISPLAY_TOKEN` — the ESP32 round display; read-only: `GET /api/macros/days/{date}`
   (`docs/macro-model.md` § "Kernel departure").
 
+DB-backed device tokens (`device_tokens`: hashed, scoped, individually revocable, minted on
+`/settings/devices` or by `npm run panel:token`):
+- The kitchen panel and the recipes sender: `/api/panel/**` only, which also accepts a Clerk
+  session (`docs/panel-contract.md` §3).
+- The iOS app: module routes, via `requireScope(request, "{module}:read|write")`, on exactly the
+  allowlist in `docs/ios-app.md` §3.4 (v1) and §6.1 (phase 2). Never in `identify()`, so a
+  device token never passes `bearerAuth`/`primaryKey`. Hard DELETE (`?hard=true`) stays on
+  `requirePrimary`, so a device token can only soft-delete. OpenAPI marks these operations
+  with the `deviceToken` scheme.
+
 The web UI authenticates via Clerk session and never presents a bearer token; it does not
-call `/api`. Clerk gates `/` entirely.
+call `/api`. Clerk gates `/` entirely. The iOS app never talks to Clerk; its only credential is
+its device token.
 
 ## 3. Error envelope
 
@@ -128,6 +148,9 @@ openapi/{module}.json       # generated OpenAPI fragment (build artifact, from s
 Tables live in `src/lib/db/schema.ts`, namespaced by module (e.g. `macroFood`,
 `macroEntry`, `macroTargetProfile`, `weightEntry`).
 
+**Module kinds.** A module is a **logging** module (owns facts) or an **interpretive** module
+(owns reads about other modules' facts). The kind decides what it may depend on — §9.
+
 **Shared (cross-module), owned by no single module:** app-shell chrome lives in
 `src/components/shell/` (`AppShell` = nav rail + terminal header + content slot; `ThemeToggle`);
 pure utilities live in `src/lib/` (e.g. `date.ts`). The dependency rule is one-directional —
@@ -160,28 +183,72 @@ module plan MUST include them:
       **health-related** (see §9), also add its numbers to `manage-health`'s daily/weekly views
       and add the sibling cross-reference section to the other health skills' `SKILL.md`s.
 
-## 9. Skills — and the one sanctioned cross-cut
+## 9. Module dependencies — logging modules stand alone, interpretive modules read them
+
+A module is one of two kinds:
+
+- **Logging modules** own facts. Each records something (what was eaten, a weigh-in, a ride
+  file, a night's sleep, a shopping line) and answers reads about it. Today: macros, weight,
+  shopping, lifting, rides, vitals (and garage, when it lands).
+- **Interpretive modules** own reads *about* other modules' facts: a ride interpreted with the
+  night's sleep and the training goal in view, a daily health summary. They have no facts of their
+  own. None exists server-side yet; `manage-health` is the skill-layer one (below).
+
+Surfaces (web UI, token API, iOS app, kitchen panel — §1) are neither. A surface reads and writes
+any module, always through that module's own `schema` and `repo`.
+
+**The rule: a logging module never relies on another module to do its job. An interpretive module
+may read across logging modules — that is what it is for.** Under five limits:
+
+1. **One direction.** Interpretive → logging; never logging → interpretive, never logging →
+   logging. Every logging module keeps working with every interpretive module deleted. An
+   interpretive module doesn't read another interpretive module either: the graph stays two
+   layers deep until a real need says otherwise.
+2. **Read through the contract.** An interpretive module reads a logging module only through that
+   module's repo **read** functions, receiving its response views — the Zod views in
+   `src/lib/{module}/schema.ts` that the OpenAPI spec and the response contract test
+   (`src/lib/http/contract.test.ts`) are built from. From the skill layer, the same reads come over
+   the token API. Never another module's tables, Drizzle schema, or private helpers.
+3. **Own the output; no cross-module writes.** An interpretive module writes only its own tables,
+   keyed to its subject (e.g. `{ module: "rides", id }`). It never writes into a logging module —
+   not through that module's repo, not through its API. A logging module's own annotations
+   (lifting's `interpretation`, a ride's `note`) stay that module's fields, written through its
+   own path.
+4. **Degrade, don't fail.** A missing input (no vitals row for the night, a module with no data
+   yet, a module that errors) narrows an interpretation; it never fails it. The output says what
+   it didn't have.
+5. **Interpret, never score.** Prose reads are the point. New cross-module *numbers* are not: no
+   derived cross-module metrics, no readiness or load scores, no renamed fields. Any number an
+   interpretation quotes is a module's own, under its own name. The only additive structured
+   layer is factual absence (`gaps`), stated as observation, never judgment.
+
+**What "rely on" means — the garage test.** A logging module may *copy facts in* from another
+module through its own write path, attributed and snapshotted at write time: garage copying a
+ride's moving time into its usage ledger is fine. It may not *query another module live* to answer
+its own reads: garage computing hours by reading rides at request time is not. Copied-in facts
+leave it self-sufficient; a live query makes it dependent.
+
+**Notifications aren't dependencies.** A logging module may fire a change signal that never
+affects its own result. The macros, weight and shopping repos call the panel's fire-and-forget
+`bump()` after writes (`src/lib/panel/version.ts`); a failed bump is a no-op and the write
+stands. That is the only allowed logging → consumer call, and it stays fire-and-forget.
+
+### The skill layer
 
 Each module's skill (`skills/manage-{module}/`) is a standalone Python-stdlib client over the
 token API — the agent's surface for that module. Skills follow the module boundary: one module,
-one skill, the module's own field names verbatim (no aliases, no per-skill renaming).
+one skill, the module's own field names verbatim (no aliases, no per-skill renaming). A module's
+own skill may read a sibling module's API to inform writes **to its own module** (garage reading
+rides to attribute hours) — limit 3 still holds: it writes only its own module.
 
-**The exception is deliberate.** Modules are self-contained everywhere in the codebase, but the
-*person* the health modules describe is one person — so cross-cutting is sanctioned at exactly
-one layer, under hard limits:
-
-- **Skill layer only.** A cross-cutting skill (`manage-health`) composes the modules' existing
-  token-API **read** endpoints. No server-side code crosses modules: no cross-module repo calls,
-  no aggregate API routes, no shared tables.
-- **Read-only.** A cross-cutting skill has no write methods. Writes stay in the per-module
-  skills, which own the write prose (confidence, normalization, correction semantics).
-- **Assemble, never invent.** Every number in the composed view is a module's own number under
-  the module's own field name. No derived cross-module metrics, no scores. The only additive
-  layer is `gaps` — factual absences (nothing logged, nothing pending-interpreted), stated as
-  observations, never judgments.
+**`manage-health` is the skill-layer interpretive module.** It composes the logging modules'
+token-API **read** endpoints into a unified daily/weekly view, under the limits above: read-only
+(writes stay in the per-module skills, which own the write prose — confidence, normalization,
+correction semantics), assemble-never-invent (every number is a module's own number under its own
+field name), and `gaps` as the only additive layer (nothing logged, nothing pending-interpreted).
 
 **Health-related** means it describes Curtis's body, training, or intake — today: macros,
-weight, lifting, rides. Convenience modules (shopping) are out. A new health module joins
+weight, lifting, rides, vitals. Convenience modules (shopping) are out. A new health module joins
 `manage-health`'s daily/weekly views, and every health skill's `SKILL.md` carries a short
 "other health skills" section nudging toward its siblings — the skills are separate tools, but
 they should know they're a set.

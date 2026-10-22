@@ -13,9 +13,10 @@ Everything is private behind auth; there are no public reads.
 
 ## Non-negotiable conventions (see `docs/CONVENTIONS.md` for the full spec)
 
-- **Two surfaces, one data.** The token API (`/api/**`) is the *machine* interface only.
-  The web UI (`/`) is Clerk-gated and reads/writes the database directly through the
-  repo layer via server components and server actions. The UI never calls the API.
+- **Two surfaces, one data.** The token API (`/api/**`) is the interface for machines and
+  for the native iOS app (`ios/`, `docs/ios-app.md`). The web UI (`/`) is Clerk-gated and
+  reads/writes the database directly through the repo layer via server components and
+  server actions. The web UI never calls the API.
 - **Surfaces differ on READ, never on WRITE.** Every write — from either surface —
   passes through the same `schema.parse()` then the same `repo` function. No write path
   skips validation.
@@ -23,6 +24,10 @@ Everything is private behind auth; there are no public reads.
   `/api` route. If a request has no valid bearer token, it is rejected.
 - **Two tokens.** `JMW_API_KEY` (full access) and `JMW_AGENT_TOKEN` (Claude's token —
   structurally rejected for hard DELETE). Take data down via soft-delete, not DELETE.
+  Every other credential is **scoped and allowlisted**: the publisher and display env
+  tokens, and the DB-backed `device_tokens` (the kitchen panel, the iOS app). Each is
+  accepted only by the routes its doc names, never passes `requireBearer`, and can never
+  hard DELETE. Widening any allowlist means a model-doc entry and a test.
 - **PATCH is the default modify verb.** Full-replace PUT is only for wholesale-document
   modules (there are none yet). Entry-style modules use POST/PATCH/soft-DELETE.
 - **Nutrition numbers, not strings.** Mass macros in grams, energy in kcal, always
@@ -47,11 +52,16 @@ utility (`src/lib/date.ts`), and these conventions. Nothing else is "platform." 
 rule is one-directional: UI imports from `lib`, never the reverse — so a module's domain types
 live in `src/lib/{module}/types.ts`, not in its components.
 
-The one sanctioned cross-cut is the **skill layer**: a skill may read across modules
-(`manage-health` assembles the unified daily/weekly health view) — **read-only**, over the
-modules' own token-API read endpoints, adding no new metrics and renaming no fields. Server-side
-code never crosses modules, and a cross-cutting write path is never allowed (writes stay in the
-per-module skills). See `docs/CONVENTIONS.md` §9.
+**Module dependencies run one way** (`docs/CONVENTIONS.md` §9). **Logging modules** own facts
+(macros, weight, shopping, lifting, rides, vitals) and never rely on another module to do their
+job — a logging module may copy facts in through its own write path, but never queries another
+module live to answer its own reads. **Interpretive modules** own reads *about* those facts and
+may read across logging modules — through their repo read functions and response views only,
+never their tables — writing only their own tables, degrading when an input is missing, and
+adding no cross-module scores or renamed fields. There is no cross-module write path, anywhere.
+No interpretive module exists server-side yet; `manage-health` is the skill-layer one. Surfaces
+(web, API, iOS app, panel) are not modules: they read and write any module through its own
+`schema` and `repo`.
 
 ## Work tracking
 
