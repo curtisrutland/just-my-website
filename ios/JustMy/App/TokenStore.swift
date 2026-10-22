@@ -16,7 +16,10 @@ protocol TokenStoring: Sendable {
 
 enum TokenStoreError: Error, Equatable {
     case notFound
+    /// The user dismissed the Face ID prompt.
     case cancelled
+    /// Face ID ran and didn't match.
+    case authFailed
     case unavailable(OSStatus)
 }
 
@@ -77,7 +80,8 @@ struct KeychainTokenStore: TokenStoring {
                 }
                 return .success(token)
             case errSecItemNotFound: return .failure(.notFound)
-            case errSecUserCanceled, errSecAuthFailed: return .failure(.cancelled)
+            case errSecUserCanceled: return .failure(.cancelled)
+            case errSecAuthFailed: return .failure(.authFailed)
             default: return .failure(.unavailable(status))
             }
         }.value
