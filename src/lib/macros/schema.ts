@@ -86,6 +86,21 @@ const nutritionShape = {
   saturatedFatContent: macro,
 };
 
+/**
+ * The same fields on a PER-100G basis (catalog foods, batches). Sodium is grams like every mass
+ * macro, so it can't exceed pure salt (~39 g/100g): a value over 40 is a label's mg stored without
+ * the ÷1000 (#93). Absolute shapes (entries, the printed label, batch components) don't get the cap.
+ */
+const per100gNutritionShape = {
+  ...nutritionShape,
+  sodiumContent: z
+    .number()
+    .finite()
+    .nonnegative()
+    .max(40, { error: "sodiumContent is grams per 100g (salt is ~39); divide a label's mg by 1000" })
+    .nullish(),
+};
+
 // --- Food ---
 
 /**
@@ -97,7 +112,7 @@ export const labelBasisSchema = z
   .object({
     servingLabel: z.string().trim().min(1).nullish(),
     servingGrams: z.number().finite().positive().nullish(),
-    ...nutritionShape, // AS PRINTED, per serving (not per-100g)
+    ...nutritionShape, // AS PRINTED, per serving (not per-100g) — so sodium here is the label's mg
   })
   .strict();
 
@@ -118,7 +133,7 @@ const foodBase = z
     // Optional household serving (input sugar only; never changes the per-100g storage basis).
     servingLabel: z.string().trim().min(1).nullish(),
     servingGrams: z.number().finite().positive().nullish(),
-    ...nutritionShape, // per-100g
+    ...per100gNutritionShape,
   })
   .strict();
 
@@ -184,7 +199,7 @@ const batchBase = z
     initialGrams: z.number().finite().positive().nullish(),
     basis: batchBasisSchema.nullish(),
     note: z.string().trim().min(1).nullish(),
-    ...nutritionShape, // per-100g
+    ...per100gNutritionShape,
   })
   .strict();
 

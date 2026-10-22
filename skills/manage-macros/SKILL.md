@@ -106,7 +106,8 @@ to one meal and you want the all-or-nothing guarantee.
 - `estimated` — **you inferred it from Curtis's words.** Attach a `note` so it's auditable.
 - `logged_serving` — Curtis gave a household unit (1 scoop, 1 banana) you converted to grams.
 
-Macros are plain numbers (grams for mass macros, kcal for `calories`) and use the **schema.org
+Macros are plain numbers (grams for mass macros — **sodium included**, so 210 mg is `0.21` — kcal
+for `calories`) and use the **schema.org
 field names — the same on write and read**: `calories`, `proteinContent`, `fatContent`,
 `carbohydrateContent`, `fiberContent`, `sugarContent`, `sodiumContent`, `saturatedFatContent`.
 The name you log with is the name you read back. Provide what you know; leave the rest out
@@ -129,17 +130,24 @@ a number only moves when a *weight* moves. Registry foods live in the same catal
 ### Register from a label (per-100g, keep the printed label)
 Labels print **per serving**; the registry stores **per 100g**. Convert: `per100g = printed × 100 /
 servingGrams`. Pass the printed serving + printed macros **verbatim** as `label_basis` so the per-100g
-value stays auditable back to the scan. Every non-usda ingredient needs a `category` (the match key)
+value stays auditable back to the scan.
+
+**Sodium is printed in mg; store it in grams.** `per100g sodium = printed mg ÷ 1000 × 100 /
+servingGrams`. The label's 80 mg per 240 g cup is `sodiumContent=0.0333`, not `33.3`. `label_basis`
+keeps the printed mg (it's the label verbatim); only the per-100g value converts. The API rejects a
+per-100g sodium over 40 (pure salt is ~39 g/100g), but a low-sodium food stored in mg slips under
+that, so do the ÷1000 every time. (Every other label macro is already printed in grams.) Every non-usda ingredient needs a `category` (the match key)
 and at least `calories`/`proteinContent`/`fatContent`/`carbohydrateContent` per 100g.
 
 ```python
 res = m.register_ingredient(
     "Ripple Unsweetened", "plant-milk", source="scanned", brand="Ripple",
-    # per 100g (label said 8g protein / 4.5g fat per 240 mL cup → ×100/240):
-    calories=52, proteinContent=3.3, fatContent=1.9, carbohydrateContent=0,
+    # per 100g (label said 8g protein / 4.5g fat / 120mg sodium per 240 mL cup → ×100/240; mg ÷1000):
+    calories=52, proteinContent=3.3, fatContent=1.9, carbohydrateContent=0, sodiumContent=0.05,
     serving_label="1 cup", serving_grams=240,
-    label_basis={"servingLabel": "1 cup", "servingGrams": 240,   # AS PRINTED (per serving)
-                 "calories": 125, "proteinContent": 8, "fatContent": 4.5, "carbohydrateContent": 0},
+    label_basis={"servingLabel": "1 cup", "servingGrams": 240,   # AS PRINTED (per serving, sodium in mg)
+                 "calories": 125, "proteinContent": 8, "fatContent": 4.5, "carbohydrateContent": 0,
+                 "sodiumContent": 120},
     tags=["low-carb", "liquid"],
 )
 ```
@@ -200,7 +208,8 @@ the ingredient registry — they have their own store.
 
 ### Register at cook time
 Sum the components (use registry/USDA rows where they exist), divide by the total cooked weight for
-per-100g, and keep the derivation as `basis` **verbatim** so the math stays auditable:
+per-100g, and keep the derivation as `basis` **verbatim** so the math stays auditable. Component
+sodium is grams too (a seasoning packet's 1,200 mg is `1.2`):
 
 ```python
 b = m.register_batch(

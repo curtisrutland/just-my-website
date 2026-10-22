@@ -24,6 +24,26 @@ describe("nutrition numeric contract", () => {
   });
 });
 
+describe("sodium is grams (#93)", () => {
+  const silk = { name: "Silk soymilk", source: "scanned", category: "plant-milk", calories: 33 } as const;
+  // A backstop, not a detector: an unconverted low-sodium label (Silk's 33.3 "g") sits under the cap.
+  it("rejects a per-100g sodium above pure salt — a label's mg stored without ÷1000", () => {
+    expect(foodCreateSchema.safeParse({ ...silk, sodiumContent: 692.3 }).success).toBe(false);
+    expect(foodPatchSchema.safeParse({ sodiumContent: 469 }).success).toBe(false);
+    expect(batchPatchSchema.safeParse({ sodiumContent: 681.28 }).success).toBe(false);
+  });
+  it("accepts grams per 100g, up to salt itself", () => {
+    expect(foodCreateSchema.safeParse({ ...silk, sodiumContent: 0.0333 }).success).toBe(true);
+    expect(foodPatchSchema.safeParse({ sodiumContent: 38.8 }).success).toBe(true); // table salt
+  });
+  it("leaves the printed label (mg, per serving) and absolute entries uncapped", () => {
+    expect(
+      foodCreateSchema.safeParse({ ...silk, sodiumContent: 0.0333, labelBasis: { servingGrams: 240, sodiumContent: 80 } }).success
+    ).toBe(true);
+    expect(entryPatchSchema.safeParse({ sodiumContent: 45 }).success).toBe(true); // a big salty day's worth is still grams
+  });
+});
+
 describe("food source / fdcId invariant", () => {
   it("usda requires an fdcId", () => {
     expect(foodCreateSchema.safeParse({ name: "chicken", source: "usda" }).success).toBe(false);
