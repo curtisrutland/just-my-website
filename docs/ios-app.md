@@ -92,7 +92,7 @@ tokens: **an explicit allowlist of routes, a model-doc entry (this doc), and a t
    |---|---|
    | `macros:read` · `weight:read` · `lifting:read` · `rides:read` · `vitals:read` · `shopping:read` | The module's `GET` routes listed in §3.4 |
    | `weight:write` | `POST /api/weight/entries` |
-   | `shopping:write` | `POST /api/shopping/items`, `PATCH /api/shopping/items/{id}` |
+   | `shopping:write` | `POST /api/shopping/items`, `PATCH /api/shopping/items/{id}`, `DELETE /api/shopping/items/{id}` (soft only; `?hard=true` stays primary-key-only) |
 
    A `PHONE_SCOPES` preset (all six `:read` + the two `:write`) sits beside `KITCHEN_PANEL_SCOPES`.
    Module-qualified scopes cost nothing now and mean a second device (an iPad on the kitchen wall,
@@ -150,9 +150,10 @@ Write:
 | Scope | Routes |
 |---|---|
 | `weight:write` | `POST /api/weight/entries` |
-| `shopping:write` | `POST /api/shopping/items`, `PATCH /api/shopping/items/{id}` |
+| `shopping:write` | `POST /api/shopping/items`, `PATCH /api/shopping/items/{id}`, `DELETE /api/shopping/items/{id}` (soft only; `?hard=true` stays primary-key-only) |
 
-Deliberately **not** on the list in v1: every `DELETE` (including soft-delete), every other
+Deliberately **not** on the list in v1: every other `DELETE` (including soft-delete; the shopping
+item soft-delete above is the one exception, because the PWA has swipe-to-delete), every other
 `PATCH`, ingestion (`/api/rides/upload`, `POST /api/vitals`, `/api/lifting/pull`, webhooks),
 `/api/macros/usda/*`, foods and batches. Food logging stays Claude's job (the `manage-macros`
 skill), where estimation and pinned ingredients live.
@@ -224,7 +225,7 @@ into "More", and "More" is a poor home for a module used daily. The app groups t
 |---|---|---|---|
 | **Macros** | `fork.knife` | Day view | `/macros/[date]` |
 | **Body** | `figure` | Segmented: **Weight · Vitals** | `/weight`, `/vitals` |
-| **Training** | `dumbbell` | Segmented: **Lifting · Rides** | `/lifting`, `/rides` |
+| **Training** | `figure.outdoor.cycle` | Segmented: **Lifting · Rides** | `/lifting`, `/rides` |
 | **Shopping** | `cart` | The list | `/shopping` |
 
 Settings (unpair, server, version) is a toolbar button, not a tab.
@@ -243,7 +244,9 @@ Within each tab, a `NavigationStack`:
   progression (push).
 - **Training › Rides** — weekly strip (`/api/rides/weekly`) + ride list, paged as you scroll →
   ride detail (push): route on **MapKit** (an `MKPolyline` from the stream's `lat`/`lon` channels,
-  `?streams=1`), stream charts and HR zones with Swift Charts, the summary facts.
+  `?streams=1`), stream charts and HR zones with Swift Charts, the summary facts → **Replay**
+  (full-screen cover): the map marker, a sweeper across the three charts and a readout, scrubbed
+  by dragging the charts or played back at a selectable time compression (`docs/ios-design-handoff.md` §6).
 - **Shopping** — the list; swipe or tap to check off; an add field pinned at the bottom (§6).
 
 Everywhere: pull-to-refresh; refetch when the app returns to the foreground; skeletons while loading.
@@ -251,7 +254,7 @@ Everywhere: pull-to-refresh; refetch when the app returns to the foreground; ske
 ### 5.1 Design — a native pass, not a port
 
 The web design language doesn't map one-to-one onto iOS, so the app gets its own design pass before
-the read views are built: `docs/ios-design-brief.md`, for Claude Design, following the same Phase 2
+the read views are built: `docs/archive/ios-design-brief.md`, for Claude Design, following the same Phase 2
 pattern as the module design briefs. The split:
 
 - **Carries over (the meaning).** These are product rules, not styling:
@@ -265,7 +268,8 @@ pattern as the module design briefs. The split:
 - **Goes native (the structure):**
   - the tab bar and navigation stacks instead of the nav rail;
   - grouped lists and system materials (Liquid Glass) instead of custom card surfaces;
-  - SF Pro and SF Mono instead of the web fonts, with Dynamic Type;
+  - SF Pro and SF Mono instead of the web fonts (system text styles; Dynamic Type is **not** a
+    requirement — one user, default text size);
   - SF Symbols;
   - swipe actions, sheets, and pull-to-refresh.
   The display font and the web's custom chrome don't come along.
@@ -274,6 +278,10 @@ pattern as the module design briefs. The split:
   screens; the app icon.
 
 The brief has to be settled before the read views (§10).
+
+**Settled 2026-10-22:** the design is on the Claude Design canvas linked from
+`docs/ios-design-handoff.md`, which is the build reference for #73/#74 and lists the amendments
+this design made to the spec (§9 there).
 
 **Open for Curtis:** grouping into four tabs vs. six flat tabs (five + More). The grouping is the
 recommendation; it's a one-file change either way.
@@ -299,8 +307,8 @@ recommendation; it's a one-file change either way.
 ### Out of v1 (named so the seams stay open)
 
 - **Food logging / editing macros** — stays with the `manage-macros` skill.
-- **Edit or delete** anything, including weight entries and shopping items (soft-delete stays off
-  the allowlist).
+- **Edit or delete** anything, including weight entries — except **deleting a shopping item**
+  (swipe to delete, soft-delete, on the allowlist). Everything else stays off it.
 - **Lifting goals, ride names/notes** — editable on the web or via skills.
 - **Offline mode / on-disk cache / queued writes.**
 - **iPad, Mac, Watch layouts.** iPhone only; iPad runs it as a phone app.
@@ -431,7 +439,7 @@ The reason to go native at all. Not scoped; listed so v1 doesn't paint them into
 ## 10. Open / deferred
 
 - **Tab grouping** (§5) — four grouped tabs recommended; six flat is the alternative.
-- **Native design brief** (§5.1) — written: `docs/ios-design-brief.md` (#71). The read views (#73) build to
-  the design Claude Design returns from it.
+- **Native design brief** (§5.1) — done (#71): the design and its handoff are in
+  `docs/ios-design-handoff.md`; the brief is archived. The read views (#73) build to the handoff.
 - **Paid Developer Program** — not needed for v1; revisit if a "Later" item needs it.
 - **#23 (Clerk production instance)** — independent of this app, which never talks to Clerk.

@@ -1,3 +1,9 @@
+> **Archived 2026-10-22.** This brief is consumed: the design is on the Claude Design canvas
+> linked from `docs/ios-design-handoff.md`, which is now the build reference (#73, #74). Things the
+> design changed from what's written below — Dynamic Type dropped, the Training icon, the HR zone
+> colors, the added Replay view, shopping swipe-to-delete in v1, the darkened light-mode roles —
+> are listed in the handoff's §9. Kept as the historical record; don't edit.
+
 # Design brief → Claude Design: JustMy for iPhone (native)
 
 The native iPhone app for justmy.website: the same six modules as the web UI, shown in a native
