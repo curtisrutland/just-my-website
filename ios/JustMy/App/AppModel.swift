@@ -59,6 +59,14 @@ final class AppModel {
         if case let .unlocked(session) = phase { session } else { nil }
     }
 
+    /// Clients for an unlocked session. Any `401` from any module means the token was revoked, so
+    /// it routes back here and the app returns to pairing.
+    private func makeClients(_ pairing: PairingPayload) -> JMWClients {
+        JMWClients(pairing: pairing, onUnauthorized: { [weak self] in
+            Task { @MainActor in self?.handleUnauthorized() }
+        })
+    }
+
     // MARK: Pairing
 
     /// `fallbackBase` is only used when `text` is a bare token rather than the QR payload.
@@ -77,7 +85,7 @@ final class AppModel {
             switch try await check(pairing) {
             case .ok:
                 try store.save(pairing)
-                phase = .unlocked(Session(pairing: pairing, clients: JMWClients(pairing: pairing)))
+                phase = .unlocked(Session(pairing: pairing, clients: makeClients(pairing)))
             case .rejected:
                 errorMessage = "The server rejected that token. It may be revoked, or not a phone token."
             case let .unexpected(code):
@@ -98,6 +106,7 @@ final class AppModel {
 
     /// Any 401 from the API: the token was revoked or lost its scope. Forget it and re-pair.
     func handleUnauthorized() {
+        guard phaseKind != .unpaired else { return } // several in-flight reads may 401 together
         store.delete()
         phase = .unpaired(notice: "This iPhone's token was revoked. Pair it again to continue.")
     }
@@ -122,7 +131,7 @@ final class AppModel {
             errorMessage = "Couldn't read the token (\(error))."
             return
         }
-        phase = .unlocked(Session(pairing: pairing, clients: JMWClients(pairing: pairing)))
+        phase = .unlocked(Session(pairing: pairing, clients: makeClients(pairing)))
         // Re-prove the token so a revocation shows up now, not on the first screen's fetch.
         // Offline is fine: stay unlocked and let the screens report the network.
         if case .rejected = try? await check(pairing) {
