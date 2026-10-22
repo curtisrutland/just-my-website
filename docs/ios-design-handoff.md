@@ -44,7 +44,7 @@ web's.
 | Name | Dark | Light | Used for |
 |---|---|---|---|
 | `Accent` | `#3AD0D6` | `#0A7278` | App tint. Chart lines and sparklines, the ride route, selection, the `≈` estimate mark, the estimation strip. Never a fill behind text. |
-| `Success` | `#4EC97A` | `#1E7342` | On target / within band. **Unused on the macros day in v1** (#49). |
+| `Success` | `#4EC97A` | `#1E7342` | On target / within band: calories landed, protein floor cleared. |
 | `Warning` | `#E0A63A` | `#845D12` | Approaching / over a ceiling. |
 | `Over` | `#E5533F` | `#BF3523` | Clearly over a ceiling. |
 | `Band` | Accent @ 12% | Accent @ 12% | A target corridor or range fill; the only tinted fill. |
@@ -63,6 +63,7 @@ reserved for state-against-target and are never chart series.
 |---|---|
 | Sleep stages (categorical) | Deep `Color.indigo` · Light `Color.blue` · REM `Color.purple` · Awake `Color.orange` |
 | HR zones (ordinal) | below Z1 `systemGray` @ 45% · Z1 `systemGray` · Z2 `Color.blue` · Z3 `Color.green` · Z4 `Color.orange` · Z5 `Color.red` · above max → same as Z5. `Color.yellow` is the spare step if a profile ever carries six zones. |
+| Macros budget (energy by source) | Protein `Accent` · Fat `Color.pink` · Carbs `Color.yellow` (`#E5B800` in light). Source hues only; state lives in the ticks and the delta text. |
 | Everything else | Single hue: Accent line (and a 12% Accent area under ride charts) on a `secondaryLabel` ground. |
 
 ### 2.3 Type ramp (text styles)
@@ -119,21 +120,37 @@ Boards: `Main`, `MacrosDay-Light`, `MacrosEntry-Dark/Light`, `MacrosNullTarget-D
 
 - **Nav:** large title = the date. Trailing: calendar glass button (date picker) and `Today`
   capsule (hidden when already on today). Horizontal swipe pages days.
-- **Rollup card** (one inset section):
-  - Hero line: `2,409` (hero numeral) `/ 2,600 kcal` (body, secondary) left; `191 left` right,
-    baseline-aligned. A 5 pt neutral track below (`systemFill` ground, `secondaryLabel` fill,
-    width = min(1, total/target)).
-  - Three macro rows (Protein, Fat, Carbs), 12 pt apart: label `.subheadline` secondary left;
-    right-aligned `187 / 160 g` in `.body` tabular with the `/ 160 g` part secondary; a delta
-    column fixed at 60 pt (`+27 g` / `3 left`) in secondary; the same 5 pt neutral track under
-    each. **Over target is a number, never a color** in v1. Over-target track = 100%.
+- **Rollup card** (one inset section) — the **budget**. Boards `MacroBudget` (four real days)
+  and `MacroColorOptions` (the directions that were rejected) show how it was chosen.
+  - Hero line: `2,409` (hero numeral) `/ 2,600 kcal` (body, secondary) left; the calorie state
+    right, baseline-aligned (below).
+  - **The budget bar**, 10 pt, radius 5: a track that runs to **115% of the calorie ceiling** (so
+    an overshoot has room). It fills left to right with the day's energy **by source**: protein
+    in `Accent`, fat in `Color.pink` (`#FF375F`), carbs in `Color.yellow` (`#FFD60A` dark,
+    `#E5B800` light), 4/9/4 kcal per gram, scaled so the three segments sum to the logged
+    `calories`. Two 2 pt white ticks with 11 pt labels under them: **floor** at
+    `proteinContent target × 4 × scale` and **ceiling** at 100%. A `Band` tint behind the track
+    from 95% to 100% is the landing zone.
+  - **Calorie state** (the ceiling is also the goal): under 95% → `191 left` in secondary; 95–100%
+    → `landed · 26 left` in `Success` semibold; over → the overflow is drawn past the ceiling
+    tick as a solid stub and the delta reads `+387 over`, both in `Warning` up to 3% over and
+    `Over` beyond.
+  - **Protein row**: Accent legend dot, `187 / 160 g`, and the floor state in a fixed 110 pt
+    column: `cleared · +27 g` in `Success` once `proteinContent ≥ target`; while short on the
+    current day, `45 g to floor` in secondary (not a finding yet); short on a past day,
+    `12 g short` in `Warning` (a hard finding).
+  - **Levers row**: fat and carbs are **not goals** and never get "left" / "over" / a color
+    judgment. Legend dots + `72 g fat · 258 g carbs`, then a 6 pt **balance bar**: fat's share of
+    lever calories (`fatContent × 9 / (fatContent × 9 + carbohydrateContent × 4)`) in pink, the
+    rest in yellow, with a white tick at the guideline's share (same formula over the targets).
+    Caption `fat 38% of the levers · guide 36%` left, `guide 75 / 295 g` right.
   - Hairline, then the **estimation row**: `≈` in Accent, `11% estimated` Accent semibold,
     `· 3 of 15 entries` secondary; beneath it the **estimation strip** — one 6 pt segment per
     entry, 3 pt gaps, estimated entries in Accent, the rest `systemFill`. This is the signature;
     don't drop it.
-  - **#49 slot:** the track fill is where state lands later — Success on protein when it
-    clears the floor, Warning/Over on fat near its ceiling, neutral on carbs (the lever). No
-    relayout needed.
+  - This **settles #49 for the app**: one goal (calories, a ceiling), one floor (protein), two
+    levers judged only for balance. Thresholds — 5% landing zone, 3% Warning/Over split — are
+    the app's; the web can follow.
 - **Entries section** header `ENTRIES · 15`. Rows: `name` in `.body` (wraps), subtitle
   `.footnote` secondary `240 g`, plus ` · ≈ estimated` in Accent when `confidence ==
   "estimated"`, or ` · serving` in secondary when `logged_serving`. Trailing `441` tabular
@@ -143,9 +160,10 @@ Boards: `Main`, `MacrosDay-Light`, `MacrosEntry-Dark/Light`, `MacrosNullTarget-D
   with the label dimmed (`Fiber`, `Sugar`, `Sodium` (mg), `Saturated fat`); a `HOW IT WAS
   ESTIMATED` section showing `note` in quotes (section omitted when `note` is null) with the
   footnote *Claude's note on the entry. Correct it by telling Claude; the app doesn't edit food.*
-- **Null target:** hero is `2,409 kcal · no target yet`; macro rows show bare numbers, no
-  tracks, no deltas; one footnote: *No target applies to this day — the first target profile
-  starts later. Numbers only; nothing to compare against.* The estimation row stays.
+- **Null target:** hero is `2,409 kcal · no target yet`; the budget bar is the same bar as pure
+  proportions (full width, no ticks, no band); protein is a bare `187 g`; the balance bar has no
+  guide tick and reads `no guide`; one footnote: *No target applies to this day — the first
+  target profile starts later. Numbers only; nothing to compare against.* The estimation row stays.
 - **Rounding:** kcal whole; grams whole on the list, one decimal in the sheet.
 - No add button. Food logging is Claude's.
 
@@ -370,3 +388,9 @@ The path is in the artboard's SVG (`viewBox 0 0 1024 1024`):
    Hard delete (`?hard=true`) stays primary-key-only. Edit, and delete elsewhere, stay in #76.
 6. Light-mode role colors are the darkened values in §2.1, not the web's hex.
 7. Sheets are designed in dark only where the light mapping is identical to the parent screen.
+8. **The macros rollup is the budget bar (§5.1), not four neutral bars.** The brief's "no
+   under/in/over coloring in v1, wait for #49" and the §7.1 decision to ship numbers-only are
+   superseded: this is the #49 presentation for the app, decided by Curtis on 2026-10-22 —
+   calories a ceiling and a goal, protein a floor and a goal, fat and carbs levers judged only
+   for balance. The read views shipped (#92) with the neutral card; the change is tracked as its
+   own issue.
