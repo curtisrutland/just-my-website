@@ -1,8 +1,8 @@
-import { and, gte, lte } from "drizzle-orm";
+import { and, eq, gte, isNull, lte } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db } from "@/lib/db";
 import { weightEntry } from "@/lib/db/schema";
-import { getEntryByDay, getRollup, listEntries, setWeight, softDeleteEntry } from "./repo";
+import { getEntryByDay, getRollup, setWeight, softDeleteEntry } from "./repo";
 
 /** Integration test against live Neon. Far-PAST sentinel dates (1901): the clamp-to-first-entry
  *  assertion needs the seeded rows to be the table's global-earliest, and `getRollup` derives that
@@ -60,8 +60,12 @@ describe("one weight per day (upsert)", () => {
     await seed("1901-10-10", 190);
     await seed("1901-10-10", 195);
     expect((await getEntryByDay("1901-10-10"))?.weight).toBe(195);
-    const list = await listEntries({ limit: 100 });
-    expect(list.items.filter((x) => x.measuredOn === "1901-10-10")).toHaveLength(1);
+    // Counted directly: a newest-first page stops reaching 1901 once real weigh-ins outnumber it.
+    const rows = await db
+      .select()
+      .from(weightEntry)
+      .where(and(eq(weightEntry.measuredOn, "1901-10-10"), isNull(weightEntry.deletedAt)));
+    expect(rows).toHaveLength(1);
   });
 });
 
