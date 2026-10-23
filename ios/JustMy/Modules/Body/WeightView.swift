@@ -7,7 +7,7 @@ typealias WeightRollup = WeightAPI.Components.Schemas.WeightRollup
 typealias WeightEntry = WeightAPI.Components.Schemas.WeightEntryView
 
 /// Body › Weight (docs/ios-design-handoff.md §5.2). The trend is the truth: the 7-day average leads,
-/// daily weigh-ins are subordinate scatter. Logging a weight is #74.
+/// daily weigh-ins are subordinate scatter. `+` logs a weigh-in.
 struct WeightView<Header: View>: View {
     let header: Header
     @Environment(\.api) private var api
@@ -15,6 +15,7 @@ struct WeightView<Header: View>: View {
     @AppStorage("weight.window") private var window = 30
     @State private var rollup = Loader<WeightRollup>()
     @State private var recent = Loader<[WeightEntry]>()
+    @State private var logging = false
 
     var body: some View {
         ScrollView {
@@ -37,6 +38,14 @@ struct WeightView<Header: View>: View {
             .pageContent()
         }
         .background(Color(.systemGroupedBackground))
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Log weight", systemImage: "plus") { logging = true }
+            }
+        }
+        .sheet(isPresented: $logging) {
+            WeightLogSheet(latest: recent.value?.first) { Task { await load() } }
+        }
         .refreshable { await load() }
         .task(id: window) { await load() }
         .onChange(of: scenePhase) { _, phase in if phase == .active { Task { await load() } } }
