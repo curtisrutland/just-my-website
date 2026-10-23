@@ -10,6 +10,14 @@ struct PairingPayloadTests {
         #expect(p == PairingPayload(base: URL(string: "https://justmy.website")!, token: token))
     }
 
+    @Test func readsTheOptionalNameFromTheDevicesPage() throws {
+        let named = try PairingPayload.parse(#"{"v":1,"base":"https://justmy.website","token":"\#(token)","name":" Curtis's iPhone "}"#)
+        #expect(named.name == "Curtis's iPhone")
+        let blank = try PairingPayload.parse(#"{"v":1,"base":"https://justmy.website","token":"\#(token)","name":"  "}"#)
+        #expect(blank.name == nil)
+        #expect(try PairingPayload.parse(token).name == nil)
+    }
+
     @Test func trimsTrailingSlashesAndWhitespace() throws {
         let p = try PairingPayload.parse("  {\"v\":1,\"base\":\"https://justmy.website//\",\"token\":\"\(token)\"}\n")
         #expect(p.base.absoluteString == "https://justmy.website")
