@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { after } from "next/server";
 import { db } from "@/lib/db";
 import { deviceToken } from "@/lib/db/schema";
@@ -99,6 +99,33 @@ export async function createDeviceToken(opts: {
     .values({ name: opts.name, tokenHash: hashToken(raw), scopes: opts.scopes })
     .returning();
   return { raw, id: row.id, name: row.name, scopes: row.scopes as DeviceScope[] };
+}
+
+/** One device token as the devices page lists it: never the hash. */
+export type DeviceTokenRow = {
+  id: string;
+  name: string;
+  scopes: DeviceScope[];
+  createdAt: Date;
+  lastSeenAt: Date | null;
+  revokedAt: Date | null;
+};
+
+/** Every device token that isn't soft-deleted, revoked ones included (newest first), for `/settings/devices`. */
+export async function listDeviceTokens(): Promise<DeviceTokenRow[]> {
+  const rows = await db
+    .select({
+      id: deviceToken.id,
+      name: deviceToken.name,
+      scopes: deviceToken.scopes,
+      createdAt: deviceToken.createdAt,
+      lastSeenAt: deviceToken.lastSeenAt,
+      revokedAt: deviceToken.revokedAt,
+    })
+    .from(deviceToken)
+    .where(isNull(deviceToken.deletedAt))
+    .orderBy(desc(deviceToken.createdAt));
+  return rows.map((r) => ({ ...r, scopes: r.scopes as DeviceScope[] }));
 }
 
 /**
