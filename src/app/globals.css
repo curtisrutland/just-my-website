@@ -7,8 +7,8 @@
  * AND expose the CSS vars, so components can also reference var(--color-…) directly like the
  * design prototype does.
  *
- * Font tokens resolve to the next/font families loaded in layout.tsx (via their `variable`
- * names), falling back to the Google-Fonts family name then a generic family.
+ * Font tokens resolve to the self-hosted next/font/local families loaded in layout.tsx (via their
+ * `variable` names), falling back to the family name (a locally installed copy) then a generic family.
  */
 @theme {
   --color-bg: #0a0d0f;
