@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { requirePanelAuth } from "@/lib/panel/auth";
 import { patchItem } from "@/lib/shopping/repo";
+import { shoppingPatchSchema } from "@/lib/shopping/schema";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -23,7 +24,9 @@ export async function POST(request: NextRequest, { params }: Ctx) {
     return Response.json({ ok: false, error: "`checked` must be a boolean." }, { status: 400 });
   }
 
-  const row = await patchItem((await params).id, { status: checked ? "bought" : "needed" });
+  // Same write path as every other surface: the module's patch schema, then the repo.
+  const patch = shoppingPatchSchema.parse({ status: checked ? "bought" : "needed" });
+  const row = await patchItem((await params).id, patch);
   if (!row) return Response.json({ ok: false, error: "Item not found." }, { status: 404 });
   return Response.json({ ok: true });
 }
