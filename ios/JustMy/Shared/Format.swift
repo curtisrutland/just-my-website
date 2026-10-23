@@ -35,6 +35,19 @@ nonisolated enum Format {
         return self.iso(moved)
     }
 
+    /// The Monday that starts the week holding that date (the platform's weeks run Monday–Sunday).
+    static func monday(of iso: String) -> String {
+        guard let d = date(fromISO: iso) else { return iso }
+        let weekday = calendar.component(.weekday, from: d) // 1 = Sunday
+        return addDays(-((weekday + 5) % 7), to: iso)
+    }
+
+    /// `September 2026`
+    static func monthYear(_ iso: String) -> String {
+        guard let d = date(fromISO: iso) else { return iso }
+        return d.formatted(Date.FormatStyle(timeZone: zone).month(.wide).year())
+    }
+
     /// `Wed, Oct 21`
     static func day(_ iso: String) -> String {
         guard let d = date(fromISO: iso) else { return iso }
