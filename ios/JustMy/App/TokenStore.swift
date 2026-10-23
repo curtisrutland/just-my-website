@@ -30,6 +30,9 @@ struct KeychainTokenStore: TokenStoring {
     private let service = "website.justmy.app.device-token"
     private let account = "device-token"
     private let baseKey = "pairing.base"
+    /// The pairing's name (from the devices page) and when it was paired: shown in Settings, not secret.
+    static let nameKey = "pairing.name"
+    static let pairedAtKey = "pairing.pairedAt"
 
     var hasPairing: Bool {
         UserDefaults.standard.string(forKey: baseKey) != nil
@@ -52,6 +55,8 @@ struct KeychainTokenStore: TokenStoring {
         let status = SecItemAdd(item as CFDictionary, nil)
         guard status == errSecSuccess else { throw .unavailable(status) }
         UserDefaults.standard.set(pairing.base.absoluteString, forKey: baseKey)
+        UserDefaults.standard.set(pairing.name, forKey: Self.nameKey)
+        UserDefaults.standard.set(Date.now.timeIntervalSince1970, forKey: Self.pairedAtKey)
     }
 
     func load(reason: String) async throws(TokenStoreError) -> PairingPayload {
@@ -86,7 +91,8 @@ struct KeychainTokenStore: TokenStoring {
             }
         }.value
         switch result {
-        case let .success(token): return PairingPayload(base: base, token: token)
+        case let .success(token):
+            return PairingPayload(base: base, token: token, name: UserDefaults.standard.string(forKey: Self.nameKey))
         case let .failure(error): throw error
         }
     }
@@ -100,5 +106,7 @@ struct KeychainTokenStore: TokenStoring {
         ]
         SecItemDelete(query as CFDictionary)
         UserDefaults.standard.removeObject(forKey: baseKey)
+        UserDefaults.standard.removeObject(forKey: Self.nameKey)
+        UserDefaults.standard.removeObject(forKey: Self.pairedAtKey)
     }
 }
