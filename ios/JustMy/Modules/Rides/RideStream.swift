@@ -13,7 +13,11 @@ struct RideTrack {
     let heartRate: [Double?]
     let speedMph: [Double?]
     let distanceMi: [Double?]
+    /// Percent, from elevation over distance (RideAnalysis.grade); nil where stopped or unmeasured.
+    let grade: [Double?]
     let coordinates: [CLLocationCoordinate2D?]
+    /// The ride's HR zone boundaries (bpm), for coloring the route by zone; nil when the file has none.
+    let zoneBoundaries: [Double]?
 
     init?(_ detail: RideDetail) {
         guard let stream = detail.stream?.value1, !stream.data.t.isEmpty else { return nil }
@@ -24,6 +28,8 @@ struct RideTrack {
         heartRate = channel("heartRate")
         speedMph = channel("speed").map { $0.map(Format.mph(fromMps:)) }
         distanceMi = channel("distance").map { $0.map(Format.miles(fromMeters:)) }
+        grade = RideAnalysis.grade(distance: channel("distance"), altitude: channel("altitude"))
+        zoneBoundaries = detail.timeInHrZone?.value1.hrZoneHighBoundary
         let lat = channel("lat"), lon = channel("lon")
         coordinates = zip(lat, lon).map { la, lo in
             guard let la, let lo else { return nil }

@@ -254,6 +254,8 @@ struct StreamChart: View {
     let values: [Double?]
     var height: CGFloat = 64
     var cursor: Double? = nil
+    /// Replay marks the channel's highest sample (#104).
+    var peak: Int? = nil
     var showsCaption = true
 
     private struct Sample: Identifiable { let id: Int; let t: Double; let v: Double; let run: Int }
@@ -287,6 +289,10 @@ struct StreamChart: View {
                     LineMark(x: .value("t", s.t), y: .value("v", s.v), series: .value("run", s.run))
                         .lineStyle(StrokeStyle(lineWidth: 1.8))
                         .foregroundStyle(Color.accentColor)
+                }
+                if let peak, let v = values[peak] {
+                    PointMark(x: .value("peak", track.t[peak]), y: .value("v", v))
+                        .symbol { Circle().fill(Color.accentColor).stroke(Color(.secondarySystemGroupedBackground), lineWidth: 2).frame(width: 9, height: 9) }
                 }
                 if let cursor {
                     RuleMark(x: .value("now", cursor)).foregroundStyle(Color(.label)).lineStyle(StrokeStyle(lineWidth: 1.5))
