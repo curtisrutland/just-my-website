@@ -26,9 +26,7 @@ struct RidesView<Header: View>: View {
                 } else if weekly.failure == nil {
                     Card { VStack(alignment: .leading, spacing: 14) { SkeletonBlock(height: 34); SkeletonBlock(height: 60) } }
                 }
-                if !rides.items.isEmpty {
-                    RideList(rides: rides)
-                }
+                RideList(rides: rides)
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 24)
@@ -83,14 +81,8 @@ final class PagedRides {
 private struct WeekCard: View {
     let weeks: WeeklyStats.WeeksPayload
 
-    private var thisMonday: String {
-        let today = Format.date(fromISO: Format.todayISO())!
-        let weekday = Format.calendar.component(.weekday, from: today) // 1 = Sunday
-        return Format.addDays(-((weekday + 5) % 7), to: Format.todayISO())
-    }
-
     var body: some View {
-        let monday = thisMonday
+        let monday = Format.monday(of: Format.todayISO())
         let current = weeks.first { $0.weekStart == monday }
         Card {
             VStack(alignment: .leading, spacing: 14) {
@@ -136,38 +128,51 @@ private struct WeekCard: View {
     }
 }
 
+/// Every ride, newest first, one card per week (the six weeks the strip shows) then per month (#100).
+/// Groups derive from whatever pages are loaded; the last row of the last group asks for the next page.
 private struct RideList: View {
     let rides: PagedRides
     @Environment(\.api) private var api
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            SectionTitle("Rides · \(rides.total)").padding(.horizontal, 16)
-            VStack(spacing: 0) {
-                ForEach(Array(rides.items.enumerated()), id: \.element.id) { index, ride in
-                    NavigationLink(value: ride) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(ride.title)
-                                Text(line2(ride)).font(.footnote).foregroundStyle(.secondary)
-                                Text(line3(ride)).font(.footnote).foregroundStyle(.secondary).monospacedDigit()
+        let today = Format.todayISO()
+        let lastID = rides.items.last?.id
+        ForEach(RideGroup.grouping(rides.items, localDate: \.localDate, today: today)) { group in
+            VStack(alignment: .leading, spacing: 8) {
+                SectionTitle(group.span.title(today: today), trailing: totals(group.items)).padding(.horizontal, 16)
+                VStack(spacing: 0) {
+                    ForEach(Array(group.items.enumerated()), id: \.element.id) { index, ride in
+                        NavigationLink(value: ride) {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(ride.title)
+                                    Text(line2(ride)).font(.footnote).foregroundStyle(.secondary)
+                                    Text(line3(ride)).font(.footnote).foregroundStyle(.secondary).monospacedDigit()
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
                             }
-                            Spacer()
-                            Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 11)
+                            .contentShape(.rect)
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 11)
-                        .contentShape(.rect)
+                        .buttonStyle(.plain)
+                        .onAppear {
+                            if ride.id == lastID, let api { Task { await rides.loadMore(api) } }
+                        }
+                        if index < group.items.count - 1 { Divider().padding(.leading, 16) }
                     }
-                    .buttonStyle(.plain)
-                    .onAppear {
-                        if index == rides.items.count - 1, let api { Task { await rides.loadMore(api) } }
-                    }
-                    if index < rides.items.count - 1 { Divider().padding(.leading, 16) }
                 }
+                .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 26))
             }
-            .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 26))
         }
+    }
+
+    /// `3 rides · 42.1 mi`; distance counts only rides that measured one.
+    private func totals(_ group: [RideSummary]) -> String {
+        let miles = Format.miles(fromMeters: group.compactMap { measured($0.distanceMeters) }.reduce(0, +))
+        let count = group.count == 1 ? "1 ride" : "\(group.count) rides"
+        return miles > 0 ? "\(count) · \(Format.oneDecimal(miles)) mi" : count
     }
 
     private func line2(_ r: RideSummary) -> String {
