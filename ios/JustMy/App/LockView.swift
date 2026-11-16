@@ -3,9 +3,9 @@ import SwiftUI
 /// Shown on launch and after five minutes away (docs/ios-app.md §4.3). Unlocking reads the token from
 /// the Keychain, which is what prompts Face ID — the lock is the Secure Enclave's, not this view's.
 ///
-/// The app's mark in a dial of 60 ticks (handoff §5, Lock; boards `Lock-Scanning-Dark`,
-/// `Lock-Checking-Dark`, `Lock-Dark`), in three beats: scanning, checking the token, and failed or
-/// dismissed. It sits in the top third because iOS draws its own Face ID glyph at the center.
+/// The app's mark in a dial of 60 ticks (handoff §5, Lock; boards `Lock-Scanning-Dark`, `Lock-Dark`),
+/// in two beats: scanning, and failed or dismissed. (The board's checking beat went with the blocking
+/// token check, #115: the app opens as soon as Face ID succeeds.) It sits in the top third because iOS draws its own Face ID glyph at the center.
 struct LockView: View {
     @Environment(AppModel.self) private var model
 
@@ -46,7 +46,6 @@ struct LockView: View {
     private var status: LockMark.Status {
         switch model.unlockStage {
         case .scanning: .plain("Face ID")
-        case .checking: .plain("Checking the token…")
         case .idle: model.errorMessage.map(LockMark.Status.error) ?? .plain("Locked")
         }
     }
@@ -100,17 +99,15 @@ private struct LockMark: View {
 }
 
 /// 60 ticks (1.3° wide every 6°, radius 113–130) around the mark. Scanning sweeps a 110° arc of lit
-/// ticks once per 1.8 s and the dot breathes; checking lights every tick with a slow fade; idle is
-/// dim and still.
+/// ticks once per 1.8 s and the dot breathes; idle is dim and still.
 private struct LockDial: View {
     enum Beat: Equatable {
-        case idle, scanning, checking
+        case idle, scanning
 
         init(_ stage: AppModel.UnlockStage) {
             switch stage {
             case .idle: self = .idle
             case .scanning: self = .scanning
-            case .checking: self = .checking
             }
         }
     }
@@ -139,9 +136,6 @@ private struct LockDial: View {
         let dim = Color(.secondaryLabel).opacity(0.18)
         // Scanning: the lit arc's start, clockwise from 12 o'clock, one turn per 1.8 s.
         let sweepStart = (t / 1.8).truncatingRemainder(dividingBy: 1) * 360
-        // Checking: 0.35 → 1, eased, alternating every 1.2 s.
-        let phase = (t / 1.2).truncatingRemainder(dividingBy: 2)
-        let settle = 0.35 + 0.65 * (1 - pow(1 - (phase < 1 ? phase : 2 - phase), 2))
 
         for i in 0..<60 {
             let start = Double(i) * 6
@@ -158,8 +152,6 @@ private struct LockDial: View {
                 if offset < 110 {
                     context.fill(tick(at: start, center: center), with: .color(.accentColor))
                 }
-            case .checking:
-                context.fill(tick(at: start, center: center), with: .color(Color.accentColor.opacity(settle)))
             }
         }
     }

@@ -74,7 +74,9 @@ struct AppModelTests {
 
         let revoked = model(store: store, result: .rejected)
         await revoked.unlock()
-        #expect(revoked.phaseKind == .unpaired)
+        #expect(revoked.phaseKind == .unlocked) // opens first (#115)…
+        await revoked.revalidation?.value
+        #expect(revoked.phaseKind == .unpaired) // …then the background check unpairs
         #expect(store.saved == nil)
     }
 
@@ -107,17 +109,36 @@ struct AppModelTests {
         #expect(m.phaseKind == .unlocked)
     }
 
-    @Test func aSlowCheckOpensTheAppAtTheTimeout() async {
+    @Test func unlockingDoesntWaitOnTheCheck() async {
         let store = FakeStore()
         store.saved = PairingPayload(base: base, token: token)
         let m = AppModel(store: store, check: { _ in
             try await Task.sleep(for: .seconds(30))
-            return .rejected
-        }, checkTimeout: .milliseconds(50))
+            return .ok
+        })
         let started = Date()
         await m.unlock()
         #expect(m.phaseKind == .unlocked)
-        #expect(Date().timeIntervalSince(started) < 5)
+        #expect(Date().timeIntervalSince(started) < 1)
+        m.revalidation?.cancel()
+    }
+
+    @Test func aLateRejectionDoesntUnpairANewerPairing() async {
+        let store = FakeStore()
+        store.saved = PairingPayload(base: base, token: "jmw_old-token")
+        let gate = AsyncStream<Void>.makeStream()
+        let m = AppModel(store: store, check: { pairing in
+            guard pairing.token == "jmw_old-token" else { return .ok }
+            for await _ in gate.stream {} // held until the test re-pairs
+            return .rejected
+        })
+        await m.unlock()
+        m.unpair()
+        await m.pair(text: qr, fallbackBase: PairingPayload.defaultBase)
+        gate.continuation.finish()
+        await m.revalidation?.value
+        #expect(m.phaseKind == .unlocked)
+        #expect(store.saved?.token == token)
     }
 
     @Test func relocksAfterFiveMinutesInTheBackgroundButNotBefore() async {

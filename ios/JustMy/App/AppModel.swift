@@ -17,7 +17,7 @@ final class AppModel {
 
     /// Where an unlock is (handoff §5, Lock): Face ID scanning, then the one token check before
     /// the app opens. `idle` while locked means the prompt failed or was dismissed.
-    enum UnlockStage: Equatable { case idle, scanning, checking }
+    enum UnlockStage: Equatable { case idle, scanning }
 
     struct Session {
         let pairing: PairingPayload
@@ -39,18 +39,15 @@ final class AppModel {
     private let policy: LockPolicy
     private let now: () -> Date
     private var backgroundedAt: Date?
-
-    /// How long the lock screen waits on the token check before opening anyway (the screens then
-    /// report the network themselves).
-    private let checkTimeout: Duration
+    /// The background token check started by the last unlock (exposed for tests).
+    private(set) var revalidation: Task<Void, Never>?
 
     init(store: any TokenStoring, check: @escaping Check, policy: LockPolicy = .init(),
-         now: @escaping () -> Date = Date.init, checkTimeout: Duration = .seconds(4)) {
+         now: @escaping () -> Date = Date.init) {
         self.store = store
         self.check = check
         self.policy = policy
         self.now = now
-        self.checkTimeout = checkTimeout
         phase = store.hasPairing ? .locked : .unpaired(notice: nil)
     }
 
@@ -149,28 +146,14 @@ final class AppModel {
             errorMessage = "Couldn't read the token (\(error))."
             return
         }
-        // Prove the token before the app opens, so a revocation shows up now rather than on the
-        // first screen's fetch. Offline, or slower than the timeout, opens anyway.
-        unlockStage = .checking
-        if case .rejected = await checkWithTimeout(pairing) {
-            handleUnauthorized()
-            return
-        }
+        // Open now and prove the token in the background (#115): waiting on the server here was
+        // the pause after every Face ID. A revoked token still unpairs, from this check or from the
+        // first screen's 401, a beat later instead of before the app shows. Offline just opens.
         phase = .unlocked(Session(pairing: pairing, clients: makeClients(pairing)))
-    }
-
-    /// The check's result, or nil when it threw or ran past `checkTimeout`.
-    private func checkWithTimeout(_ pairing: PairingPayload) async -> JMWClients.CheckResult? {
-        let check = self.check, timeout = checkTimeout
-        return await withTaskGroup(of: JMWClients.CheckResult?.self) { group in
-            group.addTask { try? await check(pairing) }
-            group.addTask {
-                try? await Task.sleep(for: timeout)
-                return nil
-            }
-            let first = await group.next() ?? nil
-            group.cancelAll()
-            return first
+        let check = self.check
+        revalidation = Task {
+            guard case .rejected = try? await check(pairing), session?.pairing == pairing else { return }
+            handleUnauthorized()
         }
     }
 
