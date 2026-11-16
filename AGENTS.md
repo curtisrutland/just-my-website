@@ -61,7 +61,8 @@ never their tables — writing only their own tables, degrading when an input is
 adding no cross-module scores or renamed fields. There is no cross-module write path, anywhere.
 No interpretive module exists server-side yet; `manage-health` is the skill-layer one. Surfaces
 (web, API, iOS app, panel) are not modules: they read and write any module through its own
-`schema` and `repo`.
+`schema` and `repo`. The local infographics renderer (`infographics/`, `docs/infographics.md`) is
+a read-only surface: token API `GET`s only, never the database, never a write.
 
 ## Work tracking
 
