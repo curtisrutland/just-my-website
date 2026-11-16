@@ -4,8 +4,8 @@ A private, single-user personal-data platform. Two users, ever: **Curtis** (huma
 **Claude** (machine, via a Python skill over a token API). Everything sits behind auth —
 there are no public pages and no anonymous reads.
 
-Five modules are live: a **macro / food-intake tracker**, a **daily weight tracker**, a
-**shopping list**, a **lifting journal**, and a **ride log**. In the macro tracker, Curtis tells Claude what he ate in
+Seven modules are live: a **macro / food-intake tracker**, a **daily weight tracker**, a
+**shopping list**, a **lifting journal**, a **ride log**, **daily vitals**, and a **bike garage**. In the macro tracker, Curtis tells Claude what he ate in
 vague terms ("a couple handfuls of almonds, a big chicken thigh") and Claude logs it — the whole
 design is built around one principle: **be honest about fuzziness.** An estimate is never presented
 with the authority of a measured fact. The weight tracker applies the same honesty from the other
@@ -59,9 +59,11 @@ src/app/(app)/{module}/**  # Clerk-gated UI (thin)
 
 Tables live in `src/lib/db/schema.ts`, namespaced by module (`macro_food`, `macro_entry`,
 `macro_day_tag` (retired — history only), `macro_target_profile`, `weight_entry`, `shopping_item`, `lifting_session`,
-`lifting_exercise`, `lifting_set`, `lifting_session_note`, `lifting_goal`, `ride`, `ride_stream`).
+`lifting_exercise`, `lifting_set`, `lifting_session_note`, `lifting_goal`, `ride`, `ride_stream`, `vitals_day`,
+`garage_bike`, `garage_profile`, `garage_ride`).
 Each module's OpenAPI fragment is **generated** from its Zod schemas (`openapi/macros.json`,
-`openapi/weight.json`, `openapi/lifting.json`, `openapi/rides.json`, `openapi/vitals.json`), never hand-written.
+`openapi/weight.json`, `openapi/lifting.json`, `openapi/rides.json`, `openapi/vitals.json`,
+`openapi/garage.json`), never hand-written.
 
 ## Getting started
 
@@ -116,6 +118,7 @@ the Neon and Clerk Marketplace integrations. The rest:
 | [`docs/lifting-model.md`](docs/lifting-model.md) | The lifting module's data model — Hevy ingestion + the annotation layer, derived e1RM/tonnage/PRs |
 | [`docs/rides-model.md`](docs/rides-model.md) | The rides module's data model — FIT ingestion, the raw-file Blob store, streams, the publisher token |
 | [`docs/vitals-model.md`](docs/vitals-model.md) | The vitals module's data model — daily Garmin measurements, and the measurement-vs-verdict line it draws |
+| [`docs/garage-model.md`](docs/garage-model.md) | The garage module's data model — bikes, the profile rules that auto-tag rides, ride tags with copied facts (v1), and the maintenance roadmap |
 | [`docs/garmin-daemon.md`](docs/garmin-daemon.md) | The Garmin daemon on Curtis's Upboard — what it polls, its token lifecycle, and what it may not do |
 | [`docs/UI-CONTRACT.md`](docs/UI-CONTRACT.md) | Design tokens, component inventory, layout slots |
 | [`docs/archive/`](docs/archive/) | Historical briefs, handoffs, and the pre-issues backlog (see its README) |
@@ -123,14 +126,16 @@ the Neon and Clerk Marketplace integrations. The rest:
 
 ## Status
 
-Live in production at [justmy.website](https://justmy.website). All six modules — **macros**,
+Live in production at [justmy.website](https://justmy.website). Six modules — **macros**,
 **weight**, **shopping**, **lifting**, **rides**, and **vitals** — are deployed, each with its schema, repo,
 token API routes, Clerk-gated UI, generated OpenAPI fragment, and a Python skill
 (`manage-macros`, `manage-weight`, `manage-shopping`, `manage-lifting`, `manage-rides`,
 `manage-vitals`). A seventh
 skill, **`manage-health`**, is the one sanctioned cross-cut (`docs/CONVENTIONS.md` §9): a
 read-only unified daily/weekly view over the five health modules, assembled at the skill layer
-from their existing read endpoints — no server-side aggregation.
+from their existing read endpoints — no server-side aggregation. The seventh module, the
+**garage** (v1: bikes, profile rules, ride tags; `docs/garage-model.md`), has its API, UI and OpenAPI
+fragment but no skill yet — that lands with its maintenance roadmap.
 Auth currently runs on the Clerk **dev** instance (the production-instance switch is an open issue).
 Outstanding work and deferred decisions are tracked as
 [GitHub Issues](https://github.com/curtisrutland/just-my-website/issues); the pre-issues

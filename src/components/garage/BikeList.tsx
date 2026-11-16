@@ -74,7 +74,13 @@ function BikeCard({ bike, save, setRetired }: { bike: BikeView; save: Save; setR
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
-  if (editing) return <BikeEditor bike={bike} save={save} onDone={() => setEditing(false)} />;
+  // The editor takes the whole row: a half-width card is too narrow for its four-up first line.
+  if (editing)
+    return (
+      <div style={{ gridColumn: "1 / -1" }}>
+        <BikeEditor bike={bike} save={save} onDone={() => setEditing(false)} />
+      </div>
+    );
 
   const retire = () => {
     const retiring = !bike.retiredOn;
