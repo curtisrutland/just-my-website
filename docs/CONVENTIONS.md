@@ -50,7 +50,8 @@ Scoped device tokens (documented kernel departures — never in `identify()`, so
 pass `bearerAuth`/`primaryKey`; each is accepted only by its named routes, and widening a list
 needs a model-doc entry and a test):
 - `JMW_PUBLISHER_TOKEN` — the Garmin daemon; push-only: `POST /api/rides/upload`,
-  `POST /api/vitals` (`docs/rides-model.md` §2, `docs/vitals-model.md`).
+  `POST /api/vitals`, `POST /api/garage/rides/attribute` (`docs/rides-model.md` §2,
+  `docs/vitals-model.md`, `docs/garage-model.md`).
 - `JMW_DISPLAY_TOKEN` — the ESP32 round display; read-only: `GET /api/macros/days/{date}`
   (`docs/macro-model.md` § "Kernel departure").
 

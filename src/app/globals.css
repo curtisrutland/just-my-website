@@ -724,3 +724,28 @@
     overflow-x: auto;
   }
 }
+
+/* Garage: bike cards two-up on desktop, one column on a phone; the bike form's first row four-up. */
+.garage-bikes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 10px;
+}
+.garage-form-grid {
+  display: grid;
+  grid-template-columns: 80px 1fr 1fr 1fr;
+  gap: 12px;
+}
+.garage-untagged-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 11px 16px;
+  flex-wrap: wrap;
+}
+@media (max-width: 640px) {
+  .garage-form-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}

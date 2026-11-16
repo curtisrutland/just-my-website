@@ -58,12 +58,14 @@ export function requirePrimary(request: Request): AuthOk | AuthFail {
 /**
  * The scoped third token (documented kernel departure — docs/rides-model.md §2,
  * docs/vitals-model.md § "Kernel departure"): `JMW_PUBLISHER_TOKEN` is the Garmin daemon's
- * credential, accepted by EXACTLY TWO routes, both of which call this instead of `requireBearer`:
+ * credential, accepted by EXACTLY THREE routes, each of which calls this instead of `requireBearer`:
  *
- *   - `POST /api/rides/upload`  — push a FIT file
- *   - `POST /api/vitals`        — push one day of measurements
+ *   - `POST /api/rides/upload`             — push a FIT file
+ *   - `POST /api/vitals`                   — push one day of measurements
+ *   - `POST /api/garage/rides/attribute`   — apply the bike rules to rides it just uploaded
+ *                                            (docs/garage-model.md); it can't read or edit a tag
  *
- * Both are pushes of machine-collected facts from the box in Curtis's house. The token is
+ * All three are pushes of machine-collected facts from the box in Curtis's house. The token is
  * deliberately NOT added to `identify()`, so it can never pass `requireBearer`/`requirePrimary`:
  * no reads, no PATCH, no DELETE, anywhere, in any module. Least privilege — a leaked daemon box
  * can push facts and nothing else. Widening this list is a kernel change: it needs a model-doc

@@ -682,3 +682,76 @@ export type RideStream = typeof rideStream.$inferSelect;
 export type NewRideStream = typeof rideStream.$inferInsert;
 export type VitalsDay = typeof vitalsDay.$inferSelect;
 export type NewVitalsDay = typeof vitalsDay.$inferInsert;
+
+/**
+ * `garage_bike` — a bike Curtis owns (garage module, docs/garage-model.md). `name` is the nickname
+ * (the model name until Curtis renames it). A retired bike keeps its ride tags but loses its
+ * profile rules and is offered for no new tags.
+ */
+export const garageBike = pgTable(
+  "garage_bike",
+  {
+    ...auditColumns(),
+    name: text("name").notNull(),
+    brand: text("brand").notNull(),
+    model: text("model").notNull(),
+    modelYear: integer("model_year").notNull(),
+    note: text("note"),
+    retiredOn: date("retired_on", { mode: "string" }),
+  },
+  (t) => [uniqueIndex("garage_bike_name_key").on(sql`lower(${t.name})`).where(sql`${t.deletedAt} is null`)]
+);
+
+/**
+ * `garage_profile` — the auto-tag rules: a device activity profile ("GRAVEL") that means one bike,
+ * matched against a ride's `sportProfileName` case-insensitively. A bike may claim several (the Edge
+ * says MOUNTAIN where the Instinct says MTB); a profile names at most one bike.
+ */
+export const garageProfile = pgTable(
+  "garage_profile",
+  {
+    ...auditColumns(),
+    profile: text("profile").notNull(),
+    bikeId: uuid("bike_id")
+      .notNull()
+      .references(() => garageBike.id),
+  },
+  (t) => [uniqueIndex("garage_profile_profile_key").on(sql`lower(${t.profile})`).where(sql`${t.deletedAt} is null`)]
+);
+
+/**
+ * `garage_ride` — which bike a ride was on. `activityId` is the ride's id in the rides module,
+ * opaque (no foreign key — the row lives in another module, CONVENTIONS §9). The ride facts the
+ * garage needs are COPIED in at write time (snapshotted), never read live, so the garage answers
+ * its own reads (per-bike totals) with no dependency on rides. `assignedBy`: 'rule' | 'manual' |
+ * 'backfill' (enforced by Zod); a person beats a rule — rules only ever touch 'rule' rows.
+ */
+export const garageRide = pgTable(
+  "garage_ride",
+  {
+    ...auditColumns(),
+    activityId: uuid("activity_id").notNull(),
+    bikeId: uuid("bike_id")
+      .notNull()
+      .references(() => garageBike.id),
+    assignedBy: text("assigned_by").notNull(),
+    // The matched profile for a rule tag, why for a backfill tag, null for a manual one.
+    reason: text("reason"),
+    localDate: date("local_date", { mode: "string" }).notNull(),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+    sportProfileName: text("sport_profile_name"),
+    movingSeconds: real("moving_seconds").notNull(),
+    distanceMeters: real("distance_meters"),
+  },
+  (t) => [
+    // A ride is on at most one bike.
+    uniqueIndex("garage_ride_activity_key").on(t.activityId).where(sql`${t.deletedAt} is null`),
+    index("garage_ride_bike_idx").on(t.bikeId, t.localDate).where(sql`${t.deletedAt} is null`),
+  ]
+);
+
+export type GarageBike = typeof garageBike.$inferSelect;
+export type NewGarageBike = typeof garageBike.$inferInsert;
+export type GarageProfile = typeof garageProfile.$inferSelect;
+export type GarageRide = typeof garageRide.$inferSelect;
+export type NewGarageRide = typeof garageRide.$inferInsert;

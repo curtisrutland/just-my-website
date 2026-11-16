@@ -4,10 +4,12 @@ import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import * as z from "zod";
 import { rideTitle } from "@/components/rides/format";
+import { attribute } from "@/lib/garage/repo";
 import { FitDecodeError } from "@/lib/rides/fit";
 import { ingestFitFile } from "@/lib/rides/ingest";
 import { patchRide, softDeleteRide } from "@/lib/rides/repo";
 import { ridePatchSchema } from "@/lib/rides/schema";
+import { rideFacts } from "../garage/facts";
 
 /**
  * Rides web write paths (CONVENTIONS §1): the UI writes through the SAME pipeline as the token
@@ -39,7 +41,15 @@ export async function uploadFitAction(formData: FormData): Promise<UploadOutcome
   if (file.size > MAX_BYTES) return { file: file.name, status: "failed", detail: "over the 15 MB limit" };
   try {
     const { ride, deduped } = await ingestFitFile(Buffer.from(await file.arrayBuffer()));
+    // Put it on a bike if a garage profile rule names its profile. Best-effort: the upload stands
+    // either way, and the /garage sweep catches anything missed (docs/garage-model.md).
+    try {
+      await attribute([rideFacts(ride)]);
+    } catch (e) {
+      console.error("garage attribute after upload failed", e);
+    }
     revalidatePath("/rides");
+    revalidatePath("/garage");
     return deduped
       ? { file: file.name, status: "deduped", detail: `already have this one · ${rideTitle(ride)}` }
       : { file: file.name, status: "ingested", detail: `new ride · ${rideTitle(ride)}` };

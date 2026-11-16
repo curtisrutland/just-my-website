@@ -24,8 +24,11 @@ export function RideDetail({
   saveName,
   saveNote,
   deleteRide,
+  bikeSlot,
 }: {
   ride: RideDetailData;
+  /** Which bike the ride was on (garage), rendered by the page as a surface. Absent in /preview. */
+  bikeSlot?: React.ReactNode;
   /** "7:46 PM" — derived server-side in the app timezone. */
   localStart: string;
   /** Bound server actions. Absent in the dev /preview harness (writes become local-only). */
@@ -190,6 +193,7 @@ export function RideDetail({
             </span>
             {ride.deviceProduct && <span style={{ fontFamily: mono, fontSize: 10, color: "var(--color-text-muted)" }}>{ride.deviceProduct}</span>}
           </div>
+          {bikeSlot && <div style={{ marginTop: 10 }}>{bikeSlot}</div>}
         </div>
 
         <div style={{ flex: "none", display: "flex", alignItems: "center", gap: 10 }}>

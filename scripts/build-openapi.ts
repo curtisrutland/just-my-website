@@ -46,6 +46,17 @@ import {
   shoppingPatchSchema,
 } from "../src/lib/shopping/schema";
 import { vitalsDayViewSchema, vitalsIngestSchema, vitalsRollupSchema } from "../src/lib/vitals/schema";
+import {
+  attributeResultSchema,
+  attributeSchema,
+  bikeCreateSchema,
+  bikeListSchema,
+  bikePatchSchema,
+  bikeViewSchema,
+  rideTagCreateSchema,
+  rideTagPatchSchema,
+  rideTagViewSchema,
+} from "../src/lib/garage/schema";
 import { weightCreateSchema, weightEntryViewSchema, weightPatchSchema, weightRollupSchema } from "../src/lib/weight/schema";
 
 /**
@@ -593,7 +604,7 @@ const ridesSpec = {
         type: "http",
         scheme: "bearer",
         description:
-          "JMW_PUBLISHER_TOKEN — the upload daemon's credential. Accepted ONLY by POST /api/rides/upload; structurally rejected everywhere else (least privilege: it can push FIT files and nothing more).",
+          "JMW_PUBLISHER_TOKEN — the Garmin daemon's credential. In this module, accepted ONLY by POST /api/rides/upload (elsewhere: POST /api/vitals, POST /api/garage/rides/attribute); structurally rejected everywhere else (least privilege: it pushes facts and nothing more).",
       },
     },
     schemas: {
@@ -625,7 +636,7 @@ const ridesSpec = {
       post: {
         summary: "Ingest a FIT file (raw binary body)",
         description:
-          "Body is the raw FIT bytes (application/octet-stream) — `curl --data-binary @ride.fit`. Idempotent: known bytes (or the same activity re-exported) return 200 + the existing ride with deduped:true; a new ride returns 201 + Location. Undecodable or multi-session files are 400s. The ONLY route that accepts the publisher token.",
+          "Body is the raw FIT bytes (application/octet-stream) — `curl --data-binary @ride.fit`. Idempotent: known bytes (or the same activity re-exported) return 200 + the existing ride with deduped:true; a new ride returns 201 + Location. Undecodable or multi-session files are 400s. The only rides route that accepts the publisher token.",
         security: [{ bearerAuth: [] }, { publisherToken: [] }],
         requestBody: { required: true, content: { "application/octet-stream": { schema: { type: "string", format: "binary" } } } },
         responses: {
@@ -717,8 +728,8 @@ const vitalsSpec = {
         type: "http",
         scheme: "bearer",
         description:
-          "JMW_PUBLISHER_TOKEN — the Garmin daemon's scoped credential. Accepted by exactly two routes across the " +
-          "whole API (POST /api/vitals and POST /api/rides/upload) and by nothing else: it can never read, PATCH, or DELETE.",
+          "JMW_PUBLISHER_TOKEN — the Garmin daemon's scoped credential. Accepted by exactly three routes across the " +
+          "whole API (POST /api/vitals, POST /api/rides/upload, POST /api/garage/rides/attribute) and by nothing else: it can never read, PATCH, or DELETE.",
       },
     },
     schemas: {
@@ -779,6 +790,120 @@ const vitalsSpec = {
   },
 };
 
+const garageSpec = {
+  openapi: "3.0.3",
+  info: {
+    title: "justmy.website — garage",
+    version: "0.1.0",
+    description:
+      "Token API for the garage module (docs/garage-model.md, v1): bikes, the profile rules that auto-tag rides, and ride tags. " +
+      "A tag copies in the ride facts it needs (date, profile, moving time, distance) — the garage never reads the rides module. " +
+      "Quantities are SI (s, m). Generated from Zod schemas; do not hand-edit.",
+  },
+  security: [{ bearerAuth: [] }],
+  components: {
+    securitySchemes: {
+      ...securitySchemes,
+      publisherToken: {
+        type: "http",
+        scheme: "bearer",
+        description:
+          "JMW_PUBLISHER_TOKEN — the Garmin daemon's credential. In this module, accepted ONLY by POST /api/garage/rides/attribute; structurally rejected everywhere else.",
+      },
+    },
+    schemas: {
+      BikeCreate: js(bikeCreateSchema),
+      BikePatch: js(bikePatchSchema),
+      RideTagCreate: js(rideTagCreateSchema),
+      RideTagPatch: js(rideTagPatchSchema),
+      Attribute: js(attributeSchema),
+      ...views({ BikeView: bikeViewSchema, BikeList: bikeListSchema, RideTagView: rideTagViewSchema, AttributeResult: attributeResultSchema }),
+      Error: errorSchema,
+    },
+  },
+  paths: {
+    "/api/garage/bikes": {
+      get: {
+        summary: "List bikes with their profiles and derived totals (rides, moving time, distance, last ridden)",
+        description: "Totals count tagged rides only. With `from`/`to` (local dates, inclusive) they cover only rides in that window; without, all time.",
+        parameters: [
+          { name: "includeRetired", in: "query", schema: { type: "boolean", default: false } },
+          { name: "from", in: "query", schema: { type: "string", format: "date" } },
+          { name: "to", in: "query", schema: { type: "string", format: "date" } },
+        ],
+        responses: { ...okJson("Bikes", "BikeList"), ...errorResponses },
+      },
+      post: {
+        summary: "Add a bike",
+        description: "`name` (the nickname) defaults to the model. `profiles` are the device activity profiles that mean this bike; a profile names at most one bike (409 otherwise).",
+        requestBody: jsonBody("BikeCreate"),
+        responses: { ...createdJson("Created bike", "BikeView"), ...errorResponses, ...conflictResponse },
+      },
+    },
+    "/api/garage/bikes/{id}": {
+      get: {
+        summary: "Get a bike (totals all time, or within `from`/`to`)",
+        parameters: [
+          pathParam("id"),
+          { name: "from", in: "query", schema: { type: "string", format: "date" } },
+          { name: "to", in: "query", schema: { type: "string", format: "date" } },
+        ],
+        responses: { ...okJson("Bike", "BikeView"), ...errorResponses },
+      },
+      patch: {
+        summary: "Edit a bike",
+        description: "`profiles` replaces the rule set; a removed profile also removes the rule tags it made (manual and backfill tags stay). Setting `retiredOn` retires the bike: its rules go, its tags stay.",
+        parameters: [pathParam("id")],
+        requestBody: jsonBody("BikePatch"),
+        responses: { ...okJson("Updated bike", "BikeView"), ...errorResponses, ...conflictResponse },
+      },
+      delete: {
+        summary: "Soft/hard delete a bike, with its profiles and ride tags",
+        parameters: [pathParam("id"), hardParam],
+        responses: { ...noContent, ...errorResponses },
+      },
+    },
+    "/api/garage/rides": {
+      get: {
+        summary: "List ride tags (newest ride first)",
+        parameters: [
+          ...pageParams,
+          { name: "bikeId", in: "query", schema: { type: "string" } },
+          { name: "activityId", in: "query", schema: { type: "string" }, description: "The ride's id in the rides module" },
+          { name: "from", in: "query", schema: { type: "string", format: "date" } },
+          { name: "to", in: "query", schema: { type: "string", format: "date" } },
+        ],
+        responses: { ...okList("RideTagView"), ...errorResponses },
+      },
+      post: {
+        summary: "Tag a ride by hand",
+        description: "Copies the ride's facts in. Already on this bike: 200 + the existing tag. On another bike: 409 (move it with PATCH).",
+        requestBody: jsonBody("RideTagCreate"),
+        responses: { ...createdJson("Created tag", "RideTagView"), ...okJson("Already tagged to this bike", "RideTagView"), ...errorResponses, ...conflictResponse },
+      },
+    },
+    "/api/garage/rides/{id}": {
+      patch: {
+        summary: "Move a tagged ride to another bike (it becomes a manual tag)",
+        parameters: [pathParam("id")],
+        requestBody: jsonBody("RideTagPatch"),
+        responses: { ...okJson("Updated tag", "RideTagView"), ...errorResponses, ...conflictResponse },
+      },
+      delete: { summary: "Untag a ride (soft/hard)", parameters: [pathParam("id"), hardParam], responses: { ...noContent, ...errorResponses } },
+    },
+    "/api/garage/rides/attribute": {
+      post: {
+        security: [{ bearerAuth: [] }, { publisherToken: [] }],
+        summary: "Apply the profile rules to a batch of rides",
+        description:
+          "Each ride's profile is matched case-insensitively against the rules. Creates or re-points rule tags; never touches manual or backfill tags; a rule tag whose rule is gone is removed. Idempotent.",
+        requestBody: jsonBody("Attribute"),
+        responses: { ...okJson("What was tagged, left alone, or matched no rule", "AttributeResult"), ...errorResponses },
+      },
+    },
+  },
+};
+
 const fragments = [
   ["macros", macrosSpec],
   ["weight", weightSpec],
@@ -786,6 +911,7 @@ const fragments = [
   ["lifting", liftingSpec],
   ["rides", ridesSpec],
   ["vitals", vitalsSpec],
+  ["garage", garageSpec],
 ] as const;
 
 mkdirSync("openapi", { recursive: true });

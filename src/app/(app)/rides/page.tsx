@@ -6,6 +6,7 @@ import { localStartTime } from "@/components/rides/localTime";
 import { RideCard } from "@/components/rides/RideCard";
 import { UploadPanel } from "@/components/rides/UploadPanel";
 import { todayISO } from "@/lib/date";
+import { listBikes, tagsForActivities } from "@/lib/garage/repo";
 import { listRides } from "@/lib/rides/repo";
 import type { RideView } from "@/lib/rides/types";
 import { uploadFitAction } from "./actions";
@@ -26,6 +27,13 @@ export default async function RideLogPage({ searchParams }: { searchParams: Prom
 
   // One read of the (small) history; filtering + weekly aggregates derived in-page.
   const { items, count } = await listRides({ limit: 200, offset: 0 });
+  // Which bike each ride was on (garage), read as a surface: the rides module knows nothing of bikes.
+  const [tags, bikes] = await Promise.all([tagsForActivities(items.map((r) => r.id)), listBikes({ includeRetired: true })]);
+  const bikeName = new Map(bikes.map((b) => [b.id, b.name]));
+  const bikeFor = (id: string) => {
+    const tag = tags.get(id);
+    return tag ? bikeName.get(tag.bikeId) : undefined;
+  };
   const cycling = items.filter((r) => r.sport === "cycling");
 
   // Sport chips: rides (default) · any other sports present · all.
@@ -132,7 +140,7 @@ export default async function RideLogPage({ searchParams }: { searchParams: Prom
               </span>
             </div>
             {g.rides.map((r) => (
-              <RideCard key={r.id} r={r} localStart={localStartTime(r.startedAt)} />
+              <RideCard key={r.id} r={r} localStart={localStartTime(r.startedAt)} bike={bikeFor(r.id)} />
             ))}
           </section>
         ))

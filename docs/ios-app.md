@@ -67,7 +67,7 @@ ARCHITECTURE.md (surfaces) are amended to match, in the PR that follows this doc
 Two token systems, deliberately separate (`src/lib/db/schema.ts` → `device_tokens`):
 
 - **Static env tokens** guard `/api/**`: `JMW_API_KEY` (primary), `JMW_AGENT_TOKEN` (agent), plus
-  the two single-purpose scoped tokens `JMW_PUBLISHER_TOKEN` (daemon, push-only, two routes) and
+  the two single-purpose scoped tokens `JMW_PUBLISHER_TOKEN` (daemon, push-only, three routes) and
   `JMW_DISPLAY_TOKEN` (ESP32, read-only, one route).
 - **DB-backed device tokens** guard `/api/panel/**` only: random `jmw_…` tokens, stored as
   `sha256(raw)`, each with a `scopes text[]` and a `revoked_at`. Minted by `npm run panel:token`.

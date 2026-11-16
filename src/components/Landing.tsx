@@ -59,6 +59,14 @@ const MODULES: Module[] = [
   },
   {
     glyph: "▸",
+    name: "garage",
+    badge: "LIVE",
+    href: "/garage",
+    active: true,
+    desc: "The bikes, and which one each ride was on. Profile rules tag rides automatically; anything they can't place is listed for you, never guessed.",
+  },
+  {
+    glyph: "▸",
     name: "shopping",
     badge: "LIVE",
     href: "/shopping",
