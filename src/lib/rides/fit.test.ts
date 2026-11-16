@@ -1,7 +1,14 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { decodeFitRide, downsampleRecords, FitDecodeError, STREAM_RESOLUTION_SECONDS } from "./fit";
+import {
+  decodeFitRide,
+  decodeFitSamples,
+  downsampleRecords,
+  FitDecodeError,
+  samplesFromRecords,
+  STREAM_RESOLUTION_SECONDS,
+} from "./fit";
 import { fitRideSchema } from "./schema";
 
 /**
@@ -73,6 +80,38 @@ describe("downsampleRecords", () => {
     const records = [at(0, { heartRate: 100 }), at(25, { distance: 100, heartRate: 120 })];
     const { data } = downsampleRecords(records, t0, 10);
     for (const arr of Object.values(data)) expect(arr).toHaveLength(data.t.length);
+  });
+});
+
+describe("samplesFromRecords (full resolution)", () => {
+  it("keeps every record at its own time — nothing is bucketed or averaged", () => {
+    const records = [at(0, { heartRate: 100 }), at(4, { heartRate: 110 }), at(12.5, { heartRate: 130 })];
+    const data = samplesFromRecords(records, t0);
+    expect(data.t).toEqual([0, 4, 12.5]);
+    expect(data.heartRate).toEqual([100, 110, 130]);
+  });
+
+  it("aligns every channel to t, with null where a record lacked it", () => {
+    const records = [at(0, { heartRate: 100, distance: 0 }), at(1, { distance: 4 }), at(2, { heartRate: 104 })];
+    const data = samplesFromRecords(records, t0);
+    expect(data.heartRate).toEqual([100, null, 104]);
+    expect(data.distance).toEqual([0, 4, null]);
+    expect("power" in data).toBe(false); // never recorded: omitted, as in the stored stream
+  });
+
+  it("uses the stored stream's names and unit conversions (semicircles → degrees)", () => {
+    const data = samplesFromRecords([at(0, { positionLat: 2 ** 30, positionLong: -(2 ** 30) })], t0);
+    expect(data.lat).toEqual([90]);
+    expect(data.lon).toEqual([-90]);
+  });
+
+  it("returns records in time order and drops any stamped before the start", () => {
+    const records = [at(5, { heartRate: 120 }), at(-3, { heartRate: 90 }), at(1, { heartRate: 100 })];
+    expect(samplesFromRecords(records, t0)).toEqual({ t: [1, 5], heartRate: [100, 120] });
+  });
+
+  it("handles zero records", () => {
+    expect(samplesFromRecords([], t0)).toEqual({ t: [] });
   });
 });
 
@@ -156,6 +195,22 @@ describe.skipIf(!fixturePath)("decodeFitRide (real fixture: 2026-07-28 MTB ride)
     // Distance is cumulative: the last non-null value is the ride's total.
     const lastDistance = [...data.distance!].reverse().find((v) => v != null);
     expect(lastDistance).toBeCloseTo(6053.13, 0);
+  });
+
+  it("decodes the same file at full resolution, consistent with the 10s stream", () => {
+    const full = decodeFitSamples(bytes);
+    const coarse = ride.stream.data;
+    expect(full.startedAt.getTime()).toBe(ride.startedAt.getTime());
+    // More samples than buckets, in time order, every channel aligned.
+    expect(full.data.t.length).toBeGreaterThan(coarse.t.length);
+    for (const arr of Object.values(full.data)) expect(arr.length).toBe(full.data.t.length);
+    const t = full.data.t as number[];
+    expect(t.every((v, i) => i === 0 || v >= t[i - 1])).toBe(true);
+    // Same channels as the stored stream, and the same last position.
+    expect(Object.keys(full.data).sort()).toEqual(Object.keys(coarse).sort());
+    const last = (arr: (number | null)[]) => arr.filter((v) => v != null).at(-1);
+    expect(last(full.data.lat)).toBe(last(coarse.lat));
+    expect(last(full.data.distance)).toBe(last(coarse.distance));
   });
 
   it("hashes the exact bytes (the dedupe identity)", () => {

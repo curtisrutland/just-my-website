@@ -21,6 +21,22 @@ export async function getRideFile(key: string): Promise<Buffer | null> {
   return Buffer.from(await new Response(result.stream).arrayBuffer());
 }
 
+/**
+ * Open the raw FIT as a stream (the download route). Nothing is buffered: the bytes go from Blob
+ * to the client as they arrive. Returns null when the blob is missing.
+ *
+ * `size` is null when Blob doesn't state it. The SDK reads it from the response's Content-Length
+ * and reports 0 when that header is absent, which it is for these files — so 0 means "unknown",
+ * never "empty" (an ingested FIT is never empty).
+ */
+export async function openRideFile(
+  key: string
+): Promise<{ stream: ReadableStream<Uint8Array>; size: number | null } | null> {
+  const result = await get(key, { access: "private" });
+  if (!result || result.statusCode !== 200) return null;
+  return { stream: result.stream, size: result.blob.size > 0 ? result.blob.size : null };
+}
+
 /** Remove the raw file (hard delete only — soft-deleted rides keep their blob). */
 export async function deleteRideFile(key: string): Promise<void> {
   await del(key);

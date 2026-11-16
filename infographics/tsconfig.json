@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "types": ["node"],
+    // The site's own code that this package reuses (the FIT decoder, the ride formatters) keeps
+    // its `@/` imports working when it is type-checked from here.
+    "paths": { "@/*": ["../src/*"] }
+  },
+  "include": ["src", "pieces", "scripts", "remotion.config.ts"]
+}

@@ -153,7 +153,7 @@ skills and the panel. Curtis gets native navigation on his phone, and the guaran
 unchanged: the app's writes are API writes, through the same `schema.parse()` and the same
 repo. See [`ios-app.md`](ios-app.md).
 
-The infographics renderer (`infographics/`, planned) is one more token-API client, and a
+The infographics renderer (`infographics/`) is one more token-API client, and a
 read-only one: it runs on Curtis's Mac, fetches through the API, and renders one-off stills and
 videos. It never writes. See [`infographics.md`](infographics.md).
 
