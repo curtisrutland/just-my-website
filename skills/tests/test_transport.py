@@ -229,6 +229,7 @@ def load_client(skill: str) -> Any:
 
 
 CLIENTS = {
+    "manage-garage": "GarageClient",
     "manage-health": "HealthClient",
     "manage-lifting": "LiftingClient",
     "manage-macros": "MacrosClient",
@@ -243,6 +244,8 @@ DAY = "2026-09-29"
 
 # (skill, call) pairs that must retry transparently: reads, PATCH, soft DELETE, server-idempotent POSTs.
 RETRIED: list[tuple[str, Callable[[Any], Any]]] = [
+    ("manage-garage", lambda c: c.get_bike("00000000-0000-4000-8000-000000000001")),
+    ("manage-garage", lambda c: c.update_bike("00000000-0000-4000-8000-000000000001", note="x")),
     ("manage-health", lambda c: c._get("/x")),
     ("manage-lifting", lambda c: c.set_goal("Get stronger")),
     ("manage-lifting", lambda c: c.pull()),
@@ -269,6 +272,7 @@ NOT_RETRIED: list[tuple[str, Callable[[Any], Any]]] = [
     ("manage-macros", lambda c: c.register_batch("Chili", DAY, **MACROS)),
     ("manage-macros", lambda c: c.set_target(DAY, calories=2000)),
     ("manage-shopping", lambda c: c.add_item("produce", "apples")),
+    ("manage-garage", lambda c: c.create_bike("Trek", "Roscoe 8", 2026)),
 ]
 
 

@@ -34,7 +34,7 @@ Known dates: the Neuron was first. The Checkpoint was in use by 2026-08-09. The 
 
 - No parts, installs, service intervals, services, or the "what's due" status view.
 - No estimated (pre-tracking) hours. v1's hours are tracked rides only.
-- No `manage-garage` skill. The backfill is a one-time script.
+- The `manage-garage` skill is small: mileage per bike (all time or a window, always with the untagged rides beside it), tagging rides on Curtis's word, untagged rides, bikes and their profiles. The backfill is a one-time script.
 - No iOS surface (no `garage:*` device scopes yet).
 - No money, suspension setup, Garmin Connect Gear, or notifications (anti-scope from the September draft, unchanged).
 
@@ -180,7 +180,7 @@ From the September draft, still the intended direction. Each step adds tables; n
 1. **Parts and installs:** `garage_component` (a fixed kind list plus `other`, only `kind` required, `source` of `spec_sheet` / `verified` / `assumed`) and `garage_install` (install windows, so a fork keeps its hours across bikes).
 2. **Hours:** a part's hours are derived from the `garage_ride` rows of the bike it was installed on during its install window, plus `garage_estimate` rows for pre-tracking history (bike- or component-level, always shown split: "62 h (48 tracked + ~14 est.)").
 3. **Intervals and services:** hours, distance or months, whichever comes first. Services reset specific intervals. This leads to the **"what needs attention before your next ride" status view**.
-4. **`manage-garage` skill:** Claude builds a bike's parts from its spec sheet and tags rides it's asked about. Garage creates take client-supplied ids, so the skill can retry every write (#57's reference implementation).
+4. **`manage-garage`, grown with parts:** Claude builds a bike's parts from its spec sheet and logs services. Garage creates take client-supplied ids, so the skill can retry every write (#57's reference implementation). (v1's skill already covers mileage and tagging.)
 5. **iOS:** the bike on the ride detail (`garage:read`), then tagging from the phone (`garage:write`).
 
 ### Open / deferred
