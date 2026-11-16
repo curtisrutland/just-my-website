@@ -118,8 +118,8 @@ Three callers. Each is a surface or client reading rides and writing garage thro
 
 ### Token API (`/api/garage/**`)
 
-- `bikes/route.ts`: `GET` (list, with derived totals; `?includeRetired`), `POST`.
-- `bikes/[id]/route.ts`: `GET`, `PATCH` (including `profiles: string[]`, which replaces the set), `DELETE` (soft; hard requires `JMW_API_KEY`).
+- `bikes/route.ts`: `GET` (list, with derived totals; `?includeRetired`; `?from=&to=` totals only the rides in that window of local dates), `POST`.
+- `bikes/[id]/route.ts`: `GET` (the same `from`/`to` window), `PATCH` (including `profiles: string[]`, which replaces the set), `DELETE` (soft; hard requires `JMW_API_KEY`).
 - `rides/route.ts`: `GET` (`?bikeId`, `?activityId`, `?from`, `?to`, paginated), `POST` (a manual tag with copied facts). A ride that's already tagged to the same bike gets `200`; to another bike, `409` naming it, because moving a ride is a `PATCH`.
 - `rides/[id]/route.ts`: `PATCH` (`bikeId`, which makes it `manual`), `DELETE` (soft: untag).
 - `rides/attribute/route.ts`: `POST`, the rule application above. Accepted by the full and agent tokens, plus the publisher token on this route only.

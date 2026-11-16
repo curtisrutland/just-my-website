@@ -79,6 +79,14 @@ export type RideTagCreate = z.input<typeof rideTagCreateSchema>;
 export type RideTagPatch = z.infer<typeof rideTagPatchSchema>;
 export type AttributeInput = z.infer<typeof attributeSchema>;
 
+/** Bike totals over a window of local dates (inclusive); both optional, so no window = all time. */
+export const bikeWindowSchema = z.object({
+  from: calendarDate.optional(),
+  to: calendarDate.optional(),
+});
+
+export type BikeWindow = z.infer<typeof bikeWindowSchema>;
+
 export const rideTagListQuerySchema = z.object({
   bikeId: z.uuid().optional(),
   activityId: z.uuid().optional(),
@@ -88,7 +96,10 @@ export const rideTagListQuerySchema = z.object({
 
 // --- Response views (the JSON the routes send; OpenAPI + the contract test read these) ---
 
-/** A bike with its profiles and the totals derived from its live ride tags (never stored). */
+/**
+ * A bike with its profiles and the totals derived from its live ride tags (never stored). With a
+ * `from`/`to` window, the totals cover only rides in it (`lastRiddenOn` too).
+ */
 export const bikeViewSchema = z.object({
   id: z.uuid(),
   name: z.string(),

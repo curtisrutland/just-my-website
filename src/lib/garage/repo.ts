@@ -6,6 +6,7 @@ import { decideAttribution, diffProfiles, normalizeProfile, type ExistingTag, ty
 import {
   rideTagCreateSchema,
   type AssignedBy,
+  type BikeWindow,
   type BikeCreate,
   type BikePatch,
   type RideFacts,
@@ -75,8 +76,8 @@ export function toRideTagView(row: GarageRide): RideTagView {
   };
 }
 
-/** Assemble views for these bike rows: their live profiles and their derived ride totals. */
-async function withProfilesAndTotals(rows: GarageBike[]): Promise<BikeView[]> {
+/** Assemble views for these bike rows: their live profiles and their derived ride totals (within `window`). */
+async function withProfilesAndTotals(rows: GarageBike[], window: BikeWindow = {}): Promise<BikeView[]> {
   if (rows.length === 0) return [];
   const ids = rows.map((r) => r.id);
   const profiles = await db
@@ -93,7 +94,14 @@ async function withProfilesAndTotals(rows: GarageBike[]): Promise<BikeView[]> {
       lastRiddenOn: max(garageRide.localDate),
     })
     .from(garageRide)
-    .where(and(liveRide, inArray(garageRide.bikeId, ids)))
+    .where(
+      and(
+        liveRide,
+        inArray(garageRide.bikeId, ids),
+        window.from ? gte(garageRide.localDate, window.from) : undefined,
+        window.to ? lte(garageRide.localDate, window.to) : undefined
+      )
+    )
     .groupBy(garageRide.bikeId);
   const totalsBy = new Map(
     totals.map((t) => [
@@ -117,14 +125,15 @@ async function withProfilesAndTotals(rows: GarageBike[]): Promise<BikeView[]> {
 
 // -- Bikes --------------------------------------------------------------------
 
-/** Live bikes, active first then retired, each by name. Retired bikes only when asked. */
-export async function listBikes({ includeRetired = false } = {}): Promise<BikeView[]> {
+/** Live bikes, active first then retired, each by name. Retired bikes only when asked. Totals cover
+ *  `from`–`to` (inclusive local dates) when given, else all time. */
+export async function listBikes({ includeRetired = false, from, to }: { includeRetired?: boolean } & BikeWindow = {}): Promise<BikeView[]> {
   const rows = await db
     .select()
     .from(garageBike)
     .where(includeRetired ? liveBike : and(liveBike, isNull(garageBike.retiredOn)))
     .orderBy(sql`${garageBike.retiredOn} is not null`, sql`lower(${garageBike.name})`);
-  return withProfilesAndTotals(rows);
+  return withProfilesAndTotals(rows, { from, to });
 }
 
 async function getBikeRow(id: string): Promise<GarageBike | null> {
@@ -132,9 +141,9 @@ async function getBikeRow(id: string): Promise<GarageBike | null> {
   return row ?? null;
 }
 
-export async function getBike(id: string): Promise<BikeView | null> {
+export async function getBike(id: string, window: BikeWindow = {}): Promise<BikeView | null> {
   const row = await getBikeRow(id);
-  return row ? (await withProfilesAndTotals([row]))[0] : null;
+  return row ? (await withProfilesAndTotals([row], window))[0] : null;
 }
 
 async function assertNameFree(name: string, exceptId?: string) {

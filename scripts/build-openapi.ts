@@ -825,7 +825,12 @@ const garageSpec = {
     "/api/garage/bikes": {
       get: {
         summary: "List bikes with their profiles and derived totals (rides, moving time, distance, last ridden)",
-        parameters: [{ name: "includeRetired", in: "query", schema: { type: "boolean", default: false } }],
+        description: "Totals count tagged rides only. With `from`/`to` (local dates, inclusive) they cover only rides in that window; without, all time.",
+        parameters: [
+          { name: "includeRetired", in: "query", schema: { type: "boolean", default: false } },
+          { name: "from", in: "query", schema: { type: "string", format: "date" } },
+          { name: "to", in: "query", schema: { type: "string", format: "date" } },
+        ],
         responses: { ...okJson("Bikes", "BikeList"), ...errorResponses },
       },
       post: {
@@ -836,7 +841,15 @@ const garageSpec = {
       },
     },
     "/api/garage/bikes/{id}": {
-      get: { summary: "Get a bike", parameters: [pathParam("id")], responses: { ...okJson("Bike", "BikeView"), ...errorResponses } },
+      get: {
+        summary: "Get a bike (totals all time, or within `from`/`to`)",
+        parameters: [
+          pathParam("id"),
+          { name: "from", in: "query", schema: { type: "string", format: "date" } },
+          { name: "to", in: "query", schema: { type: "string", format: "date" } },
+        ],
+        responses: { ...okJson("Bike", "BikeView"), ...errorResponses },
+      },
       patch: {
         summary: "Edit a bike",
         description: "`profiles` replaces the rule set; a removed profile also removes the rule tags it made (manual and backfill tags stay). Setting `retiredOn` retires the bike: its rules go, its tags stay.",

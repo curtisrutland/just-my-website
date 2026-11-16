@@ -2,8 +2,8 @@ import type { NextRequest } from "next/server";
 import { requireBearer, requirePrimary } from "@/lib/auth/tokens";
 import { garageWrite } from "@/lib/garage/http";
 import { getBike, hardDeleteBike, patchBike, softDeleteBike } from "@/lib/garage/repo";
-import { bikePatchSchema } from "@/lib/garage/schema";
-import { notFound, parseJson } from "@/lib/http/errors";
+import { bikePatchSchema, bikeWindowSchema } from "@/lib/garage/schema";
+import { notFound, parseJson, validationError } from "@/lib/http/errors";
 import { noContent, ok } from "@/lib/http/responses";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -11,7 +11,10 @@ type Ctx = { params: Promise<{ id: string }> };
 export async function GET(request: NextRequest, { params }: Ctx) {
   const auth = requireBearer(request);
   if (!auth.ok) return auth.response;
-  const bike = await getBike((await params).id);
+  const sp = request.nextUrl.searchParams;
+  const window = bikeWindowSchema.safeParse({ from: sp.get("from") ?? undefined, to: sp.get("to") ?? undefined });
+  if (!window.success) return validationError(window.error);
+  const bike = await getBike((await params).id, window.data);
   return bike ? ok(bike) : notFound("Bike not found");
 }
 

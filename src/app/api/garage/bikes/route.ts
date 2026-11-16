@@ -2,16 +2,22 @@ import type { NextRequest } from "next/server";
 import { requireBearer } from "@/lib/auth/tokens";
 import { garageWrite } from "@/lib/garage/http";
 import { createBike, listBikes } from "@/lib/garage/repo";
-import { bikeCreateSchema } from "@/lib/garage/schema";
-import { parseJson } from "@/lib/http/errors";
+import { bikeCreateSchema, bikeWindowSchema } from "@/lib/garage/schema";
+import { parseJson, validationError } from "@/lib/http/errors";
 import { created, ok } from "@/lib/http/responses";
 
-/** GET — every live bike with its profiles and derived totals; `?includeRetired=true` adds retired ones. */
+/**
+ * GET — every live bike with its profiles and derived totals; `?includeRetired=true` adds retired
+ * ones; `?from=&to=` (local dates, inclusive) totals only the rides in that window.
+ */
 export async function GET(request: NextRequest) {
   const auth = requireBearer(request);
   if (!auth.ok) return auth.response;
-  const includeRetired = request.nextUrl.searchParams.get("includeRetired") === "true";
-  return ok({ items: await listBikes({ includeRetired }) });
+  const sp = request.nextUrl.searchParams;
+  const window = bikeWindowSchema.safeParse({ from: sp.get("from") ?? undefined, to: sp.get("to") ?? undefined });
+  if (!window.success) return validationError(window.error);
+  const includeRetired = sp.get("includeRetired") === "true";
+  return ok({ items: await listBikes({ includeRetired, ...window.data }) });
 }
 
 /** POST — add a bike (nickname defaults to the model) with its profile rules. */

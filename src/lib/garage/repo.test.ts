@@ -120,6 +120,23 @@ describe("attribute: rules tag, people win", () => {
   });
 });
 
+describe("totals over a window", () => {
+  it("counts only rides between from and to (inclusive), last ridden included", async () => {
+    const bike = await createBike({ name: `${T}window`, brand: "x", model: "y", modelYear: 2026 });
+    for (const day of ["1990-03-01", "1990-03-15", "1990-04-01"]) {
+      await createRideTag({ ...ride(null, { localDate: day, startedAt: `${day}T12:00:00.000Z` }), bikeId: bike.id });
+    }
+    expect(await getBike(bike.id)).toMatchObject({ rides: 3, distanceMeters: 60000, lastRiddenOn: "1990-04-01" });
+    expect(await getBike(bike.id, { from: "1990-03-01", to: "1990-03-31" })).toMatchObject({
+      rides: 2,
+      movingSeconds: 7200,
+      distanceMeters: 40000,
+      lastRiddenOn: "1990-03-15",
+    });
+    expect(await getBike(bike.id, { from: "1991-01-01" })).toMatchObject({ rides: 0, distanceMeters: 0, lastRiddenOn: null });
+  });
+});
+
 describe("hand tags", () => {
   it("replays the same tag, refuses another bike, and a move makes it manual", async () => {
     const a = await createBike({ name: `${T}hand a`, brand: "x", model: "y", modelYear: 2026 });
