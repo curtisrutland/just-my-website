@@ -22,6 +22,7 @@ import { GET as liftingSession, PATCH as liftingSessionPatch } from "@/app/api/l
 import { GET as rides } from "@/app/api/rides/route";
 import { GET as ridesWeekly } from "@/app/api/rides/weekly/route";
 import { GET as ride, PATCH as ridePatch } from "@/app/api/rides/[id]/route";
+import { GET as rideFit } from "@/app/api/rides/[id]/fit/route";
 import { GET as vitalsList } from "@/app/api/vitals/route";
 import { GET as vitalsSummary } from "@/app/api/vitals/summary/route";
 import { DELETE as vitalsDelete, GET as vitalsDay } from "@/app/api/vitals/[date]/route";
@@ -177,6 +178,7 @@ describe("the iOS allowlist — a phone token on module routes", () => {
       ["weight delete", weightDelete(req(raw, `/api/weight/entries/${nil}`, { method: "DELETE" }), ctx({ id: nil }))],
       ["lifting patch", liftingSessionPatch(req(raw, `/api/lifting/sessions/${nil}`, { method: "PATCH", body: {} }), ctx({ id: nil }))],
       ["ride patch", ridePatch(req(raw, `/api/rides/${nil}`, { method: "PATCH", body: {} }), ctx({ id: nil }))],
+      ["ride raw file", rideFit(req(raw, `/api/rides/${nil}/fit`), ctx({ id: nil }))],
       ["vitals delete", vitalsDelete(req(raw, "/api/vitals/2026-10-01", { method: "DELETE" }), ctx({ date: "2026-10-01" }))],
       ["shopping items read", shoppingItems(req(raw, "/api/shopping/items"))],
       ["shopping hard delete", shoppingDelete(req(raw, `/api/shopping/items/${item.id}?hard=true`, { method: "DELETE" }), ctx({ id: item.id }))],

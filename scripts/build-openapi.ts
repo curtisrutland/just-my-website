@@ -694,6 +694,20 @@ const ridesSpec = {
         },
       },
     },
+    "/api/rides/{id}/fit": {
+      get: {
+        summary: "Download the ride's raw FIT file",
+        description:
+          "The exact bytes the device produced (application/octet-stream), streamed from storage. The stream on the detail read is a 10 s downsample; this is the full-resolution source. Normal JMW tokens only (not the publisher token, not a device token).",
+        parameters: [pathParam("id")],
+        responses: {
+          "200": { description: "The raw FIT file", content: { "application/octet-stream": { schema: { type: "string", format: "binary" } } } },
+          "401": errorResponses["401"],
+          "404": errorResponses["404"],
+          "409": { description: "The ride exists but its raw file is missing from storage", content: { "application/json": { schema: ERR } } },
+        },
+      },
+    },
     "/api/rides/weekly": {
       get: {
         security: deviceSecurity,

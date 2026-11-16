@@ -245,9 +245,9 @@ a parser improvement back-fills history (e.g. if v1 skipped a field the SDK expo
   Leaflet + OSM tiles over the stream's lat/lon, simply absent for indoor rides — and inline
   `name`/`note` editing. Server components read via repo; server actions write via the shared
   ingest pipeline / `schema.parse → repo`. The UI never calls the API.
-- **Token API** (`/api/rides/**`): upload (the one publisher-token route), reads, the human-layer
-  `PATCH`, soft-DELETE (agent barred from hard, per kernel), reprocess. Standard envelope /
-  pagination / errors.
+- **Token API** (`/api/rides/**`): upload (the one publisher-token route), reads, the raw-file
+  download, the human-layer `PATCH`, soft-DELETE (agent barred from hard, per kernel), reprocess.
+  Standard envelope / pagination / errors.
 - **Skill** (`manage-rides`, ships with v1): the conversation surface. Marquee actions:
   **list_rides** (sport defaults to cycling; `sport=None` for everything), **get_ride** (streams
   excluded by default — the agent wants the summary, not 1,800-point arrays), **weekly** (the
@@ -268,6 +268,15 @@ a parser improvement back-fills history (e.g. if v1 skipped a field the SDK expo
   `PATCH` (name/note only, `.strict()`); `DELETE` (soft; `?hard=true` requires `JMW_API_KEY` and
   also deletes the Blob).
 - `src/app/api/rides/[id]/reprocess/route.ts` — `POST` (normal JMW tokens; **not** publisher).
+- `src/app/api/rides/[id]/fit/route.ts` — `GET` the ride's **raw FIT file**, byte for byte as the
+  device wrote it (`application/octet-stream`, streamed from Blob). The stream on the detail read
+  is a 10 s downsample; this is the full-resolution source, for a client that needs every sample
+  (the local infographics renderer, `docs/infographics.md`, decodes it with `fit.ts`). **Normal
+  JMW tokens only**: not the publisher token, and not a device token — it is off the iOS
+  allowlist, because the app renders what the API computes and has no use for the file. `404` for
+  an unknown or soft-deleted ride; `409 conflict` when the row exists but its file is missing
+  from storage (the same answer reprocess gives). It exposes no storage internals: the response
+  carries the bytes, not the `blobKey` or `fileHash`.
 - `src/app/api/rides/weekly/route.ts` — `GET` the weekly rollup (`weeks`, `sport` params).
 
 `get`-after-write, soft-delete default, PATCH-as-modify-verb: all kernel-standard.
