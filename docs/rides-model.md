@@ -271,8 +271,9 @@ a parser improvement back-fills history (e.g. if v1 skipped a field the SDK expo
 - `src/app/api/rides/[id]/fit/route.ts` — `GET` the ride's **raw FIT file**, byte for byte as the
   device wrote it (`application/octet-stream`, streamed from Blob). The stream on the detail read
   is a 10 s downsample; this is the full-resolution source, for a client that needs every sample
-  (the local infographics renderer, `docs/infographics.md`, decodes it with `fit.ts`). **Normal
-  JMW tokens only**: not the publisher token, and not a device token — it is off the iOS
+  (the local infographics renderer, `docs/infographics.md`, decodes it with `decodeFitSamples`
+  in `fit.ts`: every record at its own timestamp, same channel names and conversions as the
+  stream). **Normal JMW tokens only**: not the publisher token, and not a device token — it is off the iOS
   allowlist, because the app renders what the API computes and has no use for the file. `404` for
   an unknown or soft-deleted ride; `409 conflict` when the row exists but its file is missing
   from storage (the same answer reprocess gives). It exposes no storage internals: the response

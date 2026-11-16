@@ -16,7 +16,7 @@ Derived from justmy.recipes, with intentional deviations marked **[DIFFERS FROM 
 | **Token API** (`/api/**`) | route → `repo` | route → `schema.parse` → `repo` |
 | **iOS app** (`ios/`) | token API `GET` | token API `POST`/`PATCH`/soft-`DELETE` |
 | **Kitchen panel** (`/panel`, `/api/panel/**`) | route → module `repo` reads | check-off → `shopping` `repo` |
-| **Infographics** (`infographics/`, local, when it lands) | token API `GET` | none, ever |
+| **Infographics** (`infographics/`, local) | token API `GET` | none, ever |
 
 The iOS app is a client of the token API, not a fourth path to the data: its writes are API
 writes, so they get the same `schema.parse` → `repo`. It renders what the API returns. Domain

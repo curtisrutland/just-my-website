@@ -151,6 +151,27 @@ export function downsampleRecords(
   return { resolutionSeconds: resolution, data: { t, ...channels } };
 }
 
+/**
+ * Every record, un-bucketed: `t` is each sample's own offset from the start (seconds, irregular
+ * under smart recording) and every other channel aligns to it, with the same names and unit
+ * conversions as the stored stream. Null = that record lacked the channel; a channel no record
+ * carries is omitted. Records are returned in time order.
+ */
+export function samplesFromRecords(records: FitMessage[], startedAt: Date): Record<string, (number | null)[]> {
+  const t0 = startedAt.getTime();
+  const stamped = records
+    .map((r) => ({ r, offsetS: r.timestamp instanceof Date ? (r.timestamp.getTime() - t0) / 1000 : null }))
+    .filter((x): x is { r: FitMessage; offsetS: number } => x.offsetS != null && x.offsetS >= 0)
+    .sort((a, b) => a.offsetS - b.offsetS);
+
+  const data: Record<string, (number | null)[]> = { t: stamped.map((x) => x.offsetS) };
+  for (const name of [...MEAN_CHANNELS, ...LAST_CHANNELS]) {
+    const values = stamped.map((x) => channelValue(x.r, name));
+    if (values.some((v) => v != null)) data[name] = values;
+  }
+  return data;
+}
+
 /** Make a decoded message JSON-safe for jsonb storage (Dates → ISO strings), verbatim otherwise. */
 function jsonSafe(mesg: FitMessage | undefined): Record<string, unknown> | null {
   if (!mesg) return null;
@@ -158,11 +179,10 @@ function jsonSafe(mesg: FitMessage | undefined): Record<string, unknown> | null 
 }
 
 /**
- * Decode FIT bytes and normalize to the `fitRideSchema` shape. Throws `FitDecodeError` on
- * non-FIT input, integrity failure, no session, or a multi-session (multisport) file —
- * rejected loudly per the model doc, never a silent first-session pick.
+ * Decode FIT bytes down to the one session every caller needs. Throws `FitDecodeError` on
+ * non-FIT input, integrity failure, no session, a multi-session file, or a session with no start.
  */
-export function decodeFitRide(bytes: Buffer) {
+function readSingleSession(bytes: Buffer) {
   const stream = Stream.fromBuffer(bytes);
   if (!Decoder.isFIT(stream)) throw new FitDecodeError("Not a FIT file");
   const decoder = new Decoder(stream);
@@ -184,9 +204,29 @@ export function decodeFitRide(bytes: Buffer) {
   }
 
   const session = sessions[0];
-  const fileId = messages.fileIdMesgs?.[0];
   const startedAt = session.startTime;
   if (!(startedAt instanceof Date)) throw new FitDecodeError("Session has no start time");
+  return { messages, session, activity, startedAt };
+}
+
+/**
+ * The file at full resolution: every record, not the 10 s stream that ingestion stores. For a
+ * client that needs each sample (the local infographics renderer, docs/infographics.md, which
+ * gets the bytes from GET /api/rides/{id}/fit). Ingestion never calls this.
+ */
+export function decodeFitSamples(bytes: Buffer): { startedAt: Date; data: Record<string, (number | null)[]> } {
+  const { messages, startedAt } = readSingleSession(bytes);
+  return { startedAt, data: samplesFromRecords(messages.recordMesgs ?? [], startedAt) };
+}
+
+/**
+ * Decode FIT bytes and normalize to the `fitRideSchema` shape. Throws `FitDecodeError` on
+ * non-FIT input, integrity failure, no session, or a multi-session (multisport) file —
+ * rejected loudly per the model doc, never a silent first-session pick.
+ */
+export function decodeFitRide(bytes: Buffer) {
+  const { messages, session, activity, startedAt } = readSingleSession(bytes);
+  const fileId = messages.fileIdMesgs?.[0];
 
   const elapsed = num(session.totalElapsedTime);
   const moving = num(session.totalTimerTime) ?? elapsed;

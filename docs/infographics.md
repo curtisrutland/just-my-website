@@ -5,8 +5,8 @@ a conversation (with Claude Code or claude.ai), then built, rendered on Curtis's
 alone. This doc is the fixed process, toolkit and data path that every piece follows, so a
 one-off stays cheap and the tenth piece is built the same way as the first.
 
-**Status: PLAYBOOK — the approach was approved 2026-11-16 (epic #124). This doc awaits Curtis's
-approval. No code is written.**
+**Status: PLAYBOOK — approved 2026-11-16 (epic #124, PR #125). The scaffold (#122) is built:
+`infographics/` exists with one sample piece. No real piece has been made yet.**
 
 It is **not** an interactive visualization builder, it is not part of the website, and it never
 writes data.
@@ -22,12 +22,14 @@ together.
 ```
 infographics/
   package.json              its own install: Remotion, React, d3. Nothing here ships to Vercel.
-  remotion.config.ts
+  remotion.config.ts        entry point, public dir, PNG frames, H.264, inlined fonts
   src/
     Root.tsx                registers every piece's compositions
-    kit/                    the shared kit (§6): theme, fonts, formats, units, map helpers
-    data/                   the data layer (§4): API client, cache, snapshot, FIT decode
+    kit/                    the shared kit (§6): Stage, compose, theme, fonts, formats, units, map
+    data/                   the data layer (§4): client, cache, FIT; api/ is generated
+  scripts/                  the commands (§7): data, render, api-types
   pieces/
+    2026-11-sample-ride/    the scaffold's own piece: the smallest working example to copy
     2026-11-phantom-riders/ one folder per piece, named YYYY-MM-slug
       brief.md              what was agreed (§3). Committed.
       data.ts               fetch and shape, then freeze the snapshot. Committed.
@@ -41,9 +43,9 @@ infographics/
 API, like the skills. It never opens the database, never imports a module's `repo`, and makes no
 `POST`, `PATCH` or `DELETE`.
 
-**It is walled off from the site's build.** The root `tsconfig.json` includes every `**/*.tsx`
-and the root Vitest run picks up every test file, so `infographics/` is excluded from the root
-type-check and test runs, and has its own. A broken piece can never fail a deploy.
+**It is walled off from the site's build.** The root `tsconfig.json` and `vitest.config.ts`
+exclude `infographics/`, and `.vercelignore` keeps it out of a deploy. It has its own
+`npm run typecheck` and `npm test`. A broken piece can never fail a deploy.
 
 ---
 
@@ -119,13 +121,16 @@ Filled in at the end: date, command, snapshot date.
 
 **One path, three steps: fetch, shape, freeze.**
 
-- **Fetch** through the data layer's client only. It is typed from the generated OpenAPI spec
-  (`openapi/*.json`, built by `npm run openapi:build`), so a field that changes in a module's Zod
-  schema breaks the piece at compile time, not in a picture.
+- **Fetch** through the data layer's client only. It is typed from the generated OpenAPI spec:
+  `npm run api:types` rebuilds the site's specs from its Zod schemas and turns them into
+  TypeScript, so a field that changes in a module's schema breaks the piece at compile time, not
+  in a picture. The client exposes `GET` and nothing else, and the `fetch` underneath refuses any
+  other method.
 - **Shape** in `data.ts`: filter, join, convert, and do any heavy computation once here.
-- **Freeze** the result to `data.json`. **A composition reads only the snapshot.** It makes no
-  network call and reads no cache. The same snapshot renders the same frames next month, even
-  after the underlying data has changed.
+- **Freeze** the result to `data.json`. A piece's `data.ts` default-exports a function that
+  returns the snapshot, and the runner writes the file, so a piece cannot forget to. **A
+  composition reads only the snapshot.** It makes no network call and reads no cache. The same
+  snapshot renders the same frames next month, even after the underlying data has changed.
 
 **Credentials.** The client reads `JMW_AGENT_TOKEN` from the repo's `.env.local`, the same source
 `scripts/build-skills.mjs` uses. The agent token reads everything and is structurally unable to
@@ -141,9 +146,10 @@ file's hash), so they are fetched once.
 to draw an hour-long chart. Only a piece that animates position needs full resolution, and then
 only for the rides it will draw.
 
-**Full-resolution GPS** comes from the ride's raw FIT file (the route added by #121), decoded
-with the site's own decoder in `src/lib/rides/fit.ts`. There is no second decoder: the channel
-names and unit conversions are the ones ingestion uses.
+**Full-resolution GPS** comes from the ride's raw FIT file (`GET /api/rides/{id}/fit`), decoded
+with the site's own decoder: `decodeFitSamples` in `src/lib/rides/fit.ts` returns every record at
+its own timestamp. There is no second decoder: the channel names and unit conversions are the
+ones ingestion uses. `data.ts` gets it as `fit(rideId)`.
 
 **Location.** The ride row carries no location, so "rides in an area" is worked out in `data.ts`
 from the streams. GPS traces show where Curtis rides and where rides start. A piece marked
@@ -205,8 +211,14 @@ light for print.
 
 Video is H.264 MP4 at 30 frames per second unless the brief asks for 60.
 
-**Helpers:** unit formatters (§5), heart-rate zone colours, fitting a map projection to a set of
-traces, and drawing traces to a canvas.
+**Helpers:** the unit formatters (§5), which are the web UI's own ride formatters re-exported so
+they cannot drift; fitting a map projection to a set of traces; and drawing a trace to a canvas.
+Heart-rate zone colours are not in the kit yet: the web UI defines none, so the first piece that
+needs them brings them in.
+
+**`Stage` is the root of every composition.** It holds the render until the fonts and the
+piece's snapshot are loaded, then hands the snapshot to the piece. `pieceCompositions` registers
+a piece's compositions, one per format.
 
 **What goes in the kit:** only what a real second piece needs. The first piece may write a helper
 inline; the second piece that wants it moves it into the kit.
@@ -231,22 +243,29 @@ frame-by-frame rendering correct and a re-render identical. So, inside a composi
 **Drawing.** d3 for scales, shapes and map projection. Canvas for dense marks (thousands of GPS
 points); SVG and HTML for text and sparse marks.
 
-**Commands** (the scaffold, #122, provides these as npm scripts in `infographics/`):
+**Commands,** run in `infographics/`. From a clean checkout, `npm ci` at the repo root and again
+in `infographics/` come first.
 
 | Step | Command |
 |---|---|
+| Regenerate the typed API surface | `npm run api:types` (once, and after any API change) |
 | Fetch, shape, freeze a snapshot | `npm run data -- <piece>` (`--refresh` refetches) |
-| Preview | `npm run studio` |
+| Preview | `npm run studio` (http://localhost:3123) |
 | Render a still | `npm run still -- <composition> [--frame N]` |
 | Render a video | `npm run render -- <composition>` |
+| Check the package | `npm run typecheck` and `npm test` |
 
 Compositions are named `<slug>-<format>`, for example `phantom-riders-wide`. Output goes to
-`out/<piece>/`.
+`out/<piece>/`. Flags after the composition pass through to Remotion; `--sequence` writes a
+video's frames as PNGs.
+
+**A new piece** is a folder under `pieces/` and one line in `src/Root.tsx`. The project skill
+`.claude/skills/new-infographic` walks an agent through it; `pieces/2026-11-sample-ride/` is the
+example to copy.
 
 **Licence and telemetry** (checked 2026-11-16 on remotion.dev): Remotion is free for individuals
 and for companies of up to three people. A command-line render reports usage to Remotion only when
-a licence key is set, and none is set here. Version 4 is current; the scaffold pins the exact
-version and re-reads the licence page before installing.
+a licence key is set, and none is set here. Remotion is pinned to exactly 4.0.544.
 
 ---
 
@@ -278,15 +297,20 @@ keeps things.
 - the five formats and the 30 fps default (§6);
 - the purity rules for a composition (§7).
 
-**Left to the scaffold (#122):**
+**Decided by the scaffold (#122), with what was measured on 2026-11-16:**
 
-- how a composition loads its snapshot (a static import, or Remotion's static-file loading),
-  decided by measuring with a full-resolution snapshot;
-- the exact Remotion version, the npm scripts, and the root excludes;
-- the full-resolution export from `src/lib/rides/fit.ts`: its entry point returns the 10-second
-  stream today, though `downsampleRecords` already takes a resolution;
-- that the renderer can produce the `poster` size in one image;
-- the project skill that scaffolds a piece folder.
+- **Snapshot loading:** a static file served from the piece's own folder (`pieces/` is Remotion's
+  public directory), not a static import, so a piece with no snapshot yet breaks only itself.
+  Padding the sample's snapshot to 11.6 MB, about sixty rides of full-resolution GPS, added 0.1 s
+  to a still and to a 180-frame video. A changed snapshot is picked up by the next render.
+- **Repeatability:** the sample video rendered twice gave 180 frames with identical hashes, and
+  the still gave the same file each time.
+- **Poster:** 5400 × 7200 renders in one image, and canvas marks are drawn at the full 5× density.
+- **Full resolution:** `decodeFitSamples` was added to `src/lib/rides/fit.ts`. For the sample
+  ride it returns 4,125 samples where the stored stream has 1,038 buckets.
+- **Fonts:** imported from `src/app/fonts/` and inlined into the bundle. Emitted as files they
+  rendered but Studio did not serve them.
+- **Versions:** Remotion 4.0.544 pinned exactly; React, TypeScript and tsx match the site's.
 
 **Out of scope:** an interactive builder, anything served by the website, scheduled or automatic
 rendering, and writes of any kind.

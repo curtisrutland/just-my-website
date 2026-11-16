@@ -1,0 +1,9 @@
+node_modules/
+# API responses and raw FIT files (docs/infographics.md §4)
+.cache/
+# rendered stills and videos (§8)
+out/
+# frozen snapshots: GPS traces and body data, often tens of megabytes (§8)
+pieces/*/data.json
+# generated from ../openapi/*.json by `npm run api:types`
+src/data/api/

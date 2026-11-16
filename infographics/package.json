@@ -1,0 +1,34 @@
+{
+  "name": "jmw-infographics",
+  "version": "0.0.0",
+  "private": true,
+  "description": "One-off infographics rendered locally from the justmy.website token API. See docs/infographics.md.",
+  "scripts": {
+    "api:types": "tsx scripts/api-types.ts",
+    "data": "tsx scripts/data.ts",
+    "studio": "remotion studio --port=3123",
+    "still": "tsx scripts/render.ts still",
+    "render": "tsx scripts/render.ts video",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.544",
+    "d3-geo": "3.1.2",
+    "dotenv": "17.4.2",
+    "openapi-fetch": "0.17.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "remotion": "4.0.544"
+  },
+  "devDependencies": {
+    "@types/d3-geo": "3.1.1",
+    "@types/node": "20.19.43",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "openapi-typescript": "7.13.0",
+    "tsx": "4.23.0",
+    "typescript": "5.9.3",
+    "vitest": "4.1.12"
+  }
+}
