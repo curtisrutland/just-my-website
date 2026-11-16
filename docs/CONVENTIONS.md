@@ -16,11 +16,20 @@ Derived from justmy.recipes, with intentional deviations marked **[DIFFERS FROM 
 | **Token API** (`/api/**`) | route → `repo` | route → `schema.parse` → `repo` |
 | **iOS app** (`ios/`) | token API `GET` | token API `POST`/`PATCH`/soft-`DELETE` |
 | **Kitchen panel** (`/panel`, `/api/panel/**`) | route → module `repo` reads | check-off → `shopping` `repo` |
+| **Infographics** (`infographics/`, local, when it lands) | token API `GET` | none, ever |
 
 The iOS app is a client of the token API, not a fourth path to the data: its writes are API
 writes, so they get the same `schema.parse` → `repo`. It renders what the API returns. Domain
 logic it would need lives in `src/lib/{module}` and is exposed by the API, never reimplemented
 in Swift (`docs/ios-app.md` §2, §7).
+
+The infographics renderer (`infographics/`, `docs/infographics.md`) is a read-only client of the
+token API that runs on Curtis's Mac and renders one-off stills and videos. It differs from the iOS
+app in one deliberate way: a piece may **derive a figure no module provides**, for that one
+picture. The figure is defined in the piece's brief and labelled on the piece, is never written
+back or added to the API from there, and where a module already has the number the piece uses the
+module's. A figure the *site* would show moves to `src/lib/{module}` and is served by the API
+(`docs/infographics.md` §5).
 
 - The **repo layer** (`src/lib/{module}/repo.ts`) is the only place Drizzle tables are
   touched. Both read surfaces call it. This is the "same data" guarantee.
@@ -195,7 +204,7 @@ A module is one of two kinds:
   night's sleep and the training goal in view, a daily health summary. They have no facts of their
   own. None exists server-side yet; `manage-health` is the skill-layer one (below).
 
-Surfaces (web UI, token API, iOS app, kitchen panel — §1) are neither. A surface reads and writes
+Surfaces (web UI, token API, iOS app, kitchen panel, infographics renderer — §1) are neither. A surface reads and writes
 any module, always through that module's own `schema` and `repo`.
 
 **The rule: a logging module never relies on another module to do its job. An interpretive module

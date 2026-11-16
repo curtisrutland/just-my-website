@@ -120,6 +120,7 @@ the Neon and Clerk Marketplace integrations. The rest:
 | [`docs/vitals-model.md`](docs/vitals-model.md) | The vitals module's data model — daily Garmin measurements, and the measurement-vs-verdict line it draws |
 | [`docs/garage-model.md`](docs/garage-model.md) | The garage module's data model — bikes, the profile rules that auto-tag rides, ride tags with copied facts (v1), and the maintenance roadmap |
 | [`docs/garmin-daemon.md`](docs/garmin-daemon.md) | The Garmin daemon on Curtis's Upboard — what it polls, its token lifecycle, and what it may not do |
+| [`docs/infographics.md`](docs/infographics.md) | The playbook for one-off infographics (stills and video) rendered locally from the token API — process, brief template, data rules, formats |
 | [`docs/UI-CONTRACT.md`](docs/UI-CONTRACT.md) | Design tokens, component inventory, layout slots |
 | [`docs/archive/`](docs/archive/) | Historical briefs, handoffs, and the pre-issues backlog (see its README) |
 | [GitHub Issues](https://github.com/curtisrutland/just-my-website/issues) | Outstanding work + deferred decisions (the tracker) |
