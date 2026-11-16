@@ -141,6 +141,11 @@ hard-delete. The base URL defaults to production, because that is where the data
 refetch every ride. A `--refresh` flag refetches. Raw FIT files are immutable (their key is the
 file's hash), so they are fetched once.
 
+**A window never includes today,** unless the brief says why it should. A day in progress has only
+part of its food logged, its steps half counted and its rides perhaps not yet uploaded, and a
+picture draws that as a shortfall. `data.ts` stops at the last complete day (`todayISO()` in
+`src/lib/date.ts` is today in Curtis's timezone).
+
 **Use the coarsest data that answers the question.** The API's ride stream is downsampled to
 10-second buckets (`docs/rides-model.md`), which is enough to decide which rides are in an area or
 to draw an hour-long chart. Only a piece that animates position needs full resolution, and then

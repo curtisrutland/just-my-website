@@ -1,9 +1,10 @@
+import { todayISO } from "../../../src/lib/date";
 import { all, unwrap } from "../../src/data/client";
 import type { PieceData } from "../../src/data/piece";
 
 /** What the composition reads. Weights are pounds, energy kcal, protein grams, distance metres. */
 export type Snapshot = {
-  /** First weigh-in to latest weigh-in, both inclusive. */
+  /** First weigh-in to the last complete day with a weigh-in, both inclusive. Never today. */
   window: { start: string; end: string; days: number };
   /** The weight module's rollup: one entry per day, raw weigh-in and its 7-day average. */
   weight: { date: string; weight: number | null; avg: number | null }[];
@@ -37,13 +38,16 @@ const addDays = (iso: string, n: number) => new Date(utc(iso) + n * DAY).toISOSt
 const daysFrom = (a: string, b: string) => Math.round((utc(b) - utc(a)) / DAY);
 
 const build: PieceData<Snapshot> = async ({ api, log }) => {
-  // The window is the weigh-in log itself: first entry to latest.
+  // The window is the weigh-in log, first entry to latest, but it never includes today: a day
+  // still in progress has only part of its food logged, and would read as a large shortfall.
+  const today = todayISO();
   const entries = await all((limit, offset) => api.weight.GET("/api/weight/entries", { params: { query: { limit, offset } } }).then(unwrap));
-  const dates = entries.map((e) => e.measuredOn).sort();
+  const dates = entries.map((e) => e.measuredOn).filter((date) => date < today).sort();
+  if (dates.length === 0) throw new Error("There is no weigh-in before today.");
   const start = dates[0];
   const end = dates[dates.length - 1];
   const days = daysFrom(start, end) + 1;
-  log(`window ${start} to ${end}: ${days} days, ${entries.length} weigh-ins`);
+  log(`window ${start} to ${end} (today, ${today}, is left out): ${days} days, ${dates.length} weigh-ins`);
 
   const rollup = unwrap(await api.weight.GET("/api/weight/rollup", { params: { query: { window: days, end } } }));
   const weight = rollup.series;
