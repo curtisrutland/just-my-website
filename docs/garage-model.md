@@ -20,9 +20,11 @@ Same platform kernel as every module (two surfaces / one data, two-token auth, e
 | Neuron 6 | 2026 | Canyon | Neuron 6 | — |
 | Roscoe 8 | 2026 | Trek | Roscoe 8 | — |
 | Model C | 2026 | Sunday | Model C | `BMX` |
-| Checkpoint ALR4 | 2026 | Trek | Checkpoint ALR4 | `GRAVEL` |
+| Checkpoint ALR4 | 2026 | Trek | Checkpoint ALR4 | `GRAVEL`, `Bike` |
 
-The nicknames are the model names for now; Curtis can rename them. The Neuron and the Roscoe get profiles when Curtis sets up per-bike profiles on his devices. Until then, `MTB`, `MOUNTAIN` and `Bike` rides are tagged by hand.
+The nicknames are the model names for now; Curtis can rename them.
+
+`Bike` (the Instinct's generic cycling profile) is a Checkpoint rule because the data says so: every `Bike` ride whose bike is known is the Checkpoint, and the rest are all road pace (9.2–14.5 mph). Curtis rides the mountain bikes and the BMX on pavement only between trails. The Neuron and the Roscoe get profiles when Curtis sets up per-bike profiles on his devices. Until then, `MTB` and `MOUNTAIN` rides are tagged by hand.
 
 Known dates: the Neuron was first. The Checkpoint was in use by 2026-08-09. The Roscoe was delivered 2026-10-01. The Model C was bought 2026-11-07.
 
@@ -128,10 +130,10 @@ Every write on both surfaces goes `schema.parse() → repo`, as always. OpenAPI 
 
 ## Initial load: `scripts/garage-backfill.ts` (one-time)
 
-1. Creates the four bikes and the two profile rules (`BMX` → Model C, `GRAVEL` → Checkpoint ALR4).
+1. Creates the four bikes and three profile rules (`BMX` → Model C; `GRAVEL` and `Bike` → Checkpoint ALR4).
 2. Proposes a tag for each existing cycling ride, in this order:
    1. **Profile rule** → a `rule` tag.
-   2. **The ride's name or note names exactly one bike** (checkpoint · neuron/canyon · roscoe · model c/sunday) → `backfill`, "named in the ride".
+   2. **The ride's name or note names exactly one bike** → `backfill`, "named in the ride". The aliases: checkpoint, gravelking (the Checkpoint's tires) or cyclovia → Checkpoint; neuron or canyon → Neuron; roscoe → Roscoe; model c or sunday → Model C.
    3. **Before 2026-10-01 with no bike named** → Neuron 6, `backfill`, "before the Roscoe arrived".
    4. **Everything else goes on Curtis's list:**
       - two or more bikes named;
@@ -143,16 +145,18 @@ Preview against today's data (63 cycling rides):
 
 | Bike | Tags | How |
 |---|---|---|
-| Neuron 6 | 29 | before the Roscoe arrived |
-| Checkpoint ALR4 | 11 | 5 by the GRAVEL rule, 6 named in the ride |
+| Neuron 6 | 24 | before the Roscoe arrived |
+| Checkpoint ALR4 | 22 | 5 by the `GRAVEL` rule, 7 by the `Bike` rule, 10 named in the ride (including the three Cyclovia rides and the GravelKing tire ride) |
 | Roscoe 8 | 2 | named in the ride (10/11, 10/13) |
-| Model C | 2 | 1 by the BMX rule, 1 named in the ride (11/7) |
-| **Curtis's list** | **19** | see below |
+| Model C | 2 | 1 by the `BMX` rule, 1 named in the ride (11/7) |
+| **Curtis's list** | **13** | all Neuron-or-Roscoe trail rides, see below |
 
 The list:
 - **The Roscoe named before its 10/1 delivery** (9/24 "On the new Roscoe", 9/26, 9/30). The delivery date and the notes disagree, so these aren't guessed.
 - **10/20, which names both the Neuron and the Roscoe.**
-- **15 rides after 10/1 with no bike named:** `MTB` ×6, `MOUNTAIN` ×3, `Bike` ×6. The `Bike` rides include three Cyclovia rides on 11/7.
+- **9 `MTB` or `MOUNTAIN` rides after 10/1 with no bike named.**
+
+A speed rule was considered and left out. No ride on an MTB profile averages road pace (every known mountain-bike or BMX ride is 8.4 mph or less), so once `Bike` is a rule, "9.5 mph or more → Checkpoint" tags nothing extra, and it would put a guess into live auto-tagging.
 
 Curtis tags the list on `/garage`. The two elliptical sessions aren't cycling and aren't considered.
 
