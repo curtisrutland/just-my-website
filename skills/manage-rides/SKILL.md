@@ -113,3 +113,6 @@ A ride is also a training day. When the conversation widens past the ride itself
   fueling context.
 - **manage-weight** — the trend the training serves. Reference it factually; no scores here
   either.
+
+Not a health skill, but close by: **manage-garage** knows which bike each ride was on, and the
+miles and hours per bike. Questions about a bike, or "which bike was that", go there.

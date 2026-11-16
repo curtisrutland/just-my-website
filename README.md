@@ -134,8 +134,9 @@ token API routes, Clerk-gated UI, generated OpenAPI fragment, and a Python skill
 skill, **`manage-health`**, is the one sanctioned cross-cut (`docs/CONVENTIONS.md` §9): a
 read-only unified daily/weekly view over the five health modules, assembled at the skill layer
 from their existing read endpoints — no server-side aggregation. The seventh module, the
-**garage** (v1: bikes, profile rules, ride tags; `docs/garage-model.md`), has its API, UI and OpenAPI
-fragment but no skill yet — that lands with its maintenance roadmap.
+**garage** (v1: bikes, profile rules, ride tags; `docs/garage-model.md`), has its API, UI, OpenAPI
+fragment and a small skill, `manage-garage` (mileage per bike, tagging rides); parts and service
+intervals are its roadmap.
 Auth currently runs on the Clerk **dev** instance (the production-instance switch is an open issue).
 Outstanding work and deferred decisions are tracked as
 [GitHub Issues](https://github.com/curtisrutland/just-my-website/issues); the pre-issues
