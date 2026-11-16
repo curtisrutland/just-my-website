@@ -130,6 +130,26 @@ def fit_bytes(raw: bytes) -> bytes:
         return z.read(names[0])
 
 
+def tag_bike(ride: Any, label: str) -> None:
+    """Apply the garage's bike rules to the ride just uploaded (docs/garage-model.md): the upload
+    response carries the ride's facts, and the garage copies them in. Best-effort: a failure is
+    logged and the upload stands; the /garage sweep catches anything missed."""
+    if not isinstance(ride, dict) or "id" not in ride:
+        return
+    facts = {key: ride.get(key) for key in ("localDate", "startedAt", "sportProfileName", "movingSeconds", "distanceMeters")}
+    facts["activityId"] = ride["id"]
+    try:
+        _, result = push("/api/garage/rides/attribute", json.dumps({"rides": [facts]}).encode(), "application/json")
+    except (Stop, RejectedError, PushError) as exc:
+        log.warning("garage: %s not tagged — %s", label, exc)
+        return
+    if isinstance(result, dict):
+        if result.get("tagged"):
+            log.info("garage: %s tagged by rule", label)
+        elif result.get("unmatched"):
+            log.info("garage: %s matched no bike rule (left for /garage)", label)
+
+
 # -- loops --------------------------------------------------------------------
 
 def poll_activities(g: Garmin, state: dict) -> None:
@@ -155,6 +175,7 @@ def poll_activities(g: Garmin, state: dict) -> None:
         seen.add(aid)
         deduped = isinstance(body, dict) and body.get("deduped")
         log.info("activities: %s %s", label, "deduped" if deduped else f"ingested ({status})")
+        tag_bike(body, label)
         state["seenActivityIds"] = sorted(seen)[-500:]  # bounded: the server dedupes regardless
         save_state(state)
 

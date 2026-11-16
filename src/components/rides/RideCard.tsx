@@ -7,9 +7,10 @@ const mono = "var(--font-mono)";
 /**
  * One ride card in the log (Rides.dc.html §ride card): title (name, else "MTB — Jul 28"),
  * local date + start time, the mono stat line (absent sensors simply don't appear), the sport
- * tag, and a one-line note snippet when there is one. Server-rendered link.
+ * tag, the bike it was on (garage) when tagged, and a one-line note snippet when there is one.
+ * Server-rendered link.
  */
-export function RideCard({ r, localStart }: { r: RideView; localStart: string }) {
+export function RideCard({ r, localStart, bike }: { r: RideView; localStart: string; bike?: string }) {
   return (
     <Link
       href={`/rides/${r.id}`}
@@ -28,8 +29,11 @@ export function RideCard({ r, localStart }: { r: RideView; localStart: string })
         <span style={{ fontFamily: mono, fontSize: 13, color: "var(--color-text)", fontVariantNumeric: "tabular-nums", letterSpacing: "-0.01em" }}>
           {rideStatLine(r)}
         </span>
-        <span style={{ fontFamily: mono, fontSize: 9, letterSpacing: "0.1em", color: "var(--color-text-muted)", border: "1px solid var(--color-border)", borderRadius: 3, padding: "2px 6px", flex: "none" }}>
-          {rideTag(r)}
+        <span style={{ display: "flex", alignItems: "center", gap: 8, flex: "none" }}>
+          {bike && <span style={{ fontFamily: mono, fontSize: 10.5, color: "var(--color-text-muted)" }}>{bike}</span>}
+          <span style={{ fontFamily: mono, fontSize: 9, letterSpacing: "0.1em", color: "var(--color-text-muted)", border: "1px solid var(--color-border)", borderRadius: 3, padding: "2px 6px" }}>
+            {rideTag(r)}
+          </span>
         </span>
       </div>
       {r.note && (

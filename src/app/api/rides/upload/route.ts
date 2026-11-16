@@ -11,9 +11,10 @@ import { ingestFitFile } from "@/lib/rides/ingest";
  * (`application/octet-stream`), not JSON and not multipart — simplest possible contract for
  * the v2 daemon (`curl --data-binary @ride.fit`).
  *
- * AUTH: one of the two routes that accept `JMW_PUBLISHER_TOKEN` (via `requirePublisherToken`),
- * alongside the normal JMW tokens. The other is `POST /api/vitals`; the publisher token works
- * nowhere else, and can never read, PATCH, or DELETE.
+ * AUTH: one of the three routes that accept `JMW_PUBLISHER_TOKEN` (via `requirePublisherToken`),
+ * alongside the normal JMW tokens. The others are `POST /api/vitals` and
+ * `POST /api/garage/rides/attribute`; the publisher token works nowhere else, and can never read,
+ * PATCH, or DELETE.
  *
  * Idempotent by design: re-uploading known bytes (or the same activity re-exported) returns
  * `200` + the existing ride with `deduped: true` — the daemon re-sends files forever and that

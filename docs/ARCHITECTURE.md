@@ -169,9 +169,9 @@ The web UI never presents a token; it authenticates via Clerk session and never 
 accidentally authorize an API call.
 
 Two later, deliberately-scoped additions bend this without weakening it:
-`JMW_PUBLISHER_TOKEN` is a third bearer token accepted by exactly two routes
-(`POST /api/rides/upload` and `POST /api/vitals` — least privilege for the Garmin daemon,
-which pushes facts and can never read, PATCH or DELETE anywhere), and the panel
+`JMW_PUBLISHER_TOKEN` is a third bearer token accepted by exactly three routes
+(`POST /api/rides/upload`, `POST /api/vitals` and `POST /api/garage/rides/attribute` — least
+privilege for the Garmin daemon, which pushes facts and can never read, PATCH or DELETE anywhere), and the panel
 surface has its own hashed/revocable `device_tokens` guarding `/api/panel/**` only (that
 surface also accepts a Clerk session, a documented exception for the no-hardware dev path —
 see `panel-contract.md`).
