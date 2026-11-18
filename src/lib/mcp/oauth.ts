@@ -1,5 +1,4 @@
 import { createHash, timingSafeEqual } from "node:crypto";
-import type { ModuleScope } from "@/lib/auth/scopes";
 
 /**
  * The OAuth rules for the MCP surface (`docs/mcp.md` §2–§3), as pure functions: what a client may
@@ -10,14 +9,32 @@ import type { ModuleScope } from "@/lib/auth/scopes";
  * holds the Clerk session on the consent page), and public clients only (PKCE, no client secret).
  */
 
-/** What an MCP grant can hold: read-only module scopes, nothing else. Writes are not offered. */
-export const MCP_SCOPES = ["macros:read", "weight:read", "rides:read"] as const satisfies readonly ModuleScope[];
+/**
+ * What an MCP grant can hold: read scopes, one per module, and nothing else. Writes are not offered.
+ * The names match the module scopes of the device tokens where those exist (`macros:read`, …), so a
+ * scope means the same thing on every surface; `garage:read` exists only here. A grant holds the
+ * scopes it was approved with: adding one here reaches an existing connection only when it is
+ * reconnected and approved again.
+ */
+export const MCP_SCOPES = [
+  "macros:read",
+  "weight:read",
+  "rides:read",
+  "lifting:read",
+  "vitals:read",
+  "shopping:read",
+  "garage:read",
+] as const;
 export type McpScope = (typeof MCP_SCOPES)[number];
 
 export const SCOPE_LABELS: Record<McpScope, string> = {
-  "macros:read": "Read your food log: a day's entries, totals and targets",
+  "macros:read": "Read your food log: entries, daily totals and targets, your food catalog and batches",
   "weight:read": "Read your weigh-ins and weight trend",
-  "rides:read": "Read your ride log: summaries of each ride",
+  "rides:read": "Read your ride log: each ride's numbers and its recorded track",
+  "lifting:read": "Read your lifting sessions, goals and each lift's history",
+  "vitals:read": "Read your daily watch measurements: sleep, heart rate, HRV, steps",
+  "shopping:read": "Read your shopping list",
+  "garage:read": "Read your bikes and which bike each ride was on",
 };
 
 export const OAUTH_PATHS = {
