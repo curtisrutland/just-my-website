@@ -17,10 +17,11 @@ struct SettingsView: View {
                 }
                 Section {
                     LabeledContent("Lock", value: "After 5 min in the background")
+                    LabeledContent("Siri weigh-in", value: model.siriWeighInReady ? "Ready" : "Not set up")
                 } header: {
                     Text("Security")
                 } footer: {
-                    Text("Revoke this iPhone from justmy.website (Settings → Devices) if it's lost.")
+                    Text("Revoke this iPhone from justmy.website (Settings → Devices) if it's lost. Siri logs a weigh-in with its own token, which can log and read weights and nothing else, so it works without Face ID while the phone is unlocked.")
                 }
                 Section {
                     Button("Unpair this iPhone", role: .destructive) { confirmUnpair = true }

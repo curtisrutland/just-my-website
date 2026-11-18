@@ -73,6 +73,10 @@ DB-backed device tokens (`device_tokens`: hashed, scoped, individually revocable
   device token never passes `bearerAuth`/`primaryKey`. Hard DELETE (`?hard=true`) stays on
   `requirePrimary`, so a device token can only soft-delete. OpenAPI marks these operations
   with the `deviceToken` scheme.
+- A device's **child token**: one narrower credential a device mints for itself, live only while
+  its parent is. There is one kind, the phone's weigh-in token for Siri (`weight:read`,
+  `weight:write`), minted by `POST /api/weight/weigh-in-token`, which accepts device tokens only
+  (`requireDevice`; the env tokens are rejected). Rules in `docs/ios-app.md` §3.3.7.
 
 The web UI authenticates via Clerk session and never presents a bearer token; it does not
 call `/api`. Clerk gates `/` entirely. The iOS app never talks to Clerk; its only credential is

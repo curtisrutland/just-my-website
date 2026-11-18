@@ -10,5 +10,17 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<!-- What Siri also hears the app as ("log my weight in Just My"): the display name is one word. -->
+	<key>INAlternativeAppNames</key>
+	<array>
+		<dict>
+			<key>INAlternativeAppName</key>
+			<string>Just My</string>
+		</dict>
+		<dict>
+			<key>INAlternativeAppName</key>
+			<string>Just My Website</string>
+		</dict>
+	</array>
 </dict>
 </plist>

@@ -58,6 +58,7 @@ import {
   rideTagViewSchema,
 } from "../src/lib/garage/schema";
 import { weightCreateSchema, weightEntryViewSchema, weightPatchSchema, weightRollupSchema } from "../src/lib/weight/schema";
+import { mintedTokenSchema } from "../src/lib/auth/pairing";
 
 /**
  * Generate each module's OpenAPI fragment FROM its Zod schemas (CONVENTIONS: schema.ts is the single
@@ -363,7 +364,7 @@ const weightSpec = {
     schemas: {
       WeightCreate: js(weightCreateSchema),
       WeightPatch: js(weightPatchSchema),
-      ...views({ WeightEntryView: weightEntryViewSchema, WeightRollup: weightRollupSchema }),
+      ...views({ WeightEntryView: weightEntryViewSchema, WeightRollup: weightRollupSchema, MintedToken: mintedTokenSchema }),
       Error: errorSchema,
     },
   },
@@ -379,6 +380,16 @@ const weightSpec = {
     },
     "/api/weight/days/{date}": {
       get: { security: deviceSecurity, summary: "Get a day's weigh-in", parameters: [pathParam("date")], responses: { ...okJson("Weigh-in", "WeightEntryView"), ...errorResponses } },
+    },
+    "/api/weight/weigh-in-token": {
+      post: {
+        // Device tokens ONLY: the env tokens are rejected (docs/ios-app.md §3.3.7).
+        security: [{ deviceToken: [] }],
+        summary: "Mint this device's weigh-in token (weight:read + weight:write only); replaces any previous one",
+        description:
+          "A child of the calling device token, live only while its parent is. The caller must hold weight:read and weight:write and must not itself be a child. The raw token is returned once.",
+        responses: { ...createdJson("The new weigh-in token", "MintedToken"), ...errorResponses },
+      },
     },
     "/api/weight/rollup": {
       get: {

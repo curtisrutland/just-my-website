@@ -57,4 +57,13 @@ public struct JMWClients: Sendable {
         default: .unexpected(statusCode: -1)
         }
     }
+
+    /// Asks the server, as this phone, for its weigh-in token (docs/ios-app.md §3.3.7): a child
+    /// credential that can log and read weigh-ins and nothing else, for Siri. Each call replaces the
+    /// previous one. Returns nil when the server refuses (this token can't mint one); network
+    /// failures throw.
+    public func mintWeighInToken() async throws -> String? {
+        guard case let .created(response) = try await weight.postApiWeightWeighInToken(.init()) else { return nil }
+        return try response.body.json.token
+    }
 }

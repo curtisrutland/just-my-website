@@ -132,6 +132,27 @@ tokens: **an explicit allowlist of routes, a model-doc entry (this doc), and a t
    The cached lookup stays on the panel version poll only; module routes use the direct lookup, so
    revoking the phone takes effect on its next request.
 
+7. **Child tokens: a device may mint one narrower credential for itself (#101).** Siri runs
+   without the app on screen and can't raise Face ID, so it can't reach the phone's token (§4.2).
+   Instead the unlocked app asks for a **weigh-in token**:
+
+   - `POST /api/weight/weigh-in-token`, guarded by `requireDevice` — **device tokens only**. The
+     env tokens are rejected: they aren't devices, so there is nothing for a child to hang from.
+   - The child holds `WEIGH_IN_SCOPES` (`weight:read`, `weight:write`) and nothing else, and is
+     stored with `parent_id` pointing at the token that minted it.
+   - **A child never has more than its parent:** the parent must hold both scopes itself.
+   - **No chains:** a child can't mint.
+   - **One at a time:** minting again revokes the device's previous weigh-in token.
+   - **It dies with its parent:** `revokeDeviceToken` revokes a token's children with it, and
+     `findLiveTokenByRaw` also refuses a child whose parent isn't live, so neither path depends on
+     the other.
+   - On `/settings/devices` the child is listed under its parent and can be revoked alone; the app
+     mints a new one at its next unlock.
+
+   The worst case for a leaked weigh-in token is a bogus weigh-in, which the owner corrects or
+   soft-deletes, plus a read of the weight history. Like every other scoped token it never
+   passes `requireBearer` or `requirePrimary`.
+
 ### 3.4 The allowlist
 
 Read (`{module}:read`):
@@ -166,6 +187,12 @@ deletes. Also off the list in v1: ingestion (`/api/rides/upload`, `POST /api/vit
 `/api/macros/usda/*`, foods and batches. Food logging stays Claude's job (the `manage-macros`
 skill), where estimation and pinned ingredients live.
 
+Device tokens only (no scope: the rules in §3.3.7 are the check; env tokens are rejected):
+
+| Route | Who |
+|---|---|
+| `POST /api/weight/weigh-in-token` | A top-level device token holding `weight:read` and `weight:write` |
+
 If closing a gap in §7 ever adds a read endpoint, that endpoint joins this table in the same PR.
 
 ### 3.5 Tests
@@ -176,7 +203,11 @@ Following `src/lib/auth/tokens.test.ts` and `src/lib/panel/auth.test.ts`:
   module, e.g. `DELETE /api/weight/entries/{id}`, `POST /api/macros/entries`);
 - a token without the scope gets `401`, a revoked token gets `401`, a deleted token gets `401`;
 - env tokens still pass every switched route (no skill regression);
-- a phone token never passes `requireBearer` / `requirePrimary`.
+- a phone token never passes `requireBearer` / `requirePrimary`;
+- the weigh-in token (§3.3.7): a phone mints one; it passes the weight routes and fails every
+  other module; it can't mint; it dies when its parent is revoked or deleted; minting again
+  replaces it; revoking it alone leaves the phone working; the env tokens, a panel token, a token
+  without both weight scopes and a revoked phone are all refused.
 
 ---
 
@@ -209,6 +240,11 @@ or paste. The app calls one allowlisted read to confirm the token works before s
   Keychain, never in `UserDefaults`, never logged.
 - Reading the item is what prompts Face ID, so the lock is enforced by the Secure Enclave, not by
   an `if` in app code.
+- **A second, weaker item holds the weigh-in token (§3.3.7, #101):**
+  `kSecAttrAccessibleWhenUnlockedThisDeviceOnly`, no access control, so the Siri intent can read it
+  while the phone is unlocked. It holds the server address and the weigh-in token, never the
+  phone's token. The app fetches it once after an unlock or a pairing, when the phone's token is
+  in hand, and deletes it on unpair, on a revoked phone token, and when Siri's own call gets `401`.
 
 ### 4.3 Locking
 
@@ -491,7 +527,13 @@ The reason to go native at all. **Not scoped until v1 and phase 2 (§6.1) ship**
 - **Widgets** (Home Screen / Lock Screen): today's macros remaining, the weight trend. Needs the
   token readable by an extension, so the Keychain item moves to a shared access group then.
 - **Live Activity** during a ride or lift.
-- **App Intents / Siri / Shortcuts:** "log my weight 178".
+- **App Intents / Siri / Shortcuts.** The first one shipped ahead of parity (#101, Curtis
+  2026-11-03): **"Log my weight in JustMy"**. Siri asks for the number, reads it back ("Log 246.2
+  pounds?"), and saves today's weigh-in without opening the app; if today already has one it says
+  so and asks before replacing it. It never falls back to a text field, every failure is spoken,
+  and `authenticationPolicy = .requiresAuthentication` means a locked phone is asked to unlock
+  first. It uses the weigh-in token (§3.3.7), and the same write as the sheet and the Today field.
+  Further intents wait for parity.
 - **HealthKit:** read-only context alongside vitals, or writing weight to Health. Either direction is
   a scoping conversation of its own — it touches the "the watch is the source of truth" rule.
 - **A wider Today**, read from an interpretive module (CONVENTIONS §9): vitals, lifting, shopping,

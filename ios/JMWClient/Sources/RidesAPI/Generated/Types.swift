@@ -7,7 +7,7 @@ public import struct Foundation.Date
 public protocol APIProtocol: Sendable {
     /// Ingest a FIT file (raw binary body)
     ///
-    /// Body is the raw FIT bytes (application/octet-stream) — `curl --data-binary @ride.fit`. Idempotent: known bytes (or the same activity re-exported) return 200 + the existing ride with deduped:true; a new ride returns 201 + Location. Undecodable or multi-session files are 400s. The ONLY route that accepts the publisher token.
+    /// Body is the raw FIT bytes (application/octet-stream) — `curl --data-binary @ride.fit`. Idempotent: known bytes (or the same activity re-exported) return 200 + the existing ride with deduped:true; a new ride returns 201 + Location. Undecodable or multi-session files are 400s. The only rides route that accepts the publisher token.
     ///
     /// - Remark: HTTP `POST /api/rides/upload`.
     /// - Remark: Generated from `#/paths//api/rides/upload/post`.
@@ -43,6 +43,13 @@ public protocol APIProtocol: Sendable {
     /// - Remark: HTTP `POST /api/rides/{id}/reprocess`.
     /// - Remark: Generated from `#/paths//api/rides/{id}/reprocess/post`.
     func postApiRidesIdReprocess(_ input: Operations.PostApiRidesIdReprocess.Input) async throws -> Operations.PostApiRidesIdReprocess.Output
+    /// Download the ride's raw FIT file
+    ///
+    /// The exact bytes the device produced (application/octet-stream), streamed from storage. The stream on the detail read is a 10 s downsample; this is the full-resolution source. Normal JMW tokens only (not the publisher token, not a device token).
+    ///
+    /// - Remark: HTTP `GET /api/rides/{id}/fit`.
+    /// - Remark: Generated from `#/paths//api/rides/{id}/fit/get`.
+    func getApiRidesIdFit(_ input: Operations.GetApiRidesIdFit.Input) async throws -> Operations.GetApiRidesIdFit.Output
     /// Weekly rollup (per ISO week: rides / distance / moving time / ascent / avg power)
     ///
     /// - Remark: HTTP `GET /api/rides/weekly`.
@@ -54,7 +61,7 @@ public protocol APIProtocol: Sendable {
 extension APIProtocol {
     /// Ingest a FIT file (raw binary body)
     ///
-    /// Body is the raw FIT bytes (application/octet-stream) — `curl --data-binary @ride.fit`. Idempotent: known bytes (or the same activity re-exported) return 200 + the existing ride with deduped:true; a new ride returns 201 + Location. Undecodable or multi-session files are 400s. The ONLY route that accepts the publisher token.
+    /// Body is the raw FIT bytes (application/octet-stream) — `curl --data-binary @ride.fit`. Idempotent: known bytes (or the same activity re-exported) return 200 + the existing ride with deduped:true; a new ride returns 201 + Location. Undecodable or multi-session files are 400s. The only rides route that accepts the publisher token.
     ///
     /// - Remark: HTTP `POST /api/rides/upload`.
     /// - Remark: Generated from `#/paths//api/rides/upload/post`.
@@ -140,6 +147,21 @@ extension APIProtocol {
         headers: Operations.PostApiRidesIdReprocess.Input.Headers = .init()
     ) async throws -> Operations.PostApiRidesIdReprocess.Output {
         try await postApiRidesIdReprocess(Operations.PostApiRidesIdReprocess.Input(
+            path: path,
+            headers: headers
+        ))
+    }
+    /// Download the ride's raw FIT file
+    ///
+    /// The exact bytes the device produced (application/octet-stream), streamed from storage. The stream on the detail read is a 10 s downsample; this is the full-resolution source. Normal JMW tokens only (not the publisher token, not a device token).
+    ///
+    /// - Remark: HTTP `GET /api/rides/{id}/fit`.
+    /// - Remark: Generated from `#/paths//api/rides/{id}/fit/get`.
+    public func getApiRidesIdFit(
+        path: Operations.GetApiRidesIdFit.Input.Path,
+        headers: Operations.GetApiRidesIdFit.Input.Headers = .init()
+    ) async throws -> Operations.GetApiRidesIdFit.Output {
+        try await getApiRidesIdFit(Operations.GetApiRidesIdFit.Input(
             path: path,
             headers: headers
         ))

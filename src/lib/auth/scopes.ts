@@ -54,6 +54,12 @@ export const PHONE_SCOPES: ModuleScope[] = [
   "shopping:write",
 ];
 
+/**
+ * The phone's weigh-in token (`docs/ios-app.md` §3.3.7): the child credential Siri uses, readable
+ * without Face ID. Log a weigh-in and read weigh-ins (to ask before replacing today's); nothing else.
+ */
+export const WEIGH_IN_SCOPES: ModuleScope[] = ["weight:read", "weight:write"];
+
 export function isPanelScope(value: string): value is PanelScope {
   return (PANEL_SCOPES as readonly string[]).includes(value);
 }

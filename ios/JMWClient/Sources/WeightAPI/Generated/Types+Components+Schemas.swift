@@ -275,6 +275,35 @@ extension Components {
                 case series
             }
         }
+        /// - Remark: Generated from `#/components/schemas/MintedToken`.
+        public struct MintedToken: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/MintedToken/token`.
+            public var token: Swift.String
+            /// - Remark: Generated from `#/components/schemas/MintedToken/name`.
+            public var name: Swift.String
+            /// - Remark: Generated from `#/components/schemas/MintedToken/scopes`.
+            public var scopes: [Swift.String]
+            /// Creates a new `MintedToken`.
+            ///
+            /// - Parameters:
+            ///   - token:
+            ///   - name:
+            ///   - scopes:
+            public init(
+                token: Swift.String,
+                name: Swift.String,
+                scopes: [Swift.String]
+            ) {
+                self.token = token
+                self.name = name
+                self.scopes = scopes
+            }
+            public enum CodingKeys: String, CodingKey {
+                case token
+                case name
+                case scopes
+            }
+        }
         /// - Remark: Generated from `#/components/schemas/Error`.
         public struct _Error: Codable, Hashable, Sendable {
             /// - Remark: Generated from `#/components/schemas/Error/error`.
