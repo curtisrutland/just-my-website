@@ -41,9 +41,14 @@ export function registerTools(server: McpServer): void {
     {
       title: "Food log for a day",
       description:
-        "One day of the food log: `totals` and `target` (calories in kcal, every other field in grams, schema.org " +
-        "NutritionInformation names), `estimation` (how much of the day is estimated) and `entries` (each thing eaten). " +
-        "`target` is null when no target applies.",
+        "One day of the food log. `totals` is the day's sum and `target` the goal in effect (null when none applies); " +
+        "both cover only the four headline macros: `calories` in kcal, and `proteinContent`, `fatContent` and " +
+        "`carbohydrateContent` in grams. `entries` lists each thing eaten, with those four plus `fiberContent`, " +
+        "`sugarContent`, `sodiumContent` and `saturatedFatContent` where known. Every mass is in grams, sodium " +
+        "included (0.43 means 430 mg). The extra fields are not summed in `totals`: add them up from `entries` if " +
+        "needed, and treat null as unknown, never zero. An entry's `confidence` is `measured`, `logged_serving` or " +
+        "`estimated`. `estimation` counts only the `estimated` ones: `estimatedCount` out of `entryCount`, and " +
+        "`estimatedFraction`, the share of the day's calories they account for.",
       inputSchema: z.object({
         date: date.optional().describe("The calendar date, YYYY-MM-DD. Omit for today."),
       }),
@@ -57,11 +62,15 @@ export function registerTools(server: McpServer): void {
     {
       title: "Body weight trend",
       description:
-        "Body weight over a window of days, in pounds: `series` (one point per day with that day's `weight`, null if " +
-        "not weighed, and the 7-day average `avg`) and `summary` (`current`, `currentAvg`, `trendPerWeek`, `range`).",
+        "Body weight over a window of days, in pounds. `series` has one point per day: `weight` is that day's " +
+        "weigh-in (null if there was none) and `avg` is the average of the weigh-ins in the 7 days ending that day. " +
+        "`summary` has `current` (the latest weigh-in), `currentAvg` (the 7-day average on the last day), `range` " +
+        "(the lowest and highest weigh-in in the window) and `trendPerWeek`: pounds per week, the least-squares slope " +
+        "of `avg` across the whole window, so it depends on `window`. Negative means losing weight. The window never " +
+        "starts before the first weigh-in.",
       inputSchema: z.object({
         window: z.number().int().min(7).max(3650).optional().describe("How many days to cover. Default 90."),
-        end: date.optional().describe("The last day of the window, YYYY-MM-DD. Omit for today."),
+        end: date.optional().describe("The last day of the window, YYYY-MM-DD. Omit for the day of the latest weigh-in."),
       }),
       annotations: readOnly,
     },
@@ -73,10 +82,19 @@ export function registerTools(server: McpServer): void {
     {
       title: "Ride log",
       description:
-        "Recorded rides and other activities, newest first, as summaries (no GPS or sample streams). Units are SI: " +
-        "`distanceMeters`, `movingSeconds`, `elapsedSeconds`, `avgSpeedMps`, `totalAscentMeters`, watts, bpm, kcal. " +
-        "`localDate` is the ride's own calendar date. `name` is often null; `sportProfileName` then says what it was. " +
-        "The answer is a page: `items`, plus `count` (all matches), `limit` and `offset`.",
+        "Recorded rides and other activities, newest first, as summaries (no GPS track, no sample streams). The " +
+        "answer is a page: `items`, plus `count` (all matches), `limit` and `offset`. Units are SI: `distanceMeters`, " +
+        "`movingSeconds`, `elapsedSeconds`, `avgSpeedMps` and `maxSpeedMps` (metres per second), `totalAscentMeters`, " +
+        "watts, bpm, `calories` in kcal, `avgTemperatureC`. `localDate` is the ride's own calendar date. `name` is " +
+        "often null; `sportProfileName` then says what it was, and `note` is the rider's own remark. " +
+        "These are the device's numbers, unedited, so a ride can include a recorded drive: treat a `maxSpeedMps` " +
+        "above about 13 (30 mph) as suspect, read the `note`, and ask before using that ride's speed or distance in " +
+        "a total or a summary. " +
+        "`timeInHrZone` is the watch's heart-rate zone message as recorded. Inside it, `timeInHrZone` is 7 durations " +
+        "in seconds and `hrZoneHighBoundary` is the 6 upper limits in bpm: the first duration is time up to the first " +
+        "limit, each next one is time between two neighbouring limits, and the last is time above the highest limit. " +
+        "Ignore its other fields. A ride's `maxHeartRate` can be higher than the zones' maximum. Which bike was " +
+        "ridden is not recorded here.",
       inputSchema: z.object({
         from: date.optional().describe("Only rides on or after this local date."),
         to: date.optional().describe("Only rides on or before this local date."),

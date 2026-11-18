@@ -162,6 +162,22 @@ describe("what a grant opens", () => {
     expect(JSON.parse(rides.text)).toMatchObject({ limit: 5, offset: 0, count: expect.any(Number), items: expect.any(Array) });
   });
 
+  it("the descriptions say what a reader can't guess: units, what is summed, how to read zones", async () => {
+    // Each of these was misread, or flagged as easy to misread, by Claude on first use (#133).
+    const { access_token } = await connect();
+    const listed = await call(access_token, "tools/list");
+    const about = new Map((listed.body?.result?.tools as { name: string; description: string }[]).map((t) => [t.name, t.description]));
+    for (const phrase of ["four headline macros", "sodium included", "not summed in `totals`", "counts only the `estimated` ones"]) {
+      expect(about.get("macros_day"), phrase).toContain(phrase);
+    }
+    for (const phrase of ["in pounds", "least-squares slope", "depends on `window`"]) {
+      expect(about.get("weight_rollup"), phrase).toContain(phrase);
+    }
+    for (const phrase of ["30 mph", "ask before", "`hrZoneHighBoundary` is the 6 upper limits", "metres per second"]) {
+      expect(about.get("rides_list"), phrase).toContain(phrase);
+    }
+  });
+
   it("a bad argument is an error result, not a crash", async () => {
     const { access_token } = await connect();
     expect((await tool(access_token, "macros_day", { date: "yesterday" })).isError).toBe(true);

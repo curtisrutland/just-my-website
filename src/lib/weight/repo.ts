@@ -99,7 +99,8 @@ export async function hardDeleteEntry(id: string): Promise<boolean> {
 /**
  * The trend rollup: a per-day series (raw weight + 7-day trailing average) over a window ending at
  * the latest weigh-in, plus summary stats. The rolling average is gap-tolerant (averages whatever
- * days exist in the trailing 7). The trend rate is the change in that average vs. a week ago.
+ * days exist in the trailing 7). The trend rate is the least-squares slope of that average across
+ * the window, per week. `end` defaults to the day of the latest weigh-in, not to today.
  */
 export async function getRollup(opts: { window?: number; end?: string } = {}): Promise<WeightRollup> {
   const window = opts.window ?? 90;
