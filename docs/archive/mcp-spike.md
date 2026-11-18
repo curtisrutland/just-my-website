@@ -1,7 +1,16 @@
 # MCP spike (#133)
 
-Status on 2026-11-18: step 1 is built on the branch `spike/mcp` and proven locally. It has not been
-tried from claude.ai yet, because claude.ai can only reach a public URL.
+**Archived.** Step 1 passed on 2026-11-18: after PR #134 was merged, claude.ai listed `ping` and
+called it on production. The surface that followed is described in `docs/mcp.md`; the `ping` tool
+and the open endpoint described below no longer exist. The result and the production log are on
+issue #133.
+
+What the log added to this page's findings: claude.ai talks to the server with the 2026-07-28
+protocol (`server/discover`, then `tools/list`), which has no sessions at all, and in a chat it
+opens a `subscriptions/listen` stream that held a Vercel function for the full 300 seconds.
+
+Original status, 2026-11-18: step 1 is built on the branch `spike/mcp` and proven locally. It has
+not been tried from claude.ai yet, because claude.ai can only reach a public URL.
 
 ## The question
 

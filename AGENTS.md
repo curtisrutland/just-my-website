@@ -25,9 +25,10 @@ Everything is private behind auth; there are no public reads.
 - **Two tokens.** `JMW_API_KEY` (full access) and `JMW_AGENT_TOKEN` (Claude's token —
   structurally rejected for hard DELETE). Take data down via soft-delete, not DELETE.
   Every other credential is **scoped and allowlisted**: the publisher and display env
-  tokens, and the DB-backed `device_tokens` (the kitchen panel, the iOS app). Each is
-  accepted only by the routes its doc names, never passes `requireBearer`, and can never
-  hard DELETE. Widening any allowlist means a model-doc entry and a test.
+  tokens, the DB-backed `device_tokens` (the kitchen panel, the iOS app), and the OAuth
+  grants of the MCP surface (`oauth_grants`, `docs/mcp.md`: read-only, accepted by `/mcp`
+  alone). Each is accepted only by the routes its doc names, never passes `requireBearer`,
+  and can never hard DELETE. Widening any allowlist means a model-doc entry and a test.
 - **PATCH is the default modify verb.** Full-replace PUT is only for wholesale-document
   modules (there are none yet). Entry-style modules use POST/PATCH/soft-DELETE.
 - **Nutrition numbers, not strings.** Mass macros in grams, energy in kcal, always
@@ -62,7 +63,10 @@ adding no cross-module scores or renamed fields. There is no cross-module write 
 No interpretive module exists server-side yet; `manage-health` is the skill-layer one. Surfaces
 (web, API, iOS app, panel) are not modules: they read and write any module through its own
 `schema` and `repo`. The local infographics renderer (`infographics/`, `docs/infographics.md`) is
-a read-only surface: token API `GET`s only, never the database, never a write.
+a read-only surface: token API `GET`s only, never the database, never a write. The MCP surface
+(`/mcp`, `docs/mcp.md`) is read-only too: its tools call module repo read functions and return what
+the matching API route returns. Its OAuth endpoints live outside `/api` because they cannot be
+token-only.
 
 ## Work tracking
 

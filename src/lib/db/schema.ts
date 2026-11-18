@@ -307,6 +307,58 @@ export const deviceToken = pgTable(
 );
 
 /**
+ * `oauth_grants` — one row per approval of an MCP client (`docs/mcp.md` §3). DISTINCT, by design,
+ * from `device_tokens`: a grant's credentials rotate and expire, and they are accepted by `/mcp`
+ * and nowhere else — a grant can never pass `requireScope` on the token API, and a device token can
+ * never open `/mcp`, because neither lookup reads the other's table.
+ *
+ * A row's life: created at consent holding a one-time authorization code; the token endpoint
+ * redeems the code for an access token (short-lived) and a refresh token (rotated on every use).
+ * Only sha256 hashes are stored; no raw credential ever lands here. `revoked_at IS NOT NULL` ⇒ dead
+ * for good (401 at `/mcp`, `invalid_grant` at the token endpoint), independent of `deleted_at`.
+ */
+export const oauthGrant = pgTable(
+  "oauth_grants",
+  {
+    ...auditColumns(),
+    // Shown on the devices page: the host that received the code, e.g. 'claude.ai'.
+    name: text("name").notNull(),
+    // The client's identifier as presented at authorization: an id from `/oauth/register` or a
+    // Client ID Metadata Document URL. A label, not a secret; the redirect allowlist is the check.
+    clientId: text("client_id").notNull(),
+    redirectUri: text("redirect_uri").notNull(),
+    // RFC 8707: the MCP endpoint this grant was issued for, e.g. 'https://justmy.website/mcp'.
+    resource: text("resource").notNull(),
+    // Granted scopes, a subset of MCP_SCOPES (read-only module scopes).
+    scopes: text("scopes").array().notNull(),
+    // The authorization code (hash), its PKCE S256 challenge, and its short expiry. `code_used_at`
+    // makes it single-use; a second redemption revokes the grant.
+    codeHash: text("code_hash").notNull(),
+    codeChallenge: text("code_challenge").notNull(),
+    codeExpiresAt: timestamp("code_expires_at", { withTimezone: true }).notNull(),
+    codeUsedAt: timestamp("code_used_at", { withTimezone: true }),
+    // The current access token (hash) and when it stops working. null until the code is redeemed.
+    accessHash: text("access_hash"),
+    accessExpiresAt: timestamp("access_expires_at", { withTimezone: true }),
+    // The current refresh token (hash), the one it replaced, and when that rotation happened: a
+    // replaced token presented again after a short grace is treated as theft and revokes the grant.
+    refreshHash: text("refresh_hash"),
+    prevRefreshHash: text("prev_refresh_hash"),
+    refreshRotatedAt: timestamp("refresh_rotated_at", { withTimezone: true }),
+    // Best-effort "last used" stamp, written after the response.
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
+    // null = active. Set to revoke a grant without deleting its audit row.
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex("oauth_grants_code_hash_idx").on(t.codeHash),
+    uniqueIndex("oauth_grants_access_hash_idx").on(t.accessHash),
+    uniqueIndex("oauth_grants_refresh_hash_idx").on(t.refreshHash),
+    index("oauth_grants_prev_refresh_hash_idx").on(t.prevRefreshHash),
+  ]
+);
+
+/**
  * `panel_state` — the panel's single active recipe (panel-contract §6.2). Deliberately NOT the usual
  * `auditColumns` shape: it's a SINGLETON config row (`id` int, default 1), not an entry table. No
  * uuid, no soft-delete — the empty state is `active_recipe IS NULL`, not a deleted row. A second

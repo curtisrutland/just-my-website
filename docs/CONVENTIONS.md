@@ -17,6 +17,7 @@ Derived from justmy.recipes, with intentional deviations marked **[DIFFERS FROM 
 | **iOS app** (`ios/`) | token API `GET` | token API `POST`/`PATCH`/soft-`DELETE` |
 | **Kitchen panel** (`/panel`, `/api/panel/**`) | route → module `repo` reads | check-off → `shopping` `repo` |
 | **Infographics** (`infographics/`, local) | token API `GET` | none, ever |
+| **MCP** (`/mcp`, `docs/mcp.md`) | tool → module `repo` reads | none |
 
 The iOS app is a client of the token API, not a fourth path to the data: its writes are API
 writes, so they get the same `schema.parse` → `repo`. It renders what the API returns. Domain
@@ -77,6 +78,19 @@ DB-backed device tokens (`device_tokens`: hashed, scoped, individually revocable
   its parent is. There is one kind, the phone's weigh-in token for Siri (`weight:read`,
   `weight:write`), minted by `POST /api/weight/weigh-in-token`, which accepts device tokens only
   (`requireDevice`; the env tokens are rejected). Rules in `docs/ios-app.md` §3.3.7.
+
+OAuth grants (`oauth_grants`, `docs/mcp.md`): the credential of the MCP surface, and a kernel
+departure of its own.
+- A grant is created when Curtis approves a client on the Clerk-gated consent page
+  (`/oauth/authorize`). Its access token (1 hour) and refresh token (rotating) are accepted by
+  `/mcp` and the token endpoint and **nowhere else**: grants live in their own table, so a grant
+  never passes `requireScope`, `bearerAuth` or `primaryKey`, and no API or device token opens `/mcp`.
+- A grant holds read scopes only (`macros:read`, `weight:read`, `rides:read`). There is no write
+  scope to grant.
+- Four endpoints answer without a bearer token, all outside `/api` so that "the API is token-only"
+  stays true without exception: the two `/.well-known/` discovery documents, `POST /oauth/register`
+  and `POST /oauth/token`. None returns data. Widening this list, the redirect allowlist or the
+  scopes needs an entry in `docs/mcp.md` and a test.
 
 The web UI authenticates via Clerk session and never presents a bearer token; it does not
 call `/api`. Clerk gates `/` entirely. The iOS app never talks to Clerk; its only credential is
