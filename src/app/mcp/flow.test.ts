@@ -1,87 +1,27 @@
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { and, eq, isNotNull, like } from "drizzle-orm";
+import { NextRequest } from "next/server";
 import { afterAll, describe, expect, it } from "vitest";
 import { GET as weightRollupApi } from "@/app/api/weight/rollup/route";
-import { POST as tokenEndpoint } from "@/app/oauth/token/route";
 import { createDeviceToken } from "@/lib/auth/device-tokens";
 import { db } from "@/lib/db";
 import { deviceToken, oauthGrant } from "@/lib/db/schema";
-import { createAuthorization, findGrantByAccessToken, listGrants, refreshGrant, revokeGrant } from "@/lib/mcp/grants";
-import { MCP_SCOPES, s256, type McpScope } from "@/lib/mcp/oauth";
-import { NextRequest } from "next/server";
-import { POST as mcp } from "./route";
+import { findGrantByAccessToken, listGrants, refreshGrant, revokeGrant } from "@/lib/mcp/grants";
+import { RESOURCE, mcpTestKit, type Tokens } from "./test-kit";
 
 /**
- * The MCP sign-in end to end (`docs/mcp.md`), against the real database: an approval becomes a code,
- * the code becomes tokens, the access token opens `/mcp` and nothing else, and every way a grant
- * can end actually ends it. Integration, like the other auth tests: rows are named `test-mcp…` and
- * removed afterwards. The consent page itself (Clerk) is not exercised; `createAuthorization` is
- * what its action calls after the session check.
- *
- * Tool calls read real tables, so they ask for 1971: the shape is asserted, no real data is read.
+ * The MCP sign-in end to end (`docs/mcp.md` §2–§3), against the real database: an approval becomes a
+ * code, the code becomes tokens, the access token opens `/mcp` and nothing else, and every way a
+ * grant can end actually ends it. Integration, like the other auth tests: rows are named
+ * `test-mcp…` and removed afterwards. What the tools return is in `tools.test.ts`.
  */
 const CLIENT = "test-mcp-flow";
-const REDIRECT = "http://localhost:1/callback";
-const RESOURCE = "https://example.test/mcp";
-const VERIFIER = "v".repeat(64);
+const { approve, token, redeem, connect, call, cleanup, mcp } = mcpTestKit(CLIENT);
 
 afterAll(async () => {
-  await db.delete(oauthGrant).where(like(oauthGrant.clientId, "test-mcp%"));
-  await db.delete(deviceToken).where(like(deviceToken.name, "test-mcp%"));
+  await cleanup();
+  await db.delete(deviceToken).where(like(deviceToken.name, "test-mcp-device%"));
 });
-
-const approve = (scopes: McpScope[] = [...MCP_SCOPES], now?: Date) =>
-  createAuthorization({ clientId: CLIENT, redirectUri: REDIRECT, state: "s", codeChallenge: s256(VERIFIER), scopes, resource: RESOURCE }, now);
-
-const token = (fields: Record<string, string>) =>
-  tokenEndpoint(
-    new Request("https://example.test/oauth/token", {
-      method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams(fields).toString(),
-    })
-  );
-
-const redeem = (code: string, over: Record<string, string> = {}) =>
-  token({ grant_type: "authorization_code", code, code_verifier: VERIFIER, client_id: CLIENT, redirect_uri: REDIRECT, resource: RESOURCE, ...over });
-
-type Tokens = { access_token: string; refresh_token: string; expires_in: number; token_type: string; scope: string };
-
-/** An approved, redeemed grant: the state a connected client is in. */
-async function connect(scopes?: McpScope[]): Promise<Tokens & { id: string }> {
-  const { id, code } = await approve(scopes);
-  const response = await redeem(code);
-  expect(response.status).toBe(200);
-  return { id, ...((await response.json()) as Tokens) };
-}
-
-type Rpc = { result?: Record<string, unknown>; error?: { code: number; message: string } };
-
-async function call(bearer: string | undefined, method: string, params?: unknown): Promise<{ status: number; body: Rpc | null }> {
-  const response = await mcp(
-    new Request(RESOURCE, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        accept: "application/json, text/event-stream",
-        "mcp-protocol-version": "2025-06-18",
-        ...(bearer ? { authorization: `Bearer ${bearer}` } : {}),
-      },
-      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, ...(params ? { params } : {}) }),
-    })
-  );
-  if (response.status !== 200) return { status: response.status, body: null };
-  const text = await response.text();
-  const data = text.split("\n").filter((line) => line.startsWith("data:"));
-  return { status: 200, body: JSON.parse(data.length ? data[data.length - 1].slice(5) : text) };
-}
-
-async function tool(bearer: string, name: string, args: Record<string, unknown> = {}) {
-  const { status, body } = await call(bearer, "tools/call", { name, arguments: args });
-  expect(status).toBe(200);
-  const result = body?.result as { isError?: boolean; content: { type: string; text: string }[] };
-  return { isError: Boolean(result.isError), text: result.content[0].text };
-}
 
 const invalidGrant = async (response: Response) => {
   expect(response.status).toBe(400);
@@ -135,65 +75,6 @@ describe("code → tokens", () => {
 });
 
 describe("what a grant opens", () => {
-  it("lists the three read tools and runs each", async () => {
-    const { access_token } = await connect();
-    const listed = await call(access_token, "tools/list");
-    const tools = listed.body?.result?.tools as { name: string; annotations: { readOnlyHint: boolean } }[];
-    expect(tools.map((t) => t.name).sort()).toEqual(["macros_day", "rides_list", "weight_rollup"]);
-    expect(tools.every((t) => t.annotations.readOnlyHint)).toBe(true);
-
-    // Shapes only: other suites write test rows into old dates while this one runs.
-    const day = await tool(access_token, "macros_day", { date: "1971-03-01" });
-    expect(day.isError).toBe(false);
-    const rollupDay = JSON.parse(day.text);
-    expect(rollupDay.day).toEqual({ date: "1971-03-01" });
-    expect(Object.keys(rollupDay).sort()).toEqual(["day", "entries", "estimation", "target", "totals"]);
-    expect(Array.isArray(rollupDay.entries)).toBe(true);
-
-    const weight = await tool(access_token, "weight_rollup", { window: 7, end: "1971-03-07" });
-    expect(weight.isError).toBe(false);
-    const rollup = JSON.parse(weight.text);
-    expect(Object.keys(rollup).sort()).toEqual(["series", "summary"]);
-    expect(rollup.summary.window).toBe(7);
-    expect(Array.isArray(rollup.series)).toBe(true);
-
-    const rides = await tool(access_token, "rides_list", { from: "1971-03-01", to: "1971-03-02", limit: 5 });
-    expect(rides.isError).toBe(false);
-    expect(JSON.parse(rides.text)).toMatchObject({ limit: 5, offset: 0, count: expect.any(Number), items: expect.any(Array) });
-  });
-
-  it("the descriptions say what a reader can't guess: units, what is summed, how to read zones", async () => {
-    // Each of these was misread, or flagged as easy to misread, by Claude on first use (#133).
-    const { access_token } = await connect();
-    const listed = await call(access_token, "tools/list");
-    const about = new Map((listed.body?.result?.tools as { name: string; description: string }[]).map((t) => [t.name, t.description]));
-    for (const phrase of ["four headline macros", "sodium included", "not summed in `totals`", "counts only the `estimated` ones"]) {
-      expect(about.get("macros_day"), phrase).toContain(phrase);
-    }
-    for (const phrase of ["in pounds", "least-squares slope", "depends on `window`"]) {
-      expect(about.get("weight_rollup"), phrase).toContain(phrase);
-    }
-    for (const phrase of ["30 mph", "ask before", "`hrZoneHighBoundary` is the 6 upper limits", "metres per second"]) {
-      expect(about.get("rides_list"), phrase).toContain(phrase);
-    }
-  });
-
-  it("a bad argument is an error result, not a crash", async () => {
-    const { access_token } = await connect();
-    expect((await tool(access_token, "macros_day", { date: "yesterday" })).isError).toBe(true);
-    expect((await tool(access_token, "rides_list", { limit: 5000 })).isError).toBe(true);
-  });
-
-  it("a tool outside the grant's scopes is refused", async () => {
-    const { access_token } = await connect(["weight:read"]);
-    const refused = await tool(access_token, "macros_day", { date: "1971-03-01" });
-    expect(refused.isError).toBe(true);
-    expect(refused.text).toContain("macros:read");
-    expect(refused.text).not.toContain("entries");
-    expect((await tool(access_token, "rides_list", {})).isError).toBe(true);
-    expect((await tool(access_token, "weight_rollup", { window: 7, end: "1971-03-07" })).isError).toBe(false);
-  });
-
   it("the official client connects with the token, on the newest protocol", async () => {
     const { access_token } = await connect();
     const viaRoute: typeof fetch = (input, init) => mcp(new Request(input as RequestInfo, init));
@@ -203,7 +84,7 @@ describe("what a grant opens", () => {
     );
     expect(client.getNegotiatedProtocolVersion()).toBe("2026-07-28");
     const { tools } = await client.listTools();
-    expect(tools.map((t) => t.name).sort()).toEqual(["macros_day", "rides_list", "weight_rollup"]);
+    expect(tools.map((t) => t.name)).toContain("weight_rollup");
     const result = await client.callTool({ name: "weight_rollup", arguments: { window: 7, end: "1971-03-07" } });
     expect(result.isError).toBeFalsy();
     await client.close();
@@ -224,7 +105,7 @@ describe("what a grant opens", () => {
     );
     await expect(client.listen({ toolsListChanged: true })).rejects.toThrow(/Subscription limit/);
     expect(kinds.some((kind) => kind.includes("text/event-stream"))).toBe(false);
-    expect((await client.listTools()).tools).toHaveLength(3);
+    expect((await client.listTools()).tools.length).toBeGreaterThan(0);
     await client.close();
   });
 });
@@ -335,7 +216,7 @@ describe("the devices page's list", () => {
     const [kept] = await db
       .select({ id: oauthGrant.id })
       .from(oauthGrant)
-      .where(and(like(oauthGrant.clientId, "test-mcp%"), isNotNull(oauthGrant.codeUsedAt), isNotNull(oauthGrant.deletedAt)));
+      .where(and(eq(oauthGrant.clientId, CLIENT), isNotNull(oauthGrant.codeUsedAt), isNotNull(oauthGrant.deletedAt)));
     expect(kept).toBeUndefined();
   });
 });

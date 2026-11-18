@@ -1,7 +1,7 @@
 # MCP surface
 
 How Claude reads justmy.website as a connector: one MCP endpoint, a small OAuth server in front of
-it, and three read-only tools. Issue #133. The spike that led here is `docs/archive/mcp-spike.md`.
+it, and read-only tools for every module. Issue #133. The spike that led here is `docs/archive/mcp-spike.md`.
 
 This is a **surface**, not a module (CONVENTIONS §1). It owns no domain data and no domain logic. It
 is also a **kernel departure** in auth (CONVENTIONS §2): a new kind of credential, and four
@@ -43,8 +43,9 @@ only. Rules, all in `src/lib/mcp/oauth.ts` and tested in `oauth.test.ts`:
   not fetched: it could only list redirect URIs, and the allowlist already refuses every one but
   Claude's.
 - **PKCE** with `S256` is required. There is no client secret.
-- **Scopes.** `macros:read`, `weight:read`, `rides:read`. Anything else asked for is dropped. Asking
-  for nothing we offer means all three. There is no write scope to ask for.
+- **Scopes.** One read scope per module: `macros:read`, `weight:read`, `rides:read`, `lifting:read`,
+  `vitals:read`, `shopping:read`, `garage:read`. Anything else asked for is dropped. Asking for
+  nothing we offer means all of them. There is no write scope to ask for.
 - **Resource** (RFC 8707). If sent, it must be this host's `/mcp`.
 - **Consent.** `/oauth/authorize` shows what will be readable and where the code goes. Rendering it
   changes nothing. Approve and Deny post to one server action, which checks the Clerk session and
@@ -88,19 +89,59 @@ separation structural: `/mcp` only looks in `oauth_grants`, the token API only l
 ## 4. Tools
 
 Each tool calls a module's own repo read function and returns the same JSON, with the same field
-names, as the token API route for that read. No tool writes. Each checks its scope against the
-grant before reading.
+names, as the token API route for that read. No tool writes. The scope check is in the one function
+that registers every tool (`reader` in `src/lib/mcp/tools.ts`), so a tool can't be added without one.
 
-| Tool | Scope | Reads | Same as |
+Where the API has a list route and a get-by-id route, one tool serves both: an `id` (or a single
+`date`) returns that one thing in the get route's shape; without it, the list route's shape.
+
+| Tool | Scope | Repo read | Same as |
 |---|---|---|---|
-| `macros_day` | `macros:read` | `macros` `getDayRollup(date)`; `date` defaults to today in `America/Chicago` | `GET /api/macros/days/{date}` |
-| `weight_rollup` | `weight:read` | `weight` `getRollup({ window, end })`; window 7 to 3650, default 90 | `GET /api/weight/rollup` |
-| `rides_list` | `rides:read` | `rides` `listRides(…)`; filters `from`, `to`, `sport`, `q`; `limit` 1 to 100, default 20 | `GET /api/rides` |
+| `macros_day` | `macros:read` | `getDayRollup(date)`; today in `America/Chicago` by default | `GET /api/macros/days/{date}` |
+| `macros_range` | `macros:read` | `getRange(start, end)`; at most 366 days | `GET /api/macros/range` |
+| `macros_entries` | `macros:read` | `listEntries({ on })` | `GET /api/macros/entries` |
+| `macros_foods` | `macros:read` | `listFoods(…)`, or `getFoodById(id)` | `GET /api/macros/foods`, `/foods/{id}` |
+| `macros_batches` | `macros:read` | `listBatches(…)`, or `getBatchById(id)` | `GET /api/macros/batches`, `/batches/{id}` |
+| `macros_usda_search` | `macros:read` | `searchFoods(q)` (USDA, an outside service) | `GET /api/macros/usda/search` |
+| `weight_rollup` | `weight:read` | `getRollup({ window, end })`; window 7 to 3650, default 90 | `GET /api/weight/rollup` |
+| `weight_entries` | `weight:read` | `listEntries(…)`, or `getEntryByDay(date)` | `GET /api/weight/entries`, `/days/{date}` |
+| `rides_list` | `rides:read` | `listRides(…)`; filters `from`, `to`, `sport`, `q` | `GET /api/rides` |
+| `rides_detail` | `rides:read` | `getRide(id, { includeStream })` | `GET /api/rides/{id}` |
+| `rides_weekly` | `rides:read` | `weeklyStats({ weeks, sport })` | `GET /api/rides/weekly` |
+| `lifting_sessions` | `lifting:read` | `listSessions(…)`, or `getSession(id)` | `GET /api/lifting/sessions`, `/sessions/{id}` |
+| `lifting_goal` | `lifting:read` | `getGoalOn(on)`, or `listGoals(…)` with `history` | `GET /api/lifting/goal`, `/goals` |
+| `lifting_lift` | `lifting:read` | `getLiftProgression(templateId)` | `GET /api/lifting/lifts/{templateId}` |
+| `vitals_days` | `vitals:read` | `listDays(…)`, or `getDay(date)` | `GET /api/vitals`, `/vitals/{date}` |
+| `vitals_summary` | `vitals:read` | `getRollup({ window, end })` | `GET /api/vitals/summary` |
+| `shopping_list` | `shopping:read` | `getList({ boughtWithinDays })` | `GET /api/shopping/list` |
+| `shopping_items` | `shopping:read` | `listItems(…)`, or `getItemById(id)` | `GET /api/shopping/items`, `/items/{id}` |
+| `garage_bikes` | `garage:read` | `listBikes(…)`, or `getBike(id, window)` | `GET /api/garage/bikes`, `/bikes/{id}` |
+| `garage_rides` | `garage:read` | `listRideTags(…)` | `GET /api/garage/rides` |
 
-Adding a tool: add its scope to `MCP_SCOPES` only if it needs a new one, register it in
-`src/lib/mcp/server.ts`, add a row here, and add it to `flow.test.ts`. A write tool would be a larger
-change than a tool: it needs a write scope, a decision about what the skills keep doing, and the
-write-path rule (`schema.parse` then `repo`, CONVENTIONS §5).
+**How the tools differ from the routes**, all deliberate:
+- A page is 20 items by default (the API's is 50), to keep answers small. The maximum is still 100.
+- A thing that doesn't exist is an error result saying "Not found", where the route answers 404.
+- A result over 140,000 characters is refused with a message saying to ask for less. claude.ai cuts a
+  result off at about 150,000. Measured on 2026-11-18: the longest ride (3.9 hours) with its stream is
+  about 129,000 characters, and a page of 100 rides is about 88,000.
+
+**Descriptions** say what a reader can't guess from the field names: units (food in kcal and grams,
+body weight in pounds, lifting in kilograms, rides in SI), what is and isn't summed, how to read a raw
+shape, and when a number needs a question first (a ride over about 30 mph is probably a recorded
+drive). How to *act* on the data belongs in the skills.
+
+**The cost of the list.** Every tool's definition is sent with every conversation that has the
+connector on. The 20 read tools are about 20,000 characters (`tools.test.ts` holds a budget of
+22,000). Two things keep it down: dates and ids are validated by refinement instead of zod's built-in
+formats, which publish a 200-character regular expression per field, and list and get-by-id share a
+tool.
+
+Adding a tool: add its scope to `MCP_SCOPES` (and a consent label) only if it needs a new one, register
+it with `reader`, add a row here, and add it to the table in `tools.test.ts`. A grant holds the scopes
+it was approved with, so a new scope reaches an existing connection only when it is reconnected and
+approved again. A write tool would be a larger change than a tool: it needs a write scope, a decision
+about what the skills keep doing, and the write-path rule (`schema.parse` then `repo`, CONVENTIONS §5).
+That work is #144.
 
 ## 5. Hosting notes
 
@@ -124,12 +165,13 @@ once, and then waits for the grant to be revoked on `/settings/devices`. It neve
 It works only against a dev server: production refuses loopback redirects.
 
 The automated tests are `src/lib/mcp/oauth.test.ts` (the rules), `src/app/oauth/endpoints.test.ts`
-(discovery, registration, malformed token requests), `src/app/mcp/route.test.ts` (no credential) and
-`src/app/mcp/flow.test.ts` (everything a grant does and every way it ends, against the database).
+(discovery, registration, malformed token requests), `src/app/mcp/route.test.ts` (no credential),
+`src/app/mcp/flow.test.ts` (everything a grant does and every way it ends) and
+`src/app/mcp/tools.test.ts` (every tool: its shape, its scope check, not-found, bad arguments). The
+last two run against the database and share `src/app/mcp/test-kit.ts`.
 
 ## 7. Not done
 
 - Claude Code as a client (it needs a loopback redirect in production).
 - Any write.
-- Lifting, vitals, shopping and garage tools.
 - Fetching Client ID Metadata Documents, should a second client ever be allowed.

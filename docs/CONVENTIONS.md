@@ -85,8 +85,8 @@ departure of its own.
   (`/oauth/authorize`). Its access token (1 hour) and refresh token (rotating) are accepted by
   `/mcp` and the token endpoint and **nowhere else**: grants live in their own table, so a grant
   never passes `requireScope`, `bearerAuth` or `primaryKey`, and no API or device token opens `/mcp`.
-- A grant holds read scopes only (`macros:read`, `weight:read`, `rides:read`). There is no write
-  scope to grant.
+- A grant holds read scopes only, one per module (`macros:read`, `weight:read`, `rides:read`,
+  `lifting:read`, `vitals:read`, `shopping:read`, `garage:read`). There is no write scope to grant.
 - Four endpoints answer without a bearer token, all outside `/api` so that "the API is token-only"
   stays true without exception: the two `/.well-known/` discovery documents, `POST /oauth/register`
   and `POST /oauth/token`. None returns data. Widening this list, the redirect allowlist or the
