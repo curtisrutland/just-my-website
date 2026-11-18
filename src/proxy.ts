@@ -31,8 +31,10 @@ export default clerkMiddleware(async (auth, req) => {
 
 export const config = {
   matcher: [
-    // Run on all UI routes; skip the token API, Next internals, and static files.
-    "/((?!api|_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    // Run on all UI routes; skip the token API, the MCP endpoint (#133 spike — a machine client
+    // must get the handler's answer, not a redirect to the sign-in page), Next internals, and
+    // static files.
+    "/((?!api|mcp(?:$|/)|_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
     // Panel API only: run middleware so handlers can read an optional Clerk session (never protected).
     "/api/panel/:path*",
   ],
