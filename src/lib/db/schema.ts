@@ -298,8 +298,12 @@ export const deviceToken = pgTable(
     lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
     // null = active. Set to revoke a device without deleting its audit row.
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    // A child token (`docs/ios-app.md` §3.3.7): a narrower credential a device minted for itself,
+    // e.g. the phone's weigh-in token for Siri. It is live only while its parent is, and can't mint
+    // children of its own. null = an ordinary, top-level token.
+    parentId: uuid("parent_id"),
   },
-  (t) => [uniqueIndex("device_tokens_token_hash_idx").on(t.tokenHash)]
+  (t) => [uniqueIndex("device_tokens_token_hash_idx").on(t.tokenHash), index("device_tokens_parent_id_idx").on(t.parentId)]
 );
 
 /**

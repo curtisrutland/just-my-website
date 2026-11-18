@@ -1,13 +1,14 @@
-import { eq, inArray } from "drizzle-orm";
+import { eq, like } from "drizzle-orm";
 import { NextRequest } from "next/server";
 import { afterAll, describe, expect, it } from "vitest";
 import { db } from "@/lib/db";
 import { deviceToken } from "@/lib/db/schema";
 import { getEntryByDay, hardDeleteEntry } from "@/lib/weight/repo";
 import { addItem, getItemById, hardDeleteItem } from "@/lib/shopping/repo";
-import { createDeviceToken, revokeDeviceToken } from "./device-tokens";
-import { PHONE_SCOPES } from "./scopes";
-import { requireBearer, requirePrimary, requireScope } from "./tokens";
+import { createDeviceToken, listDeviceTokens, revokeDeviceToken } from "./device-tokens";
+import { mintedTokenSchema } from "./pairing";
+import { PHONE_SCOPES, WEIGH_IN_SCOPES } from "./scopes";
+import { requireBearer, requireDevice, requirePrimary, requireScope } from "./tokens";
 
 import { GET as macrosDay } from "@/app/api/macros/days/[date]/route";
 import { GET as macrosRange } from "@/app/api/macros/range/route";
@@ -15,6 +16,7 @@ import { POST as macrosEntryCreate } from "@/app/api/macros/entries/route";
 import { GET as weightRollup } from "@/app/api/weight/rollup/route";
 import { GET as weightList, POST as weightCreate } from "@/app/api/weight/entries/route";
 import { GET as weightDay } from "@/app/api/weight/days/[date]/route";
+import { POST as weighInToken } from "@/app/api/weight/weigh-in-token/route";
 import { DELETE as weightDelete } from "@/app/api/weight/entries/[id]/route";
 import { GET as liftingSessions } from "@/app/api/lifting/sessions/route";
 import { GET as liftingLift } from "@/app/api/lifting/lifts/[templateId]/route";
@@ -32,11 +34,11 @@ import { DELETE as shoppingDelete, PATCH as shoppingPatch } from "@/app/api/shop
 
 /**
  * Integration: device tokens on module routes (CONVENTIONS §2, `docs/ios-app.md` §3.5) against live
- * Neon. Every token minted here uses a `test-scope*` name so the afterAll wipe removes only this
- * suite's rows; the weight write uses a 1990 date and the shopping item a `zzz-scope` category, both
+ * Neon. Every token minted here uses a `test-scope*` name (a child's name starts with its parent's)
+ * so the afterAll wipe removes only this suite's rows; the weight write uses a 1990 date and the shopping item a `zzz-scope` category, both
  * hard-deleted after.
  */
-const TOKENS = ["test-scope", "test-scope-narrow", "test-scope-revoked", "test-scope-deleted", "test-scope-panel"];
+const TOKEN_PREFIX = "test-scope";
 const WEIGHT_DAY = "1990-01-01";
 const shoppingIds: string[] = [];
 
@@ -47,7 +49,7 @@ afterAll(async () => {
   const w = await getEntryByDay(WEIGHT_DAY);
   if (w) await hardDeleteEntry(w.id);
   for (const id of shoppingIds) await hardDeleteItem(id);
-  await db.delete(deviceToken).where(inArray(deviceToken.name, TOKENS));
+  await db.delete(deviceToken).where(like(deviceToken.name, `${TOKEN_PREFIX}%`));
 });
 
 const req = (token: string | null, path = "/api/x", init: { method?: string; body?: unknown } = {}) =>
@@ -203,5 +205,119 @@ describe("the iOS allowlist — a phone token on module routes", () => {
     await revokeDeviceToken(id);
     expect((await weightRollup(req(raw, "/api/weight/rollup"))).status).toBe(401);
     expect((await shoppingList(req(raw, "/api/shopping/list"))).status).toBe(401);
+  });
+});
+
+describe("the weigh-in token — a phone's child credential for Siri (ios-app.md §3.3.7)", () => {
+  const mint = async (raw: string | null) => weighInToken(req(raw, "/api/weight/weigh-in-token", { method: "POST" }));
+  const minted = async (raw: string) => {
+    const res = await mint(raw);
+    const json = await res.json();
+    expect(res.status, JSON.stringify(json)).toBe(201);
+    const parsed = mintedTokenSchema.parse(json);
+    expect(parsed).toEqual(json); // nothing undeclared in the response
+    return parsed;
+  };
+
+  it("a phone mints one: weight scopes only, named after its parent, never cached", async () => {
+    const { raw, id } = await phone();
+    const res = await mint(raw);
+    expect(res.status).toBe(201);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    const child = mintedTokenSchema.parse(await res.json());
+    expect(child.token).toMatch(/^jmw_/);
+    expect(child.token).not.toBe(raw);
+    expect(child.scopes).toEqual(WEIGH_IN_SCOPES);
+    expect(child.name).toBe("test-scope · Siri weigh-in");
+    const row = (await listDeviceTokens()).find((t) => t.name === child.name && t.parentId === id);
+    expect(row?.revokedAt).toBeNull();
+  });
+
+  it("logs and reads weigh-ins, and nothing else", async () => {
+    const child = (await minted((await phone()).raw)).token;
+    const w = await weightCreate(req(child, "/api/weight/entries", { method: "POST", body: { measuredOn: WEIGHT_DAY, weight: 151 } }));
+    expect(w.status).toBe(200);
+    expect((await getEntryByDay(WEIGHT_DAY))?.weight).toBe(151);
+    expect((await weightDay(req(child), ctx({ date: WEIGHT_DAY }))).status).toBe(200);
+    expect((await weightRollup(req(child, "/api/weight/rollup"))).status).toBe(200);
+
+    const nil = "00000000-0000-0000-0000-000000000000";
+    const refused: [string, Promise<Response>][] = [
+      ["macros day", macrosDay(req(child), ctx({ date: "2026-10-01" }))],
+      ["lifting sessions", liftingSessions(req(child, "/api/lifting/sessions"))],
+      ["rides", rides(req(child, "/api/rides"))],
+      ["vitals list", vitalsList(req(child, "/api/vitals"))],
+      ["shopping list", shoppingList(req(child, "/api/shopping/list"))],
+      ["shopping create", shoppingCreate(req(child, "/api/shopping/items", { method: "POST", body: { category: "zzz-scope", text: "no" } }))],
+      ["weight delete", weightDelete(req(child, `/api/weight/entries/${nil}`, { method: "DELETE" }), ctx({ id: nil }))],
+    ];
+    for (const [name, res] of refused) expect([name, (await res).status]).toEqual([name, 401]);
+    expect(requireBearer(req(child)).ok).toBe(false);
+    expect(requirePrimary(req(child)).ok).toBe(false);
+  });
+
+  it("can't mint a token of its own (no chains)", async () => {
+    const child = (await minted((await phone()).raw)).token;
+    expect((await mint(child)).status).toBe(401);
+  });
+
+  it("dies with its parent: revoking the phone revokes the weigh-in token", async () => {
+    const { raw, id } = await phone();
+    const child = (await minted(raw)).token;
+    expect((await requireScope(req(child), "weight:write")).ok).toBe(true);
+    expect(await revokeDeviceToken(id)).toBe(true);
+    expect((await requireScope(req(child), "weight:write")).ok).toBe(false);
+    const rows = (await listDeviceTokens()).filter((t) => t.parentId === id);
+    expect(rows.length).toBe(1);
+    expect(rows[0].revokedAt).toBeInstanceOf(Date);
+  });
+
+  it("is dead while its parent is, even if only the parent's row changed", async () => {
+    const { raw, id } = await phone();
+    const child = (await minted(raw)).token;
+    await db.update(deviceToken).set({ deletedAt: new Date() }).where(eq(deviceToken.id, id)); // parent only
+    expect((await requireScope(req(child), "weight:read")).ok).toBe(false);
+  });
+
+  it("minting again replaces the previous one", async () => {
+    const { raw, id } = await phone();
+    const first = (await minted(raw)).token;
+    const second = (await minted(raw)).token;
+    expect((await requireScope(req(first), "weight:write")).ok).toBe(false);
+    expect((await requireScope(req(second), "weight:write")).ok).toBe(true);
+    const live = (await listDeviceTokens()).filter((t) => t.parentId === id && !t.revokedAt);
+    expect(live.length).toBe(1);
+    expect((await requireScope(req(raw), "vitals:read")).ok).toBe(true); // the phone itself is untouched
+  });
+
+  it("revoking only the weigh-in token leaves the phone working", async () => {
+    const { raw, id } = await phone();
+    const child = (await minted(raw)).token;
+    const row = (await listDeviceTokens()).find((t) => t.parentId === id)!;
+    expect(await revokeDeviceToken(row.id)).toBe(true);
+    expect((await requireScope(req(child), "weight:write")).ok).toBe(false);
+    expect((await requireScope(req(raw), "weight:write")).ok).toBe(true);
+  });
+
+  it("refuses everyone who isn't a device holding both weight scopes", async () => {
+    expect((await mint(null)).status).toBe(401);
+    expect((await mint("jmw_not-a-real-token")).status).toBe(401);
+    // The env tokens aren't devices: there is no parent for a child to hang from.
+    expect((await mint(primary)).status).toBe(401);
+    expect((await mint(agent)).status).toBe(401);
+    const narrow = await createDeviceToken({ name: "test-scope-narrow", scopes: ["weight:read"] });
+    expect((await mint(narrow.raw)).status).toBe(401); // a child never holds more than its parent
+    const panel = await createDeviceToken({ name: "test-scope-panel", scopes: ["panel:read", "panel:write:shopping"] });
+    expect((await mint(panel.raw)).status).toBe(401);
+    const revoked = await phone();
+    await revokeDeviceToken(revoked.id);
+    expect((await mint(revoked.raw)).status).toBe(401);
+  });
+
+  it("requireDevice names the device, and turns the env tokens away", async () => {
+    const { raw, id } = await phone();
+    expect(await requireDevice(req(raw))).toMatchObject({ ok: true, device: { id, parentId: null } });
+    expect((await requireDevice(req(primary))).ok).toBe(false);
+    expect((await requireDevice(req(agent))).ok).toBe(false);
   });
 });

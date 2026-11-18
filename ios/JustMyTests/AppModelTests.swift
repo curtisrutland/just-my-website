@@ -170,4 +170,86 @@ struct AppModelTests {
         #expect(m.phaseKind == .unpaired)
         #expect(store.saved == nil)
     }
+
+    // MARK: Siri weigh-in token (#101)
+
+    func provisioned(store: FakeStore = FakeStore(), weighInStore: FakeWeighInStore = FakeWeighInStore(),
+                     result: JMWClients.CheckResult = .ok, minted: String? = "jmw_weigh-in",
+                     mints: Counter = Counter()) -> AppModel {
+        AppModel(store: store, check: { _ in result }, weighIn: WeighInSetup(store: weighInStore) { _ in
+            mints.count += 1
+            return minted
+        })
+    }
+
+    final class Counter: @unchecked Sendable { var count = 0 }
+
+    @Test func pairingFetchesAWeighInTokenForSiri() async {
+        let weighInStore = FakeWeighInStore()
+        let m = provisioned(weighInStore: weighInStore)
+        await m.pair(text: qr, fallbackBase: PairingPayload.defaultBase)
+        await m.provisioning?.value
+        #expect(weighInStore.saved == PairingPayload(base: base, token: "jmw_weigh-in"))
+        #expect(weighInStore.saved?.token != token) // never the phone's own token
+        #expect(m.siriWeighInReady)
+    }
+
+    @Test func unlockingFetchesOneOnlyWhenItIsMissing() async {
+        let store = FakeStore()
+        store.saved = PairingPayload(base: base, token: token)
+        let weighInStore = FakeWeighInStore()
+        let mints = Counter()
+        let first = provisioned(store: store, weighInStore: weighInStore, mints: mints)
+        await first.unlock()
+        await first.provisioning?.value
+        #expect(mints.count == 1)
+        #expect(weighInStore.saved?.token == "jmw_weigh-in")
+
+        let second = provisioned(store: store, weighInStore: weighInStore, mints: mints)
+        await second.unlock()
+        await second.provisioning?.value
+        #expect(mints.count == 1) // already there: the server isn't asked again
+        #expect(second.siriWeighInReady)
+    }
+
+    @Test func aRefusedOrFailedFetchLeavesSiriNotSetUpAndTheAppOpen() async {
+        let weighInStore = FakeWeighInStore()
+        let refused = provisioned(weighInStore: weighInStore, minted: nil)
+        await refused.pair(text: qr, fallbackBase: PairingPayload.defaultBase)
+        await refused.provisioning?.value
+        #expect(refused.phaseKind == .unlocked)
+        #expect(weighInStore.saved == nil)
+        #expect(!refused.siriWeighInReady)
+
+        let offline = AppModel(store: FakeStore(), check: { _ in .ok },
+                               weighIn: WeighInSetup(store: weighInStore) { _ in throw URLError(.notConnectedToInternet) })
+        await offline.pair(text: qr, fallbackBase: PairingPayload.defaultBase)
+        await offline.provisioning?.value
+        #expect(offline.phaseKind == .unlocked)
+        #expect(weighInStore.saved == nil)
+    }
+
+    @Test func unpairingAndRevocationForgetTheWeighInToken() async {
+        let weighInStore = FakeWeighInStore()
+        let m = provisioned(weighInStore: weighInStore)
+        await m.pair(text: qr, fallbackBase: PairingPayload.defaultBase)
+        await m.provisioning?.value
+        m.unpair()
+        #expect(weighInStore.saved == nil)
+        #expect(!m.siriWeighInReady)
+
+        await m.pair(text: qr, fallbackBase: PairingPayload.defaultBase)
+        await m.provisioning?.value
+        #expect(weighInStore.saved != nil)
+        m.handleUnauthorized() // the phone's token was revoked
+        #expect(weighInStore.saved == nil)
+    }
+
+    @Test func pairingAgainReplacesAnEarlierPairingsWeighInToken() async {
+        let weighInStore = FakeWeighInStore(PairingPayload(base: base, token: "jmw_old-weigh-in"))
+        let m = provisioned(weighInStore: weighInStore)
+        await m.pair(text: qr, fallbackBase: PairingPayload.defaultBase)
+        await m.provisioning?.value
+        #expect(weighInStore.saved?.token == "jmw_weigh-in")
+    }
 }

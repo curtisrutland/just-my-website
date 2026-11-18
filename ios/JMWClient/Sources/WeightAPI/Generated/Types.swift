@@ -35,6 +35,13 @@ public protocol APIProtocol: Sendable {
     /// - Remark: HTTP `GET /api/weight/days/{date}`.
     /// - Remark: Generated from `#/paths//api/weight/days/{date}/get`.
     func getApiWeightDaysDate(_ input: Operations.GetApiWeightDaysDate.Input) async throws -> Operations.GetApiWeightDaysDate.Output
+    /// Mint this device's weigh-in token (weight:read + weight:write only); replaces any previous one
+    ///
+    /// A child of the calling device token, live only while its parent is. The caller must hold weight:read and weight:write and must not itself be a child. The raw token is returned once.
+    ///
+    /// - Remark: HTTP `POST /api/weight/weigh-in-token`.
+    /// - Remark: Generated from `#/paths//api/weight/weigh-in-token/post`.
+    func postApiWeightWeighInToken(_ input: Operations.PostApiWeightWeighInToken.Input) async throws -> Operations.PostApiWeightWeighInToken.Output
     /// Trend rollup: per-day series (raw + 7-day average) + summary stats
     ///
     /// - Remark: HTTP `GET /api/weight/rollup`.
@@ -125,6 +132,15 @@ extension APIProtocol {
             path: path,
             headers: headers
         ))
+    }
+    /// Mint this device's weigh-in token (weight:read + weight:write only); replaces any previous one
+    ///
+    /// A child of the calling device token, live only while its parent is. The caller must hold weight:read and weight:write and must not itself be a child. The raw token is returned once.
+    ///
+    /// - Remark: HTTP `POST /api/weight/weigh-in-token`.
+    /// - Remark: Generated from `#/paths//api/weight/weigh-in-token/post`.
+    public func postApiWeightWeighInToken(headers: Operations.PostApiWeightWeighInToken.Input.Headers = .init()) async throws -> Operations.PostApiWeightWeighInToken.Output {
+        try await postApiWeightWeighInToken(Operations.PostApiWeightWeighInToken.Input(headers: headers))
     }
     /// Trend rollup: per-day series (raw + 7-day average) + summary stats
     ///

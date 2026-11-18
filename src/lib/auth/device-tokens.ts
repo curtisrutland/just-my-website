@@ -4,7 +4,7 @@ import { after } from "next/server";
 import { db } from "@/lib/db";
 import { deviceToken } from "@/lib/db/schema";
 import { kv } from "@/lib/kv";
-import type { DeviceScope } from "./scopes";
+import { WEIGH_IN_SCOPES, type DeviceScope } from "./scopes";
 
 /**
  * Device/service tokens (CONVENTIONS §2): the panel and its recipes sender (panel-contract §3) and the
@@ -27,12 +27,15 @@ export type DeviceTokenIdentity = {
   id: string;
   name: string;
   scopes: DeviceScope[];
+  /** Set on a child token (`docs/ios-app.md` §3.3.7); null on an ordinary one. */
+  parentId: string | null;
 };
 
 /**
  * Resolve a raw bearer token to a live identity, or null if it is unknown, revoked, or soft-deleted.
  * Direct hash lookup — no full-table scan, no timing concern (we compare hashes in the index, and a
- * hash reveals nothing about the stored secret).
+ * hash reveals nothing about the stored secret). A child token is live only while its parent is, so
+ * revoking a phone kills its weigh-in token even if the child's own row were somehow left alone.
  */
 export async function findLiveTokenByRaw(raw: string): Promise<DeviceTokenIdentity | null> {
   const [row] = await db
@@ -47,7 +50,15 @@ export async function findLiveTokenByRaw(raw: string): Promise<DeviceTokenIdenti
     )
     .limit(1);
   if (!row) return null;
-  return { id: row.id, name: row.name, scopes: row.scopes as DeviceScope[] };
+  if (row.parentId) {
+    const [parent] = await db
+      .select({ id: deviceToken.id })
+      .from(deviceToken)
+      .where(and(eq(deviceToken.id, row.parentId), isNull(deviceToken.revokedAt), isNull(deviceToken.deletedAt)))
+      .limit(1);
+    if (!parent) return null;
+  }
+  return { id: row.id, name: row.name, scopes: row.scopes as DeviceScope[], parentId: row.parentId };
 }
 
 /**
@@ -92,13 +103,54 @@ export async function findLiveTokenByRawCached(raw: string): Promise<DeviceToken
 export async function createDeviceToken(opts: {
   name: string;
   scopes: DeviceScope[];
+  parentId?: string;
 }): Promise<{ raw: string; id: string; name: string; scopes: DeviceScope[] }> {
   const raw = generateRawToken();
   const [row] = await db
     .insert(deviceToken)
-    .values({ name: opts.name, tokenHash: hashToken(raw), scopes: opts.scopes })
+    .values({ name: opts.name, tokenHash: hashToken(raw), scopes: opts.scopes, parentId: opts.parentId ?? null })
     .returning();
   return { raw, id: row.id, name: row.name, scopes: row.scopes as DeviceScope[] };
+}
+
+/**
+ * Mint a device's weigh-in token (`docs/ios-app.md` §3.3.7): a child of `parent` holding
+ * `WEIGH_IN_SCOPES` and nothing else. The rules, all enforced here rather than at the call site:
+ *
+ *  - the parent must itself hold every scope the child gets — a child never has more than its parent;
+ *  - a child can't mint (no chains), so a leaked weigh-in token can't make more of itself;
+ *  - a device has at most one live weigh-in token: minting again revokes the previous one.
+ *
+ * Returns null when the parent isn't allowed to mint. The raw token is returned exactly once.
+ */
+export async function mintWeighInToken(
+  parent: DeviceTokenIdentity
+): Promise<{ raw: string; id: string; name: string; scopes: DeviceScope[] } | null> {
+  if (parent.parentId) return null;
+  if (!WEIGH_IN_SCOPES.every((scope) => parent.scopes.includes(scope))) return null;
+  await revokeChildren(parent.id);
+  return createDeviceToken({ name: `${parent.name} · Siri weigh-in`, scopes: WEIGH_IN_SCOPES, parentId: parent.id });
+}
+
+/** Revoke every live child of a token, dropping any cache entries. Returns how many were revoked. */
+async function revokeChildren(parentId: string): Promise<number> {
+  const rows = await db
+    .update(deviceToken)
+    .set({ revokedAt: new Date() })
+    .where(and(eq(deviceToken.parentId, parentId), isNull(deviceToken.revokedAt), isNull(deviceToken.deletedAt)))
+    .returning();
+  await Promise.all(rows.map((row) => dropCached(row.tokenHash)));
+  return rows.length;
+}
+
+async function dropCached(tokenHash: string): Promise<void> {
+  const client = kv();
+  if (!client) return;
+  try {
+    await client.del(tokenCacheKey(tokenHash));
+  } catch {
+    // KV unavailable → the cached entry ages out at its TTL; the direct lookup already rejects
+  }
 }
 
 /** One device token as the devices page lists it: never the hash. */
@@ -109,6 +161,8 @@ export type DeviceTokenRow = {
   createdAt: Date;
   lastSeenAt: Date | null;
   revokedAt: Date | null;
+  /** The token this one was minted by (a phone's weigh-in token); null for an ordinary token. */
+  parentId: string | null;
 };
 
 /** Every device token that isn't soft-deleted, revoked ones included (newest first), for `/settings/devices`. */
@@ -121,6 +175,7 @@ export async function listDeviceTokens(): Promise<DeviceTokenRow[]> {
       createdAt: deviceToken.createdAt,
       lastSeenAt: deviceToken.lastSeenAt,
       revokedAt: deviceToken.revokedAt,
+      parentId: deviceToken.parentId,
     })
     .from(deviceToken)
     .where(isNull(deviceToken.deletedAt))
@@ -131,7 +186,8 @@ export async function listDeviceTokens(): Promise<DeviceTokenRow[]> {
 /**
  * Revoke a device. Sets `revoked_at` (the audit row stays) and drops the version-poll cache entry, so
  * revocation is immediate on every path — the direct lookup never sees the token again, and the cached
- * one can't serve it from KV for up to a day. Returns false if no live token has that id.
+ * one can't serve it from KV for up to a day. Its child tokens are revoked with it. Returns false if
+ * no live token has that id.
  */
 export async function revokeDeviceToken(id: string): Promise<boolean> {
   const [row] = await db
@@ -140,14 +196,8 @@ export async function revokeDeviceToken(id: string): Promise<boolean> {
     .where(and(eq(deviceToken.id, id), isNull(deviceToken.revokedAt), isNull(deviceToken.deletedAt)))
     .returning();
   if (!row) return false;
-  const client = kv();
-  if (client) {
-    try {
-      await client.del(tokenCacheKey(row.tokenHash));
-    } catch {
-      // KV unavailable → the cached entry ages out at its TTL; the direct lookup already rejects
-    }
-  }
+  await dropCached(row.tokenHash);
+  await revokeChildren(row.id);
   return true;
 }
 

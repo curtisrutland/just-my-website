@@ -36,23 +36,29 @@ final class AppModel {
 
     private let store: any TokenStoring
     private let check: Check
+    private let weighIn: WeighInSetup?
     private let policy: LockPolicy
     private let now: () -> Date
     private var backgroundedAt: Date?
     /// The background token check started by the last unlock (exposed for tests).
     private(set) var revalidation: Task<Void, Never>?
+    /// The weigh-in token being fetched, if one was missing (exposed for tests).
+    private(set) var provisioning: Task<Void, Never>?
+    /// Whether Siri has what it needs to log a weigh-in; Settings shows it.
+    private(set) var siriWeighInReady = false
 
-    init(store: any TokenStoring, check: @escaping Check, policy: LockPolicy = .init(),
-         now: @escaping () -> Date = Date.init) {
+    init(store: any TokenStoring, check: @escaping Check, weighIn: WeighInSetup? = nil,
+         policy: LockPolicy = .init(), now: @escaping () -> Date = Date.init) {
         self.store = store
         self.check = check
+        self.weighIn = weighIn
         self.policy = policy
         self.now = now
         phase = store.hasPairing ? .locked : .unpaired(notice: nil)
     }
 
     static func live() -> AppModel {
-        AppModel(store: KeychainTokenStore(), check: { try await JMWClients(pairing: $0).check() })
+        AppModel(store: KeychainTokenStore(), check: { try await JMWClients(pairing: $0).check() }, weighIn: .live)
     }
 
     var phaseKind: PhaseKind {
@@ -93,7 +99,9 @@ final class AppModel {
             switch try await check(pairing) {
             case .ok:
                 try store.save(pairing)
+                weighIn?.store.delete() // a weigh-in token from an earlier pairing belongs to that phone token
                 phase = .unlocked(Session(pairing: pairing, clients: makeClients(pairing)))
+                provisionWeighIn(for: pairing)
             case .rejected:
                 errorMessage = "The server rejected that token. It may be revoked, or not a phone token."
             case let .unexpected(code):
@@ -108,6 +116,7 @@ final class AppModel {
 
     func unpair() {
         store.delete()
+        forgetWeighIn()
         errorMessage = nil
         phase = .unpaired(notice: nil)
     }
@@ -116,6 +125,7 @@ final class AppModel {
     func handleUnauthorized() {
         guard phaseKind != .unpaired else { return } // several in-flight reads may 401 together
         store.delete()
+        forgetWeighIn()
         phase = .unpaired(notice: "This iPhone's token was revoked. Pair it again to continue.")
     }
 
@@ -155,6 +165,33 @@ final class AppModel {
             guard case .rejected = try? await check(pairing), session?.pairing == pairing else { return }
             handleUnauthorized()
         }
+        provisionWeighIn(for: pairing)
+    }
+
+    // MARK: Siri weigh-in
+
+    /// Makes sure Siri has a weigh-in token (docs/ios-app.md §3.3.7, §4.2). The phone's own token is
+    /// only in hand while the app is unlocked, so this is the moment to ask for the narrow one: once,
+    /// then it sits in its own Keychain item until this phone is unpaired or the token is revoked.
+    /// Quiet on failure — offline or refused just means Siri says to open the app, and the next
+    /// unlock tries again.
+    private func provisionWeighIn(for pairing: PairingPayload) {
+        guard let weighIn else { return }
+        if weighIn.store.load()?.base == pairing.base {
+            siriWeighInReady = true
+            return
+        }
+        provisioning = Task {
+            guard let token = try? await weighIn.mint(pairing), session?.pairing == pairing else { return }
+            weighIn.store.save(PairingPayload(base: pairing.base, token: token))
+            siriWeighInReady = weighIn.store.load() != nil
+        }
+    }
+
+    private func forgetWeighIn() {
+        provisioning?.cancel()
+        weighIn?.store.delete()
+        siriWeighInReady = false
     }
 
     func scenePhaseChanged(to scenePhase: ScenePhase) {

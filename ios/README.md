@@ -78,6 +78,13 @@ SIMCTL_CHILD_JMW_TODAY=2026-11-19 xcrun simctl launch --terminate-running-proces
 
 Revoke a test token when you're done. Until #69 adds a revoke button, set `revoked_at` on its `device_tokens` row, or delete the row.
 
+## Siri
+
+"Log my weight in JustMy" logs today's weigh-in without opening the app (`JustMy/Intents/`, spec §9, #101). The action also appears in Shortcuts and Spotlight, and can go on the Action button. To say just "log my weight", make a Shortcut with that name that runs **Log Weight**.
+
+- Siri uses a second credential, the **weigh-in token** (spec §3.3.7): it can log and read weigh-ins and nothing else, and sits in its own Keychain item that is readable while the phone is unlocked. The app fetches it after an unlock; Settings shows "Siri weigh-in: Ready" once it has one.
+- The logic is in `SiriWeighIn.swift` and is tested against a stubbed server (`SiriWeighInTests`). The spoken conversation itself can only be checked on a phone.
+
 ## Signing
 
 The project ships with no `DEVELOPMENT_TEAM`. To run on your iPhone, pick your personal team under **Signing & Capabilities** in Xcode. With a free Apple ID the build expires after 7 days; rebuild from Xcode to renew it (spec §8).

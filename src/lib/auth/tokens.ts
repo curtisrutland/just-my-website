@@ -1,6 +1,6 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { unauthorized } from "@/lib/http/errors";
-import { findLiveTokenByRaw, touchLastSeen } from "./device-tokens";
+import { findLiveTokenByRaw, touchLastSeen, type DeviceTokenIdentity } from "./device-tokens";
 import type { ModuleScope } from "./scopes";
 
 /**
@@ -136,4 +136,22 @@ export async function requireScope(request: Request, scope: ModuleScope): Promis
   }
   touchLastSeen(device.id);
   return { ok: true, kind: "device", tokenId: device.id };
+}
+
+/**
+ * A live device token and nothing else (`docs/ios-app.md` §3.3.7): for the one route where a device
+ * acts on its own credential — minting its weigh-in token. The env tokens are REJECTED here: they
+ * aren't devices, so there is no parent for a child token to hang from, and nothing a skill needs.
+ * Returns the device's identity so the caller can apply the minting rules to it.
+ */
+type DeviceAuthOk = { ok: true; device: DeviceTokenIdentity };
+
+export async function requireDevice(request: Request): Promise<DeviceAuthOk | AuthFail> {
+  const token = extractBearer(request);
+  if (!token) return { ok: false, response: unauthorized("Missing bearer token") };
+  if (identify(token)) return { ok: false, response: unauthorized("This operation requires a device token") };
+  const device = await findLiveTokenByRaw(token);
+  if (!device) return { ok: false, response: unauthorized("Invalid token") };
+  touchLastSeen(device.id);
+  return { ok: true, device };
 }
