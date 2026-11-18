@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { underParents } from "@/lib/auth/device-list";
 import type { DeviceTokenRow } from "@/lib/auth/device-tokens";
 import { SectionLabel } from "./PairPhone";
 
@@ -10,16 +11,6 @@ const when = (d: Date | null) =>
   d
     ? d.toLocaleString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
     : "never";
-
-/**
- * A child token (a phone's weigh-in token for Siri) sits directly under the token that minted it;
- * one whose parent isn't listed any more falls back to the top level rather than vanishing.
- */
-function underParents(devices: DeviceTokenRow[]): DeviceTokenRow[] {
-  const ids = new Set(devices.map((d) => d.id));
-  const top = devices.filter((d) => !d.parentId || !ids.has(d.parentId));
-  return top.flatMap((d) => [d, ...devices.filter((c) => c.parentId === d.id)]);
-}
 
 /** Every device token, revoked ones included. Revoke asks first; nothing here can un-revoke. */
 export function DeviceList({ devices: listed, revoke }: { devices: DeviceTokenRow[]; revoke: (id: string) => Promise<void> }) {
