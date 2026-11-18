@@ -227,10 +227,12 @@ or paste. The app calls one allowlisted read to confirm the token works before s
 
 The web UI is a flat list of six modules. On iPhone a tab bar shows five tabs before collapsing
 into "More", and "More" is a poor home for a module used daily. The app groups the six into
-**four tabs**, using the pairs the data already suggests:
+**four module tabs**, using the pairs the data already suggests, behind a **Today** tab that the
+app opens on (#116):
 
 | Tab | SF Symbol | Contents | Web equivalent |
 |---|---|---|---|
+| **Today** | `sun.max` | The daily check: macros at a glance, today's weigh-in, the latest ride | none |
 | **Macros** | `fork.knife` | Day view | `/macros/[date]` |
 | **Body** | `figure` | Segmented: **Weight · Vitals** | `/weight`, `/vitals` |
 | **Training** | `figure.outdoor.cycle` | Segmented: **Lifting · Rides** | `/lifting`, `/rides` |
@@ -240,6 +242,20 @@ Settings (unpair, server, version) is a toolbar button, not a tab.
 
 Within each tab, a `NavigationStack`:
 
+- **Today** — the first tab, and where every unlock lands. Three things, each from its module's own
+  read, each loading and failing on its own:
+  - **Macros:** the top of the day rollup (calories against the ceiling, protein to the floor),
+    from `GET /api/macros/days/{today}`. Tap → the Macros tab.
+  - **Weight:** today's weigh-in, from `GET /api/weight/entries`. Tap → Body › Weight. With no
+    weigh-in yet today it is a weight field instead, focused with the keyboard up once per unlock,
+    so the daily weigh-in is "open, Face ID, type, Save". It saves through the same
+    `POST /api/weight/entries` call as the Log weight sheet (§6), for today only.
+  - **Latest ride:** one line (`Tue · 10.5 mi · 1:38`), from `GET /api/rides?limit=1`. Tap → that
+    ride's detail, pushed on Today's own stack.
+
+  Today is a surface, not a module: it arranges three modules' facts side by side and adds no
+  score, no combined number, and no renamed field (CONVENTIONS §9). Every route was already on the
+  §3.4 allowlist, so it needed no new route, no new scope and no re-pair.
 - **Macros** — the day view for today (America/Chicago, the platform's day boundary). Swipe
   horizontally to page between days; a toolbar date picker jumps; a "Today" button returns. Tap an
   entry → entry detail (sheet, from the rollup's `EntryView`).
@@ -291,7 +307,9 @@ The brief has to be settled before the read views (§10).
 `docs/ios-design-handoff.md`, which is the build reference for #73/#74 and lists the amendments
 this design made to the spec (§9 there).
 
-**Decided (Curtis, 2026-10-21):** four grouped tabs, as above.
+**Decided (Curtis, 2026-10-21):** four grouped tabs, as above. **Amended 2026-11-03 (#116):** a
+Today tab goes in front of them, pulled ahead of phase 2 because the weigh-in is the app's main
+daily use. Five tabs is the most a tab bar shows before collapsing into "More".
 
 ---
 
@@ -476,7 +494,9 @@ The reason to go native at all. **Not scoped until v1 and phase 2 (§6.1) ship**
 - **App Intents / Siri / Shortcuts:** "log my weight 178".
 - **HealthKit:** read-only context alongside vitals, or writing weight to Health. Either direction is
   a scoping conversation of its own — it touches the "the watch is the source of truth" rule.
-- **A cross-module Today tab**, read from an interpretive module (CONVENTIONS §9).
+- **A wider Today**, read from an interpretive module (CONVENTIONS §9): vitals, lifting, shopping,
+  quick actions (#111). The narrow Today tab — macros, the weigh-in, the latest ride — shipped
+  ahead of parity as a plain surface over existing reads (§5, #116).
 - **Notifications:** none in v1; there is no server push infrastructure.
 
 ---

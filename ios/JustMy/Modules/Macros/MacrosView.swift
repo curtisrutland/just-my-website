@@ -178,10 +178,10 @@ private struct RollupCard: View {
         let budget = Budget(day: day)
         Card(padding: EdgeInsets(top: 18, leading: 16, bottom: 6, trailing: 16)) {
             VStack(alignment: .leading, spacing: 14) {
-                hero(budget)
+                BudgetHero(budget: budget)
                 BudgetBar(budget: budget)
                 VStack(spacing: 12) {
-                    proteinRow(budget)
+                    ProteinRow(budget: budget, isToday: isToday)
                     LeversRow(budget: budget)
                 }
                 if budget.ceiling == nil {
@@ -194,20 +194,25 @@ private struct RollupCard: View {
             }
         }
     }
+}
 
-    private func hero(_ b: Budget) -> some View {
+/// Calories against the ceiling: the hero numeral, and where the day stands. Shared with Today (#116).
+struct BudgetHero: View {
+    let budget: Budget
+
+    var body: some View {
         HStack(alignment: .firstTextBaseline) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(Format.whole(b.kcal)).font(.hero).tracking(-0.6).monospacedDigit()
-                if let ceiling = b.ceiling {
+                Text(Format.whole(budget.kcal)).font(.hero).tracking(-0.6).monospacedDigit()
+                if let ceiling = budget.ceiling {
                     Text("/ \(Format.whole(ceiling)) kcal").foregroundStyle(.secondary).monospacedDigit()
                 } else {
                     Text("kcal").foregroundStyle(.secondary)
                 }
             }
             Spacer(minLength: 12)
-            if let ceiling = b.ceiling {
-                calorieState(b, ceiling: ceiling)
+            if let ceiling = budget.ceiling {
+                calorieState(ceiling: ceiling)
             } else {
                 Text("no target yet").font(.subheadline).foregroundStyle(.secondary)
             }
@@ -215,33 +220,39 @@ private struct RollupCard: View {
     }
 
     @ViewBuilder
-    private func calorieState(_ b: Budget, ceiling: Double) -> some View {
+    private func calorieState(ceiling: Double) -> some View {
         Group {
-            switch b.calorieState {
+            switch budget.calorieState {
             case .under:
-                Text("\(Format.whole(ceiling - b.kcal)) left").foregroundStyle(.secondary)
+                Text("\(Format.whole(ceiling - budget.kcal)) left").foregroundStyle(.secondary)
             case .landed:
-                Text("landed · \(Format.whole(ceiling - b.kcal)) left").fontWeight(.semibold).foregroundStyle(Color("Success"))
+                Text("landed · \(Format.whole(ceiling - budget.kcal)) left").fontWeight(.semibold).foregroundStyle(Color("Success"))
             case let .over(color):
-                Text("+\(Format.whole(b.kcal - ceiling)) over").fontWeight(.semibold).foregroundStyle(color)
+                Text("+\(Format.whole(budget.kcal - ceiling)) over").fontWeight(.semibold).foregroundStyle(color)
             }
         }
         .font(.subheadline)
         .monospacedDigit()
         .lineLimit(1)
     }
+}
 
-    private func proteinRow(_ b: Budget) -> some View {
+/// Protein against its floor. Shared with Today (#116).
+struct ProteinRow: View {
+    let budget: Budget
+    let isToday: Bool
+
+    var body: some View {
         HStack(alignment: .firstTextBaseline) {
             Legend(color: .accentColor, label: "Protein")
             Spacer(minLength: 12)
             HStack(alignment: .firstTextBaseline, spacing: 10) {
-                if let floor = b.proteinFloor {
-                    Text("\(Format.whole(b.protein)) \(Text("/ \(Format.whole(floor)) g").foregroundStyle(.secondary))")
-                    proteinState(b.protein, floor: floor)
+                if let floor = budget.proteinFloor {
+                    Text("\(Format.whole(budget.protein)) \(Text("/ \(Format.whole(floor)) g").foregroundStyle(.secondary))")
+                    state(floor: floor)
                         .frame(minWidth: 110, alignment: .trailing)
                 } else {
-                    Text("\(Format.whole(b.protein)) \(Text("g").foregroundStyle(.secondary))")
+                    Text("\(Format.whole(budget.protein)) \(Text("g").foregroundStyle(.secondary))")
                 }
             }
             .monospacedDigit()
@@ -250,19 +261,19 @@ private struct RollupCard: View {
 
     /// Cleared is a finding in Success. Short on a past day is a hard finding; short today is just
     /// where the day stands.
-    private func proteinState(_ protein: Double, floor: Double) -> some View {
-        if protein >= floor {
-            Text("cleared · +\(Format.whole(protein - floor)) g").foregroundStyle(Color("Success"))
+    private func state(floor: Double) -> some View {
+        if budget.protein >= floor {
+            Text("cleared · +\(Format.whole(budget.protein - floor)) g").foregroundStyle(Color("Success"))
         } else if isToday {
-            Text("\(Format.whole(floor - protein)) g to floor").foregroundStyle(.secondary)
+            Text("\(Format.whole(floor - budget.protein)) g to floor").foregroundStyle(.secondary)
         } else {
-            Text("\(Format.whole(floor - protein)) g short").foregroundStyle(Color("Warning"))
+            Text("\(Format.whole(floor - budget.protein)) g short").foregroundStyle(Color("Warning"))
         }
     }
 }
 
 /// The day's arithmetic over `totals` and `target` — presentation only, nothing server-side.
-private struct Budget {
+struct Budget {
     /// The bar runs to 115% of the ceiling so an overshoot has room to show.
     static let span = 1.15
 
@@ -336,7 +347,7 @@ private struct Budget {
 
 /// Energy by source filling toward the ceiling, the floor and ceiling ticks, the landing band, and
 /// any overshoot past the ceiling as a stub in the state color.
-private struct BudgetBar: View {
+struct BudgetBar: View {
     let budget: Budget
 
     var body: some View {

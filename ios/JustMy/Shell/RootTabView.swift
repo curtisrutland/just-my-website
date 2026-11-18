@@ -1,27 +1,37 @@
 import SwiftUI
 
-/// The four tabs (docs/ios-app.md §5; docs/ios-design-handoff.md §4). Body and Training put two
-/// modules behind a segmented control; Training opens on Rides and remembers the last choice.
+/// The five tabs (docs/ios-app.md §5; docs/ios-design-handoff.md §4). Today is first and is where
+/// the app opens (#116). Body and Training put two modules behind a segmented control; Training
+/// opens on Rides and remembers the last choice.
 struct RootTabView: View {
     @Environment(AppModel.self) private var model
+    /// Not remembered: this view is rebuilt on every unlock, so every unlock lands on Today.
+    @State private var tab = AppTab.today
 
     var body: some View {
-        TabView {
-            Tab("Macros", systemImage: "fork.knife") {
+        TabView(selection: $tab) {
+            Tab("Today", systemImage: "sun.max", value: AppTab.today) {
+                ModuleStack { TodayView(tab: $tab) }
+            }
+            Tab("Macros", systemImage: "fork.knife", value: AppTab.macros) {
                 ModuleStack { MacrosView() }
             }
-            Tab("Body", systemImage: "figure") {
+            Tab("Body", systemImage: "figure", value: AppTab.body) {
                 ModuleStack { BodyView() }
             }
-            Tab("Training", systemImage: "figure.outdoor.cycle") {
+            Tab("Training", systemImage: "figure.outdoor.cycle", value: AppTab.training) {
                 ModuleStack { TrainingView() }
             }
-            Tab("Shopping", systemImage: "cart") {
+            Tab("Shopping", systemImage: "cart", value: AppTab.shopping) {
                 ModuleStack { ShoppingView() }
             }
         }
         .environment(\.api, model.session?.clients)
     }
+}
+
+enum AppTab: Hashable {
+    case today, macros, body, training, shopping
 }
 
 /// A tab's NavigationStack with the shared Settings gear (leading, on each tab's top screen).
