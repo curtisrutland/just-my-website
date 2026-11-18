@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import { pieceCompositions, type PieceProps } from "../../src/kit/compose";
 import { FONT } from "../../src/kit/fonts";
+import { CATEGORICAL } from "../../src/kit/palette";
 import { Stage } from "../../src/kit/Stage";
 import { dark } from "../../src/kit/theme";
 import { lb, mdShort, mi } from "../../src/kit/units";
@@ -12,9 +13,8 @@ import type { Snapshot } from "./data";
 const PIECE = "2026-11-the-descent";
 const theme = dark;
 
-// One colour per bike, assigned in order of first ride so a bike keeps its colour as rides are
-// added. Checked as a set on this background: every pair is told apart at a glance.
-const BIKE_COLOURS = ["#3987e5", "#c98500", "#199e70", "#d55181"];
+// One colour per bike, assigned in order of first ride so a bike keeps its colour as rides are added.
+const BIKE_COLOURS = CATEGORICAL;
 
 // The video's beats, in seconds (brief: Timeline).
 const DRAW_FROM = 2;

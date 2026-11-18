@@ -10,3 +10,6 @@ export { ft, hms, mdLong, mdShort, mi, mph, rideTitle, watts } from "../../../sr
 
 /** Body weight reads in pounds at one decimal, as the weight pages show it: `lb(238.8)` → "238.8". */
 export { fmt1 as lb } from "../../../src/components/weight/format";
+
+/** A total of riding time, as the garage page shows a bike's hours: `hours(131760)` → "36.6". */
+export const hours = (seconds: number): string => (seconds / 3600).toFixed(1);
