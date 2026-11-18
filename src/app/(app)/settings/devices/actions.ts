@@ -7,6 +7,7 @@ import QRCode from "qrcode";
 import { createDeviceToken, revokeDeviceToken } from "@/lib/auth/device-tokens";
 import { originFrom, pairingPayload } from "@/lib/auth/pairing";
 import { PHONE_SCOPES } from "@/lib/auth/scopes";
+import { revokeGrant } from "@/lib/mcp/grants";
 
 async function requireUser() {
   const { userId } = await auth();
@@ -33,5 +34,12 @@ export async function pairPhoneAction(rawName: string): Promise<Pairing> {
 export async function revokeDeviceAction(id: string) {
   await requireUser();
   await revokeDeviceToken(id);
+  revalidatePath("/settings/devices");
+}
+
+/** Disconnect an app connected through the MCP sign-in (`docs/mcp.md` §3). Its row stays, revoked. */
+export async function revokeGrantAction(id: string) {
+  await requireUser();
+  await revokeGrant(id);
   revalidatePath("/settings/devices");
 }
