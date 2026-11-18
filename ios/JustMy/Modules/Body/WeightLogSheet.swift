@@ -94,12 +94,7 @@ struct WeightLogSheet: View {
         Binding(get: { Format.date(fromISO: day) ?? .now }, set: { day = Format.iso($0) })
     }
 
-    /// Accepts the locale's decimal separator; nil until it's a positive number.
-    private var parsedWeight: Double? {
-        let text = weight.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: ",", with: ".")
-        guard let value = Double(text), value > 0, value.isFinite else { return nil }
-        return value
-    }
+    private var parsedWeight: Double? { WeightInput.parse(weight) }
 
     private func replaceNotice(_ entry: WeightEntry) -> AttributedString {
         let whose = day == Format.todayISO() ? "Today" : Format.day(day)
@@ -120,19 +115,10 @@ struct WeightLogSheet: View {
         error = nil
         defer { saving = false }
         let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
-        do {
-            let body = Components.Schemas.WeightCreate(measuredOn: day, weight: value, note: trimmed.isEmpty ? nil : trimmed)
-            switch try await api.weight.postApiWeightEntries(.init(body: .json(body))) {
-            case .ok:
-                onSaved()
-                dismiss()
-            case let .badRequest(response):
-                error = (try? response.body.json.error.message) ?? "The server refused that weight."
-            default:
-                error = "Couldn't save. Try again."
-            }
-        } catch {
-            self.error = LoadFailure(write: error).isOffline ? "Offline — nothing was saved." : "Couldn't save. Try again."
+        error = await api.logWeight(value, on: day, note: trimmed.isEmpty ? nil : trimmed)
+        if error == nil {
+            onSaved()
+            dismiss()
         }
     }
 }

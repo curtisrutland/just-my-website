@@ -16,7 +16,18 @@ nonisolated enum Format {
     // MARK: Calendar dates ("YYYY-MM-DD")
 
     /// Today's calendar date in Chicago, as the API spells it.
-    static func todayISO(now: Date = .now) -> String { iso(now) }
+    static func todayISO(now: Date = .now) -> String { debugToday ?? iso(now) }
+
+    /// DEBUG only: `SIMCTL_CHILD_JMW_TODAY=2026-11-19` makes the simulator treat that date as today,
+    /// so day-dependent states (no weigh-in yet, an empty macros day) can be seen without waiting
+    /// for one or writing to the database (see ios/README.md). Compiled out of release builds.
+    private static let debugToday: String? = {
+        #if DEBUG
+        ProcessInfo.processInfo.environment["JMW_TODAY"].flatMap { date(fromISO: $0) == nil ? nil : $0 }
+        #else
+        nil
+        #endif
+    }()
 
     static func iso(_ date: Date) -> String {
         let c = calendar.dateComponents([.year, .month, .day], from: date)
@@ -64,6 +75,28 @@ nonisolated enum Format {
     static func monthDay(_ iso: String) -> String {
         guard let d = date(fromISO: iso) else { return iso }
         return d.formatted(monthDayStyle)
+    }
+
+    /// `Tue`
+    static func weekday(_ iso: String) -> String {
+        guard let d = date(fromISO: iso) else { return iso }
+        return d.formatted(Date.FormatStyle(timeZone: zone).weekday(.abbreviated))
+    }
+
+    /// Whole calendar days from one date to another; nil if either isn't a date.
+    static func days(from start: String, to end: String) -> Int? {
+        guard let a = date(fromISO: start), let b = date(fromISO: end) else { return nil }
+        return calendar.dateComponents([.day], from: a, to: b).day
+    }
+
+    /// How long ago a day was, said briefly: `Today`, `Yesterday`, `Tue` within the week, else `Nov 7`.
+    static func recentDay(_ iso: String, today: String = todayISO()) -> String {
+        switch days(from: iso, to: today) {
+        case 0: "Today"
+        case 1: "Yesterday"
+        case .some(2...6): weekday(iso)
+        default: monthDay(iso)
+        }
     }
 
     private static var dayStyle: Date.FormatStyle {

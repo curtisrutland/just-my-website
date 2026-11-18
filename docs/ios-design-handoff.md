@@ -107,9 +107,12 @@ The day boundary is `America/Chicago`. Dates `Wed, Oct 21`; times `7:28 PM`.
 
 ## 4. Navigation
 
-Four tabs: **Macros** `fork.knife` · **Body** `figure` · **Training** `figure.outdoor.cycle` ·
-**Shopping** `cart`. Body and Training have a segmented control under the large title
-(Weight | Vitals; Lifting | Rides — Rides is the default and the last choice is remembered).
+Five tabs: **Today** `sun.max` · **Macros** `fork.knife` · **Body** `figure` · **Training**
+`figure.outdoor.cycle` · **Shopping** `cart`. Today was added after this design (#116) and is
+built from the existing Card, row and States patterns rather than its own board: the Macros hero
+keeps the screen's one hero numeral, and the weight value and field use the trend size. Body and
+Training have a segmented control under the large title (Weight | Vitals; Lifting | Rides — Rides
+is the default and the last choice is remembered).
 Settings is a leading toolbar gear on each tab's top screen, presenting a medium sheet.
 
 ## 5. Screens

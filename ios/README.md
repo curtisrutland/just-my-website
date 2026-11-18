@@ -6,7 +6,7 @@ The native iOS app: a SwiftUI client of the token API. The spec is [`docs/ios-ap
 ios/
   JustMy.xcodeproj      the app project (iOS 27, iPhone only); folders are synced, so new files need no project edits
   JustMy/               the app: App/ (pairing, lock, Keychain), Shell/ (tabs, settings)
-  JustMyTests/          unit tests for the app model and lock policy (Swift Testing)
+  JustMyTests/          unit tests: the app model, lock policy, ride grouping, Today, the weigh-in write (Swift Testing)
   JMWClient/            local Swift package: one generated client per module, plus JMWClientSupport (auth, pairing)
   Tools/                pins swift-openapi-generator; build-time only
   scripts/              generate-client.sh
@@ -69,6 +69,12 @@ The app talks to the server only with a **device token** that holds the phone sc
      ```
 
   `http://` is accepted only for `localhost`, `127.0.0.1` and `*.local` hosts. Production is always https.
+
+To see a day-dependent state without waiting for it (Today with no weigh-in yet, an empty macros day), DEBUG builds also read `JMW_TODAY` and treat that date as today. Don't tap Save while it's set: the write would land on that date.
+
+```bash
+SIMCTL_CHILD_JMW_TODAY=2026-11-19 xcrun simctl launch --terminate-running-process booted website.justmy.app
+```
 
 Revoke a test token when you're done. Until #69 adds a revoke button, set `revoked_at` on its `device_tokens` row, or delete the row.
 
