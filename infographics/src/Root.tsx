@@ -1,3 +1,4 @@
+import { onTheBike } from "../pieces/2026-11-on-the-bike/Piece";
 import { sampleRide } from "../pieces/2026-11-sample-ride/Piece";
 import { theDescent } from "../pieces/2026-11-the-descent/Piece";
 
@@ -10,6 +11,7 @@ export function Root() {
     <>
       {sampleRide}
       {theDescent}
+      {onTheBike}
     </>
   );
 }

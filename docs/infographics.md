@@ -146,6 +146,14 @@ part of its food logged, its steps half counted and its rides perhaps not yet up
 picture draws that as a shortfall. `data.ts` stops at the last complete day (`todayISO()` in
 `src/lib/date.ts` is today in Curtis's timezone).
 
+**Questionable data is asked about, never quietly used and never quietly dropped.** The first
+such rule: a bike ride with a top speed over 30 mph is questionable, most likely because the
+watch kept recording in a car, which also inflates that ride's distance, time and ascent.
+`settleQuestionableRides` in `src/data/sanity.ts` stops the data step and lists any such ride that
+has no recorded answer. Curtis's answer for each (include or exclude, and why) is written into
+the piece's `data.ts`, and a piece that leaves rides out says so on the picture. New sanity rules
+join that file as they are found.
+
 **Use the coarsest data that answers the question.** The API's ride stream is downsampled to
 10-second buckets (`docs/rides-model.md`), which is enough to decide which rides are in an area or
 to draw an hour-long chart. Only a piece that animates position needs full resolution, and then

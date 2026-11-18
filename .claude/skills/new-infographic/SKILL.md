@@ -44,6 +44,10 @@ type. It receives `{ api, fit, log }`:
   questions, including which rides are in an area.
 - Do the heavy work here, once. Trim anything the brief says must not appear (ride starts near
   home on a shareable piece) here, so it never reaches the snapshot.
+- A piece that totals or ranks rides passes them through `settleQuestionableRides`
+  (`src/data/sanity.ts`). It stops on any ride with a top speed over 30 mph that has no recorded
+  answer. Ask Curtis about each one; record his answer and the reason in `data.ts`. Never decide
+  for him, and never drop a ride silently.
 
 **`Piece.tsx`** runs in the browser. Its root is `<Stage<Snapshot> piece="YYYY-MM-<slug>">`, which
 loads the fonts and the snapshot and then calls its child with the data. Export the result of
